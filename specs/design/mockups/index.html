@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+  Mockup index — Scaffold Reference  |  /design gate
+  Navigation for the 8 UI-layer mockups. Self-contained; no external refs.
+  Aesthetic direction ("Platform Console"): indigo #4f46e5 primary, slate
+  near-white surfaces, hairline borders, Inter for UI + a monospace face for
+  all technical metadata (API calls, IDs, tokens, codes). Every color is a
+  CSS custom property (E3-S1 theming contract). radius 0.5rem.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI Mockups · Scaffold Reference</title>
+<style>
+  :root{
+    --primary:#4f46e5; --primary-hover:#4338ca; --primary-foreground:#ffffff;
+    --secondary:#eef2ff; --secondary-foreground:#3730a3;
+    --background:#f6f7fb; --foreground:#0f172a; --card:#ffffff;
+    --muted:#f1f5f9; --muted-foreground:#64748b; --border:#e2e8f0; --ring:#4f46e5;
+    --radius:0.5rem;
+    --font-sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06); --shadow-md:0 12px 34px -16px rgba(15,23,42,.30);
+  }
+  [data-theme="dark"]{
+    --primary:#818cf8; --primary-hover:#a5b4fc; --primary-foreground:#1e1b4b;
+    --secondary:#1e293b; --secondary-foreground:#c7d2fe;
+    --background:#0b1120; --foreground:#e2e8f0; --card:#111a2e; --muted:#1e293b; --muted-foreground:#94a3b8;
+    --border:#24304a; --ring:#818cf8;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{margin:0;letter-spacing:-.01em}
+  .mono{font-family:var(--font-mono)} .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}
+  .top{display:flex;align-items:center;gap:12px;padding:16px 24px;background:var(--card);border-bottom:1px solid var(--border)}
+  .wordmark{display:flex;align-items:center;gap:10px;font-weight:650}
+  .logo{width:28px;height:28px;border-radius:8px;background:var(--primary);display:grid;place-items:center;color:var(--primary-foreground);flex:none}
+  .spacer{margin-left:auto}
+  .iconbtn{font:inherit;font-size:13px;cursor:pointer;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px}
+  .iconbtn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+  .page{max-width:1080px;margin:0 auto;padding:34px 24px 80px}
+  .lede{color:var(--muted-foreground);max-width:74ch;margin:10px 0 0}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:26px}
+  a.cardlink{display:block;text-decoration:none;color:inherit}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm);padding:18px 20px;height:100%;transition:border-color .12s,box-shadow .12s}
+  a.cardlink:hover .card{border-color:var(--primary);box-shadow:var(--shadow-md)}
+  .card .id{font-family:var(--font-mono);font-size:11px;color:var(--primary);background:var(--secondary);border-radius:999px;padding:3px 10px;display:inline-block;margin-bottom:10px}
+  .card h3{font-size:16px;margin-bottom:6px} .card p{color:var(--muted-foreground);font-size:13.5px;margin:0 0 12px}
+  .eps{display:flex;flex-wrap:wrap;gap:6px}
+  .ep{font-family:var(--font-mono);font-size:10.5px;color:var(--muted-foreground);border:1px solid var(--border);border-radius:5px;padding:3px 7px}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="wordmark"><span class="logo" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg></span>Scaffold Reference</div>
+    <span class="mono" style="font-size:11px;color:var(--muted-foreground);border:1px solid var(--border);border-radius:999px;padding:3px 10px">/design · UI mockups</span>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
+  </header>
+
+  <main class="page">
+    <p class="eyebrow">Design gate · visual contract</p>
+    <h1 style="font-size:28px;margin-top:8px">UI mockups</h1>
+    <p class="lede">Eight interactive, self-contained mockups covering the UI-layer stories. Aesthetic: <b>Platform
+      Console</b> — indigo primary, slate surfaces, Inter for UI, a monospace face for all technical metadata. Every
+      color is a CSS custom property (the E3-S1 theming contract), so each screen carries a light/dark toggle and,
+      where relevant, a state switch (happy / empty / error). Field names follow SPEC §19; API captions follow §15.</p>
+
+    <div class="grid">
+      <a class="cardlink" href="E3-S1.html"><div class="card"><span class="id">E3-S1</span>
+        <h3>Theme provider</h3><p>branding.colors → CSS custom properties on :root (light + derived dark), with logo/name/favicon/font/radius from config and a light/dark toggle.</p>
+        <div class="eps"><span class="ep">GET /api/me</span></div></div></a>
+
+      <a class="cardlink" href="E3-S2.html"><div class="card"><span class="id">E3-S2</span>
+        <h3>platform-ui component library</h3><p>Token-driven button, input, select, dialog, dropdown, table, tabs, toast, card, form, empty-state, confirm-dialog — no literal hex.</p>
+        <div class="eps"><span class="ep">POST …/workspaces</span><span class="ep">GET …/members</span></div></div></a>
+
+      <a class="cardlink" href="E3-S3.html"><div class="card"><span class="id">E3-S3</span>
+        <h3>Terminology (useTerm)</h3><p>One noun resolved across nav, a settings heading, and a validation message, with a live Organization↔Clinic config toggle.</p>
+        <div class="eps"><span class="ep">GET /api/me</span><span class="ep">POST /api/orgs</span></div></div></a>
+
+      <a class="cardlink" href="E3-S4.html"><div class="card"><span class="id">E3-S4</span>
+        <h3>Web app shell</h3><p>Sidebar nav (order/hidden), org switcher, user menu, top bar, main content, plus 404 and upgrade-notice surfaces.</p>
+        <div class="eps"><span class="ep">GET /api/me</span><span class="ep">POST /api/auth/sign-out</span></div></div></a>
+
+      <a class="cardlink" href="E4-S3.html"><div class="card"><span class="id">E4-S3</span>
+        <h3>Auth screens</h3><p>Sign in, sign up, verify email, forgot/reset password, accept invite, magic link — each submit labelled with its /api/auth/* call.</p>
+        <div class="eps"><span class="ep">POST /api/auth/sign-in/email</span><span class="ep">/api/auth/*</span></div></div></a>
+
+      <a class="cardlink" href="E5-S3.html"><div class="card"><span class="id">E5-S3</span>
+        <h3>Organization UI</h3><p>Org switcher, Members admin, Invitations, read-only Roles &amp; Permissions matrix, and General settings (name, slug, delete/transfer).</p>
+        <div class="eps"><span class="ep">…/members</span><span class="ep">…/invitations</span><span class="ep">…/roles</span></div></div></a>
+
+      <a class="cardlink" href="E7-S3.html"><div class="card"><span class="id">E7-S3</span>
+        <h3>Audit Log viewer</h3><p>Admin-gated, paginated (limit/offset → {items,total}), filterable by action and actor, org-scoped by RLS.</p>
+        <div class="eps"><span class="ep">GET …/audit?action=&actor=&limit=&offset=</span></div></div></a>
+
+      <a class="cardlink" href="E8-S3.html"><div class="card"><span class="id">E8-S3</span>
+        <h3>Workspace web screens</h3><p>Workspace list (create/rename/delete) and a task screen (add, complete, delete, open/done filter, assignee picker) with the maxTasks upgrade notice.</p>
+        <div class="eps"><span class="ep">…/workspace/workspaces</span><span class="ep">…/tasks</span></div></div></a>
+    </div>
+  </main>
+
+<script>
+  function toggleTheme(){var e=document.documentElement,d=e.getAttribute('data-theme')==='dark';
+    e.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙 Dark':'☀ Light';}
+</script>
+</body>
+</html>

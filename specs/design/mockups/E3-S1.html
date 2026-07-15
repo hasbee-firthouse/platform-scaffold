@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<!--
+  E3-S1 — Theme provider (branding → CSS tokens)  |  Scaffold Reference
+  ------------------------------------------------------------------------
+  SELF-CONTAINED: no external CSS/JS/font/image/CDN references.
+  Demonstrates: branding.colors emitted as CSS custom properties on :root
+  (light + derived dark), plus logo/name/favicon/font/radius from config.
+  States: HAPPY (token grid) · EMPTY (no custom overrides -> defaults) ·
+          ERROR (invalid color in config -> boot refusal, per SPEC §7).
+  Data field names follow SPEC §7 branding config shape.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Theme Provider · Scaffold Reference</title>
+<style>
+  /* =========================================================================
+     BRANDING TOKENS — produced at web startup from product.config.ts branding.
+     These :root variables ARE the theming contract (E3-S1). Components never
+     use literal hex; they read only these vars (E3-S2).
+     ========================================================================= */
+  :root{
+    --primary:#4f46e5; --primary-hover:#4338ca; --primary-foreground:#ffffff;
+    --secondary:#eef2ff; --secondary-foreground:#3730a3;
+    --accent:#0ea5e9; --accent-foreground:#ffffff;
+    --destructive:#dc2626; --destructive-foreground:#ffffff;
+    --success:#059669; --warning:#b45309;
+    --background:#f6f7fb; --foreground:#0f172a;
+    --card:#ffffff; --card-foreground:#0f172a;
+    --muted:#f1f5f9; --muted-foreground:#64748b;
+    --border:#e2e8f0; --input:#ffffff; --ring:#4f46e5;
+    --radius:0.5rem;
+    --font-sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06);
+    --shadow-md:0 10px 30px -14px rgba(15,23,42,.28);
+  }
+  /* DERIVED DARK SET — computed by the theme provider from the same config. */
+  [data-theme="dark"]{
+    --primary:#818cf8; --primary-hover:#a5b4fc; --primary-foreground:#1e1b4b;
+    --secondary:#1e293b; --secondary-foreground:#c7d2fe;
+    --accent:#38bdf8; --accent-foreground:#082f49;
+    --destructive:#f87171; --destructive-foreground:#450a0a;
+    --success:#34d399; --warning:#fbbf24;
+    --background:#0b1120; --foreground:#e2e8f0;
+    --card:#111a2e; --card-foreground:#e2e8f0;
+    --muted:#1e293b; --muted-foreground:#94a3b8;
+    --border:#24304a; --input:#0f1830; --ring:#818cf8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);
+    font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s}
+  a{color:inherit}
+  h1,h2,h3{margin:0;letter-spacing:-.01em}
+  .mono{font-family:var(--font-mono)}
+  .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}
+
+  /* ---- demo chrome (shared visual language across all mockups) ---- */
+  .demobar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:16px;
+    padding:12px 22px;background:var(--card);border-bottom:1px solid var(--border);box-shadow:var(--shadow-sm)}
+  .wordmark{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em}
+  .logo{width:26px;height:26px;border-radius:7px;background:var(--primary);display:grid;place-items:center;
+    color:var(--primary-foreground);flex:none}
+  .storytag{font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);
+    border:1px solid var(--border);border-radius:999px;padding:3px 10px}
+  .spacer{margin-left:auto}
+  .seg{display:inline-flex;background:var(--muted);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);padding:3px}
+  .seg button{font:inherit;font-size:12.5px;border:0;background:transparent;color:var(--muted-foreground);
+    padding:5px 12px;border-radius:var(--radius);cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--card);color:var(--foreground);box-shadow:var(--shadow-sm)}
+  .iconbtn{font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+    background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px}
+  .iconbtn:focus-visible,.seg button:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+
+  .page{max-width:1080px;margin:0 auto;padding:34px 22px 80px}
+  .lede{color:var(--muted-foreground);max-width:70ch;margin:10px 0 0}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);
+    box-shadow:var(--shadow-sm)}
+  .grid{display:grid;gap:16px}
+  .cols3{grid-template-columns:repeat(3,1fr)}
+  .cols2{grid-template-columns:repeat(2,1fr)}
+
+  /* token swatches */
+  .swatch{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--card)}
+  .swatch .chip{height:64px}
+  .swatch .meta{padding:10px 12px}
+  .swatch .name{font-weight:600;font-size:13px}
+  .swatch .var{font-family:var(--font-mono);font-size:11.5px;color:var(--muted-foreground);margin-top:2px}
+  .swatch .val{font-family:var(--font-mono);font-size:11.5px;color:var(--foreground);margin-top:1px}
+
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border)}
+  .kv:last-child{border-bottom:0}
+  .kv .k{color:var(--muted-foreground)}
+  .kv .v{font-family:var(--font-mono);font-size:13px}
+
+  .api{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;
+    color:var(--muted-foreground);border-left:2px solid var(--primary);padding:2px 0 2px 8px;margin-top:6px}
+  .radrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .radbox{width:80px;height:56px;background:var(--secondary);border:1px solid var(--border);border-radius:var(--radius)}
+  .fontrow{display:flex;flex-direction:column;gap:4px}
+  .fontrow .sample{font-size:24px;font-weight:650}
+  .callout{border:1px solid var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--card));
+    color:var(--foreground);border-radius:var(--radius);padding:14px 16px}
+  .err{border:1px solid var(--destructive);background:color-mix(in srgb,var(--destructive) 10%,var(--card));
+    border-radius:var(--radius);padding:16px}
+  .err code{font-family:var(--font-mono);font-size:12.5px}
+  .sectionhead{display:flex;align-items:baseline;gap:12px;margin:34px 0 14px}
+  .hidden{display:none !important}
+  @media (max-width:760px){.cols3,.cols2{grid-template-columns:1fr}.demobar{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+  <header class="demobar">
+    <div class="wordmark">
+      <span class="logo" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg>
+      </span>
+      <span id="brandName">Scaffold Reference</span>
+    </div>
+    <span class="storytag">E3-S1 · Theme provider</span>
+    <div class="spacer"></div>
+    <div class="seg" role="group" aria-label="Config scenario">
+      <button data-state="happy" aria-pressed="true" onclick="setState('happy')">Custom brand</button>
+      <button data-state="empty" aria-pressed="false" onclick="setState('empty')">Defaults</button>
+      <button data-state="error" aria-pressed="false" onclick="setState('error')">Invalid config</button>
+    </div>
+    <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" aria-label="Toggle light or dark theme">🌙 Dark</button>
+  </header>
+
+  <main class="page">
+    <p class="eyebrow">product.config.ts → branding → CSS custom properties</p>
+    <h1 style="font-size:30px;margin-top:8px">Theme tokens on <span class="mono" style="font-size:24px">:root</span></h1>
+    <p class="lede">At web startup the theme provider reads <span class="mono">branding.colors</span>, emits them as CSS
+      custom properties on <span class="mono">:root</span>, and derives a dark set. Every component reads only these
+      variables — changing <span class="mono">colors.primary</span> and <span class="mono">productName</span> rebrands
+      every screen with zero component edits.</p>
+    <div class="api">GET&nbsp; /api/me → session bootstrap (branding served from product.config.ts at build)</div>
+
+    <!-- ERROR STATE: invalid config refuses to boot (SPEC §7) -->
+    <section id="s-error" class="hidden" style="margin-top:26px">
+      <div class="err" role="alert">
+        <p class="eyebrow" style="color:var(--destructive)">Config validation failed — process refused to boot</p>
+        <p style="margin:8px 0 0">Zod schema in <span class="mono">platform-config</span> rejected the branding block:</p>
+        <pre class="mono" style="margin:12px 0 0;white-space:pre-wrap;font-size:12.5px">branding.colors.primary: Invalid hex color
+  received: <code>"#zzz4f4"</code>
+  expected: <code>/^#([0-9a-fA-F]{6})$/</code>
+
+→ Invalid config = process refuses to boot with a precise error (SPEC §7).</pre>
+      </div>
+    </section>
+
+    <!-- HAPPY + EMPTY share the token grid; EMPTY shows the shipped defaults -->
+    <div id="s-tokens">
+      <div class="sectionhead">
+        <h2 style="font-size:18px">Color tokens</h2>
+        <span class="eyebrow" id="scenarioNote">custom: primary #4f46e5</span>
+      </div>
+      <div class="grid cols3" id="swatches"></div>
+
+      <div class="sectionhead"><h2 style="font-size:18px">Non-color tokens</h2></div>
+      <div class="grid cols2">
+        <div class="card">
+          <div class="kv"><span class="k">branding.radius</span><span class="v" id="radVal">0.5rem</span></div>
+          <div style="padding:16px"><div class="radrow"><div class="radbox"></div>
+            <span class="eyebrow">--radius applied to cards, inputs & buttons</span></div></div>
+        </div>
+        <div class="card">
+          <div class="kv"><span class="k">typography.fontFamily</span><span class="v" id="fontVal">Inter, sans-serif</span></div>
+          <div style="padding:16px" class="fontrow">
+            <span class="sample">The quick brown fox</span>
+            <span class="mono" style="font-size:12px;color:var(--muted-foreground)">--font-sans · headings & body</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sectionhead"><h2 style="font-size:18px">Config surface (branding)</h2></div>
+      <div class="card">
+        <div class="kv"><span class="k">branding.productName</span><span class="v" id="cfgName">"Scaffold Reference"</span></div>
+        <div class="kv"><span class="k">branding.logo.light</span><span class="v">"/brand/logo.svg"</span></div>
+        <div class="kv"><span class="k">branding.logo.dark</span><span class="v">"/brand/logo-dark.svg"</span></div>
+        <div class="kv"><span class="k">branding.favicon</span><span class="v">"/brand/favicon.svg"</span></div>
+        <div class="kv"><span class="k">document.title</span><span class="v" id="cfgTitle">"Scaffold Reference"</span></div>
+      </div>
+
+      <div class="callout" style="margin-top:22px">
+        <p class="eyebrow" style="color:var(--warning)">Acceptance</p>
+        <p style="margin:6px 0 0">Toggle <strong>Dark</strong> above — the derived dark token set swaps with no component
+          edits. Toggle <strong>Defaults</strong> to see the shipped fallback palette when a fork provides no overrides.</p>
+      </div>
+    </div>
+  </main>
+
+<script>
+  // Token catalogue read back off the live computed :root — proves components
+  // would consume the same values. Field names mirror branding.colors keys.
+  var TOKENS = [
+    ['primary','--primary'],['primary-foreground','--primary-foreground'],
+    ['secondary','--secondary'],['secondary-foreground','--secondary-foreground'],
+    ['accent','--accent'],['destructive','--destructive'],
+    ['success','--success'],['warning','--warning'],
+    ['background','--background'],['foreground','--foreground'],
+    ['muted','--muted'],['muted-foreground','--muted-foreground'],
+    ['card','--card'],['border','--border']
+  ];
+  function renderSwatches(){
+    var css = getComputedStyle(document.documentElement);
+    document.getElementById('swatches').innerHTML = TOKENS.map(function(t){
+      var val = css.getPropertyValue(t[1]).trim();
+      return '<div class="swatch"><div class="chip" style="background:var('+t[1]+')"></div>'+
+        '<div class="meta"><div class="name">'+t[0]+'</div>'+
+        '<div class="var">'+t[1]+'</div><div class="val">'+val+'</div></div></div>';
+    }).join('');
+  }
+  function toggleTheme(){
+    var el=document.documentElement, dark=el.getAttribute('data-theme')==='dark';
+    el.setAttribute('data-theme',dark?'light':'dark');
+    document.getElementById('themeBtn').textContent = dark?'🌙 Dark':'☀ Light';
+    renderSwatches();
+  }
+  var DEFAULT_PRIMARY='#4f46e5', DEFAULT_NAME='Scaffold Reference';
+  function setState(s){
+    document.querySelectorAll('.seg button').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.state===s ? 'true':'false');
+    });
+    var tokens=document.getElementById('s-tokens'), err=document.getElementById('s-error');
+    if(s==='error'){ err.classList.remove('hidden'); tokens.classList.add('hidden'); return; }
+    err.classList.add('hidden'); tokens.classList.remove('hidden');
+    // EMPTY = shipped defaults (no fork overrides). HAPPY = a fork's custom brand.
+    var root=document.documentElement;
+    if(s==='empty'){
+      root.style.setProperty('--primary','#4f46e5');
+      root.style.setProperty('--ring','#4f46e5');
+      document.getElementById('scenarioNote').textContent='defaults: primary #4f46e5 (Inter, 0.5rem)';
+      setName('Scaffold Reference');
+    } else {
+      root.style.setProperty('--primary','#4f46e5');
+      root.style.setProperty('--ring','#4f46e5');
+      document.getElementById('scenarioNote').textContent='custom: primary #4f46e5';
+      setName('Scaffold Reference');
+    }
+    renderSwatches();
+  }
+  function setName(n){
+    document.getElementById('brandName').textContent=n;
+    document.getElementById('cfgName').textContent='"'+n+'"';
+    document.getElementById('cfgTitle').textContent='"'+n+'"';
+    document.title=n+' · Theme provider';
+  }
+  renderSwatches();
+</script>
+</body>
+</html>

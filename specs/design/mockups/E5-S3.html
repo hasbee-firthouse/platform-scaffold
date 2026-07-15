@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<!--
+  E5-S3 — Organization UI  |  Scaffold Reference
+  ------------------------------------------------------------------------
+  SELF-CONTAINED: no external CSS/JS/font/image/CDN references.
+  Org switcher + tabs: Members (list, role change, remove, admin-create) ·
+  Invitations (pending, resend, revoke, send new) · Roles & Permissions
+  (read-only matrix) · General (name, slug, delete/transfer).
+  States: HAPPY, EMPTY (no invitations), ERROR (CONFLICT / at-least-one-owner).
+  Field names per SPEC §19: member{id,user_id,org_id,role};
+  invitation{id,email,role,status,expires_at}; organization{id,slug,name,type}.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Organization settings · Scaffold Reference</title>
+<style>
+  :root{
+    --primary:#4f46e5; --primary-hover:#4338ca; --primary-foreground:#ffffff;
+    --secondary:#eef2ff; --secondary-foreground:#3730a3;
+    --destructive:#dc2626; --success:#059669; --warning:#b45309;
+    --background:#f6f7fb; --foreground:#0f172a; --card:#ffffff;
+    --muted:#f1f5f9; --muted-foreground:#64748b; --border:#e2e8f0; --input:#ffffff; --ring:#4f46e5;
+    --sidebar:#0f1430; --sidebar-foreground:#c7cbe6;
+    --radius:0.5rem;
+    --font-sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06); --shadow-md:0 12px 34px -16px rgba(15,23,42,.32);
+  }
+  [data-theme="dark"]{
+    --primary:#818cf8; --primary-hover:#a5b4fc; --primary-foreground:#1e1b4b;
+    --secondary:#1e293b; --secondary-foreground:#c7d2fe; --destructive:#f87171; --success:#34d399; --warning:#fbbf24;
+    --background:#0b1120; --foreground:#e2e8f0; --card:#111a2e; --muted:#1e293b; --muted-foreground:#94a3b8;
+    --border:#24304a; --input:#0f1830; --ring:#818cf8; --sidebar:#070b1c; --sidebar-foreground:#aab0d6;
+  }
+  *{box-sizing:border-box} html,body{margin:0;height:100%}
+  body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{margin:0;letter-spacing:-.01em}
+  .mono{font-family:var(--font-mono)} .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}
+  .api{display:inline-flex;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);border-left:2px solid var(--primary);padding:2px 0 2px 8px}
+  button{font:inherit}
+  .btn{font-size:13.5px;font-weight:550;cursor:pointer;border-radius:var(--radius);padding:8px 13px;border:1px solid transparent;display:inline-flex;align-items:center;gap:7px}
+  .btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+  .btn-primary{background:var(--primary);color:var(--primary-foreground)} .btn-primary:hover{background:var(--primary-hover)}
+  .btn-ghost{background:var(--card);color:var(--foreground);border-color:var(--border)} .btn-ghost:hover{background:var(--muted)}
+  .btn-destructive{background:var(--destructive);color:var(--destructive-foreground)}
+  .btn-sm{padding:6px 10px;font-size:12.5px}
+
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+  aside{background:var(--sidebar);color:var(--sidebar-foreground);display:flex;flex-direction:column;padding:14px 12px;gap:6px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 12px;color:#fff;font-weight:650}
+  .brand .logo{width:28px;height:28px;border-radius:8px;background:var(--primary);display:grid;place-items:center;flex:none}
+  .orgsw > button{width:100%;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.10);border-radius:var(--radius);padding:9px 10px;cursor:pointer;text-align:left}
+  .orgsw{position:relative}
+  .orgsw .oi{width:26px;height:26px;border-radius:6px;background:var(--primary);display:grid;place-items:center;flex:none;font-size:12px;font-weight:700}
+  .orgsw .ot{flex:1;min-width:0} .orgsw .ot .n{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .orgsw .ot .s{font-size:11px;font-family:var(--font-mono);color:var(--sidebar-foreground)}
+  .orgsw .menu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:6px;z-index:30}
+  .orgsw .menu[hidden]{display:none}
+  .orgsw .menu button{display:flex;width:100%;gap:10px;align-items:center;background:none;border:0;color:var(--foreground);padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px}
+  .orgsw .menu button:hover{background:var(--muted)} .orgsw .menu .type{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--muted-foreground)}
+  nav{margin-top:8px;display:flex;flex-direction:column;gap:2px}
+  nav .grp{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:12px 10px 4px}
+  nav a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:var(--radius);color:var(--sidebar-foreground);text-decoration:none;font-size:14px;cursor:pointer}
+  nav a:hover{background:rgba(255,255,255,.06);color:#fff} nav a.active{background:var(--primary);color:#fff;font-weight:600}
+
+  .main{display:flex;flex-direction:column;min-width:0}
+  .topbar{height:58px;display:flex;align-items:center;gap:14px;padding:0 22px;background:var(--card);border-bottom:1px solid var(--border)}
+  .crumbs{font-size:14px;color:var(--muted-foreground)} .crumbs .slug{font-family:var(--font-mono);font-size:12px}
+  .tspacer{margin-left:auto}
+  .iconbtn{font-size:13px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:7px 11px}
+  .content{padding:24px;overflow:auto}
+
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px}
+  .tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted-foreground);padding:10px 14px;cursor:pointer;font-size:14px;margin-bottom:-1px}
+  .tabs button[aria-selected="true"]{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+  .tabs button:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+
+  .panel{display:none} .panel.on{display:block}
+  .phead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+  .phead h2{font-size:18px} .phead p{color:var(--muted-foreground);font-size:13.5px;margin:4px 0 0}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  thead th{text-align:left;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted-foreground);font-weight:600;padding:11px 16px;border-bottom:1px solid var(--border)}
+  tbody td{padding:12px 16px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  .who{display:flex;align-items:center;gap:11px}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--secondary);color:var(--secondary-foreground);display:grid;place-items:center;font-weight:650;font-size:13px;flex:none}
+  .who .nm{font-weight:550} .who .em{font-size:12px;color:var(--muted-foreground);font-family:var(--font-mono)}
+  .select{font:inherit;font-size:13px;background:var(--input);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:6px 9px}
+  .badge{font-family:var(--font-mono);font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid var(--border);background:var(--muted);color:var(--muted-foreground)}
+  .badge-pending{background:color-mix(in srgb,var(--warning) 14%,var(--card));color:var(--warning);border-color:transparent}
+  .badge-owner{background:var(--secondary);color:var(--secondary-foreground);border-color:transparent}
+  .rowend{display:flex;gap:8px;justify-content:flex-end}
+  .foot{padding:12px 16px;border-top:1px solid var(--border)}
+
+  .empty{text-align:center;padding:42px 20px;color:var(--muted-foreground)}
+  .empty .ic{width:50px;height:50px;border-radius:14px;background:var(--secondary);color:var(--secondary-foreground);display:grid;place-items:center;margin:0 auto 12px}
+  .empty h3{color:var(--foreground);font-size:16px;margin-bottom:6px}
+
+  .matrix td.perm{font-family:var(--font-mono);font-size:12.5px;color:var(--foreground)}
+  .matrix .yes{color:var(--success);font-weight:700} .matrix .no{color:var(--muted-foreground)}
+  .field{display:flex;flex-direction:column;gap:6px;max-width:420px;margin-bottom:16px}
+  .field label{font-size:13px;font-weight:550} .field .hint{font-size:12px;color:var(--muted-foreground)}
+  .input{font:inherit;font-size:14px;background:var(--input);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px}
+  .danger-zone{border:1px solid var(--destructive);border-radius:calc(var(--radius) + 2px);padding:18px;margin-top:8px}
+  .danger-zone h3{font-size:14px;color:var(--destructive)}
+  .banner{border:1px solid var(--destructive);background:color-mix(in srgb,var(--destructive) 9%,var(--card));color:var(--destructive);border-radius:var(--radius);padding:11px 13px;font-size:13.5px;margin-bottom:16px;display:none}
+  .banner.on{display:block} .banner .code{font-family:var(--font-mono);font-size:11px}
+
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:grid;place-items:center;z-index:40;padding:20px}
+  .overlay[hidden]{display:none}
+  .dialog{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius) + 4px);box-shadow:var(--shadow-md);max-width:420px;width:100%;padding:22px}
+  .dialog h3{font-size:17px;margin-bottom:14px}
+  .demoswitch{display:inline-flex;background:var(--muted);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);padding:3px}
+  .demoswitch button{border:0;background:transparent;color:var(--muted-foreground);padding:5px 11px;border-radius:var(--radius);cursor:pointer;font-size:12.5px}
+  .demoswitch button[aria-pressed="true"]{background:var(--card);color:var(--foreground);box-shadow:var(--shadow-sm)}
+  .toast{position:fixed;right:20px;bottom:20px;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--success);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:12px 14px;font-size:13.5px;display:none}
+  @media (max-width:860px){.app{grid-template-columns:1fr}aside{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><span class="logo" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg></span>Scaffold Reference</div>
+    <div class="orgsw">
+      <button aria-haspopup="true" aria-expanded="false" id="orgBtn" onclick="toggleOrg()">
+        <span class="oi">NW</span><span class="ot"><span class="n">Northwind Clinic Group</span><span class="s">/o/northwind</span></span><span aria-hidden="true">▾</span></button>
+      <div class="menu" id="orgMenu" hidden role="menu">
+        <button role="menuitem">Northwind Clinic Group <span class="type">team</span></button>
+        <button role="menuitem">Riverside Family Practice <span class="type">team</span></button>
+        <button role="menuitem">Priya Raghavan <span class="type">personal</span></button>
+        <div class="api" style="padding:6px 8px 0">GET /api/me → orgs[]</div>
+      </div>
+    </div>
+    <nav aria-label="Primary">
+      <div class="grp">Product</div>
+      <a><span>▦</span> Dashboard</a><a><span>✎</span> Workspaces</a>
+      <div class="grp">Settings</div>
+      <a class="active"><span>◈</span> Organization</a>
+      <a><span>▣</span> Audit Log</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs"><span class="slug">/o/northwind</span> · Settings · Organization</div>
+      <div class="tspacer"></div>
+      <div class="demoswitch" role="group" aria-label="Data scenario">
+        <button aria-pressed="true" onclick="setScenario('happy',this)">Populated</button>
+        <button aria-pressed="false" onclick="setScenario('empty',this)">Empty</button>
+      </div>
+      <button class="iconbtn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
+    </div>
+
+    <main class="content">
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" onclick="tab('members',this)">Members</button>
+        <button role="tab" aria-selected="false" onclick="tab('invitations',this)">Invitations</button>
+        <button role="tab" aria-selected="false" onclick="tab('roles',this)">Roles &amp; Permissions</button>
+        <button role="tab" aria-selected="false" onclick="tab('general',this)">General</button>
+      </div>
+
+      <!-- MEMBERS -->
+      <section class="panel on" id="p-members">
+        <div class="phead"><div><h2>Members</h2><p>Exactly one role per member. Admins can change roles, remove, or create members directly.</p></div>
+          <button class="btn btn-primary" onclick="openDialog('addMember')">+ Add member</button></div>
+        <div class="banner" id="ownerErr"><span class="code">CONFLICT</span> · An organization must keep at least one owner. Transfer ownership first.</div>
+        <div class="card">
+          <table>
+            <thead><tr><th>Member</th><th>Role</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+            <tbody id="memberRows"></tbody>
+          </table>
+          <div class="foot"><div class="api">GET&nbsp; /api/orgs/:orgId/members?limit=25&offset=0 · PATCH&nbsp; /api/orgs/:orgId/members/:memberId · DELETE&nbsp; /api/orgs/:orgId/members/:memberId</div></div>
+        </div>
+      </section>
+
+      <!-- INVITATIONS -->
+      <section class="panel" id="p-invitations">
+        <div class="phead"><div><h2>Invitations</h2><p>Pending invites — single-use 7-day tokens. Resend or revoke at any time.</p></div>
+          <button class="btn btn-primary" onclick="openDialog('invite')">+ Send invite</button></div>
+        <div class="card" id="inviteCard">
+          <table>
+            <thead><tr><th>Email</th><th>Role</th><th>Status</th><th>Expires</th><th style="text-align:right">Actions</th></tr></thead>
+            <tbody id="inviteRows"></tbody>
+          </table>
+          <div class="foot"><div class="api">GET&nbsp; /api/orgs/:orgId/invitations · POST&nbsp; …/invitations · POST&nbsp; …/invitations/:id/resend · DELETE&nbsp; …/invitations/:id</div></div>
+        </div>
+        <div class="card" id="inviteEmpty" style="display:none">
+          <div class="empty"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div>
+            <h3>No pending invitations</h3><p style="margin:0 0 14px">Invite teammates by email to give them access.</p>
+            <button class="btn btn-primary btn-sm" onclick="openDialog('invite')">Send an invite</button></div>
+        </div>
+      </section>
+
+      <!-- ROLES MATRIX (read-only) -->
+      <section class="panel" id="p-roles">
+        <div class="phead"><div><h2>Roles &amp; Permissions</h2><p>Read-only. Roles are code-defined (built-in + module manifests) — not editable in v1.</p></div></div>
+        <div class="card">
+          <table class="matrix">
+            <thead><tr><th>Permission</th><th style="text-align:center">owner</th><th style="text-align:center">admin</th><th style="text-align:center">member</th><th style="text-align:center">Workspace Manager</th></tr></thead>
+            <tbody id="matrixRows"></tbody>
+          </table>
+          <div class="foot"><div class="api">GET&nbsp; /api/orgs/:orgId/roles</div></div>
+        </div>
+      </section>
+
+      <!-- GENERAL -->
+      <section class="panel" id="p-general">
+        <div class="phead"><div><h2>General</h2><p>Organization name, slug, and lifecycle. Owner-only actions are gated server-side.</p></div></div>
+        <div class="card" style="padding:20px;max-width:640px">
+          <div class="field"><label for="g-name">Name</label><input class="input" id="g-name" value="Northwind Clinic Group"></div>
+          <div class="field"><label for="g-slug">Slug</label><input class="input mono" id="g-slug" value="northwind"><span class="hint">Used in URLs: /o/<span class="mono">northwind</span>/…</span></div>
+          <div class="field"><label>Type</label><span class="badge">team</span></div>
+          <button class="btn btn-primary" onclick="toast('Organization updated')">Save changes</button>
+          <div class="api" style="margin-top:12px">PATCH&nbsp; /api/orgs/:orgId</div>
+        </div>
+        <div class="danger-zone" style="max-width:640px">
+          <h3>Danger zone</h3>
+          <p style="color:var(--muted-foreground);font-size:13.5px;margin:6px 0 14px">Ownership transfer and deletion are owner-only. Deletion is a soft-delete with 30-day retention and requires typing the name to confirm.</p>
+          <div class="rowend" style="justify-content:flex-start">
+            <button class="btn btn-ghost" onclick="toast('Transfer ownership dialog')">Transfer ownership</button>
+            <button class="btn btn-destructive" onclick="openDialog('delete')">Delete organization</button>
+          </div>
+          <div class="api" style="margin-top:12px">POST&nbsp; …/transfer-ownership · DELETE&nbsp; /api/orgs/:orgId (soft-delete, deleted_at)</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- DIALOGS -->
+<div class="overlay" id="ov-invite" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="t-invite">
+  <h3 id="t-invite">Send invitation</h3>
+  <div class="field" style="max-width:none"><label for="inv-email">Email</label><input class="input" id="inv-email" value="jordan.avery@northwind.example"></div>
+  <div class="field" style="max-width:none"><label for="inv-role">Role</label><select class="select" id="inv-role" style="padding:9px 12px"><option>member</option><option>admin</option></select></div>
+  <div class="api" style="margin:4px 0 16px">POST&nbsp; /api/orgs/:orgId/invitations</div>
+  <div class="rowend"><button class="btn btn-ghost" onclick="closeDialog()">Cancel</button><button class="btn btn-primary" onclick="closeDialog();toast('Invitation sent to jordan.avery@northwind.example')">Send invite</button></div>
+</div></div>
+
+<div class="overlay" id="ov-addMember" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="t-add">
+  <h3 id="t-add">Create member</h3>
+  <p style="color:var(--muted-foreground);font-size:13.5px;margin:-4px 0 14px">Creates the account directly and sends a set-password email.</p>
+  <div class="field" style="max-width:none"><label for="am-email">Email</label><input class="input" id="am-email" value="dana.okafor@northwind.example"></div>
+  <div class="field" style="max-width:none"><label for="am-role">Role</label><select class="select" id="am-role" style="padding:9px 12px"><option>member</option><option>admin</option></select></div>
+  <div class="api" style="margin:4px 0 16px">POST&nbsp; /api/orgs/:orgId/members</div>
+  <div class="rowend"><button class="btn btn-ghost" onclick="closeDialog()">Cancel</button><button class="btn btn-primary" onclick="closeDialog();toast('Member created — set-password email sent')">Create member</button></div>
+</div></div>
+
+<div class="overlay" id="ov-delete" hidden><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t-del">
+  <h3 id="t-del">Delete organization?</h3>
+  <p style="color:var(--muted-foreground);font-size:13.5px;margin:-4px 0 12px">Type <b class="mono">northwind</b> to confirm. Soft-deleted with 30-day retention.</p>
+  <div class="field" style="max-width:none"><input class="input mono" id="del-confirm" placeholder="northwind"></div>
+  <div class="api" style="margin:4px 0 16px">DELETE&nbsp; /api/orgs/:orgId</div>
+  <div class="rowend"><button class="btn btn-ghost" onclick="closeDialog()">Cancel</button><button class="btn btn-destructive" onclick="closeDialog();toast('Organization scheduled for deletion')">Delete</button></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function toggleTheme(){var e=document.documentElement,d=e.getAttribute('data-theme')==='dark';
+    e.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙 Dark':'☀ Light';}
+  function toggleOrg(){var m=document.getElementById('orgMenu'),b=document.getElementById('orgBtn');var o=!m.hidden;m.hidden=o;b.setAttribute('aria-expanded',String(!o));}
+  document.addEventListener('click',function(e){if(!e.target.closest('.orgsw')){document.getElementById('orgMenu').hidden=true;document.getElementById('orgBtn').setAttribute('aria-expanded','false');}});
+  function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none';},2600);}
+  function tab(id,btn){document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('on');});document.getElementById('p-'+id).classList.add('on');
+    document.querySelectorAll('[role=tab]').forEach(function(b){b.setAttribute('aria-selected',String(b===btn));});}
+  function openDialog(id){var o=document.getElementById('ov-'+id);o.hidden=false;var f=o.querySelector('input,select');if(f)f.focus();}
+  function closeDialog(){document.querySelectorAll('.overlay').forEach(function(o){o.hidden=true;});}
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDialog();});
+
+  // ---- mock data (SPEC §19 field names) ----
+  var MEMBERS=[
+    {id:'m_01',user_id:'u_01',role:'owner',name:'Priya Raghavan',email:'priya.raghavan@northwind.example',status:'verified',ini:'PR'},
+    {id:'m_02',user_id:'u_02',role:'admin',name:'Marcus Bello',email:'marcus.bello@northwind.example',status:'verified',ini:'MB'},
+    {id:'m_03',user_id:'u_03',role:'member',name:'Elif Demir',email:'elif.demir@northwind.example',status:'verified',ini:'ED'},
+    {id:'m_04',user_id:'u_04',role:'member',name:'Sofia Lindqvist',email:'sofia.lindqvist@northwind.example',status:'pending',ini:'SL'}
+  ];
+  var INVITES=[
+    {id:'inv_01',email:'jordan.avery@northwind.example',role:'admin',status:'pending',expires_at:'2026-07-22'},
+    {id:'inv_02',email:'noah.kim@northwind.example',role:'member',status:'pending',expires_at:'2026-07-24'}
+  ];
+  var PERMS=[
+    ['platform.members.manage',1,1,0,0],
+    ['platform.invitations.manage',1,1,0,0],
+    ['platform.org.delete',1,0,0,0],
+    ['platform.audit.read',1,1,0,0],
+    ['workspace.workspaces.manage',1,1,0,1],
+    ['workspace.tasks.write',1,1,1,1],
+    ['workspace.tasks.read',1,1,1,1]
+  ];
+  function roleBadge(r){var cls=r==='owner'?'badge badge-owner':'badge';return '<span class="'+cls+'">'+r+'</span>';}
+  function renderMembers(){
+    document.getElementById('memberRows').innerHTML=MEMBERS.map(function(m){
+      var opts=['owner','admin','member'].map(function(r){return '<option'+(r===m.role?' selected':'')+'>'+r+'</option>';}).join('');
+      var st=m.status==='pending'?'<span class="badge badge-pending">pending</span>':'<span class="badge">verified</span>';
+      var remove=m.role==='owner'?'<button class="btn btn-ghost btn-sm" onclick="tryRemoveOwner()">Remove</button>'
+        :'<button class="btn btn-ghost btn-sm" onclick="toast(\''+m.name+' removed\')">Remove</button>';
+      return '<tr><td><div class="who"><span class="avatar">'+m.ini+'</span><div><div class="nm">'+m.name+'</div><div class="em">'+m.email+'</div></div></div></td>'+
+        '<td><select class="select" onchange="toast(\'Role changed to \'+this.value)">'+opts+'</select></td>'+
+        '<td>'+st+'</td><td><div class="rowend">'+remove+'</div></td></tr>';
+    }).join('');
+  }
+  function tryRemoveOwner(){document.getElementById('ownerErr').classList.add('on');
+    document.getElementById('ownerErr').scrollIntoView({behavior:'smooth',block:'center'});}
+  function renderInvites(list){
+    document.getElementById('inviteRows').innerHTML=list.map(function(i){
+      return '<tr><td class="mono" style="font-size:13px">'+i.email+'</td><td>'+roleBadge(i.role)+'</td>'+
+        '<td><span class="badge badge-pending">'+i.status+'</span></td><td class="mono" style="font-size:12.5px">'+i.expires_at+'</td>'+
+        '<td><div class="rowend"><button class="btn btn-ghost btn-sm" onclick="toast(\'Invitation resent\')">Resend</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="toast(\'Invitation revoked\')">Revoke</button></div></td></tr>';
+    }).join('');
+  }
+  function renderMatrix(){
+    document.getElementById('matrixRows').innerHTML=PERMS.map(function(p){
+      var cells=p.slice(1).map(function(v){return '<td style="text-align:center" class="'+(v?'yes':'no')+'">'+(v?'✓':'—')+'</td>';}).join('');
+      return '<tr><td class="perm">'+p[0]+'</td>'+cells+'</tr>';
+    }).join('');
+  }
+  function setScenario(s,btn){
+    document.querySelectorAll('.demoswitch button').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});
+    if(s==='empty'){renderInvites([]);document.getElementById('inviteCard').style.display='none';document.getElementById('inviteEmpty').style.display='block';}
+    else{renderInvites(INVITES);document.getElementById('inviteCard').style.display='block';document.getElementById('inviteEmpty').style.display='none';}
+  }
+  renderMembers();renderInvites(INVITES);renderMatrix();
+</script>
+</body>
+</html>

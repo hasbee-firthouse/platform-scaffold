@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<!--
+  E7-S3 — Audit Log viewer  |  Scaffold Reference
+  ------------------------------------------------------------------------
+  SELF-CONTAINED: no external CSS/JS/font/image/CDN references.
+  Admin-gated, org-scoped, paginated (limit/offset -> { items, total }),
+  filterable by action and actor. Columns: created_at, actor, action,
+  target_type, target_id, ip. Field names per SPEC §12/§19 audit_log.
+  States: HAPPY (rows) · EMPTY (no matches) · ERROR (FORBIDDEN, non-admin).
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit Log · Scaffold Reference</title>
+<style>
+  :root{
+    --primary:#4f46e5; --primary-hover:#4338ca; --primary-foreground:#ffffff;
+    --secondary:#eef2ff; --secondary-foreground:#3730a3;
+    --destructive:#dc2626; --success:#059669; --warning:#b45309;
+    --background:#f6f7fb; --foreground:#0f172a; --card:#ffffff;
+    --muted:#f1f5f9; --muted-foreground:#64748b; --border:#e2e8f0; --input:#ffffff; --ring:#4f46e5;
+    --sidebar:#0f1430; --sidebar-foreground:#c7cbe6;
+    --radius:0.5rem;
+    --font-sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06); --shadow-md:0 12px 34px -16px rgba(15,23,42,.32);
+  }
+  [data-theme="dark"]{
+    --primary:#818cf8; --primary-hover:#a5b4fc; --primary-foreground:#1e1b4b;
+    --secondary:#1e293b; --secondary-foreground:#c7d2fe; --destructive:#f87171; --success:#34d399; --warning:#fbbf24;
+    --background:#0b1120; --foreground:#e2e8f0; --card:#111a2e; --muted:#1e293b; --muted-foreground:#94a3b8;
+    --border:#24304a; --input:#0f1830; --ring:#818cf8; --sidebar:#070b1c; --sidebar-foreground:#aab0d6;
+  }
+  *{box-sizing:border-box} html,body{margin:0;height:100%}
+  body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{margin:0;letter-spacing:-.01em}
+  .mono{font-family:var(--font-mono)} .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}
+  .api{display:inline-flex;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);border-left:2px solid var(--primary);padding:2px 0 2px 8px}
+  button{font:inherit}
+  .btn{font-size:13.5px;font-weight:550;cursor:pointer;border-radius:var(--radius);padding:8px 13px;border:1px solid transparent;display:inline-flex;align-items:center;gap:7px}
+  .btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+  .btn-primary{background:var(--primary);color:var(--primary-foreground)}
+  .btn-ghost{background:var(--card);color:var(--foreground);border-color:var(--border)} .btn-ghost:hover{background:var(--muted)}
+  .btn-sm{padding:6px 10px;font-size:12.5px} .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+  aside{background:var(--sidebar);color:var(--sidebar-foreground);display:flex;flex-direction:column;padding:14px 12px;gap:6px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 12px;color:#fff;font-weight:650}
+  .brand .logo{width:28px;height:28px;border-radius:8px;background:var(--primary);display:grid;place-items:center;flex:none}
+  .orgpill{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:var(--radius);padding:9px 10px;color:#fff}
+  .orgpill .oi{width:26px;height:26px;border-radius:6px;background:var(--primary);display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+  .orgpill .n{font-size:13.5px;font-weight:600} .orgpill .s{font-size:11px;font-family:var(--font-mono);color:var(--sidebar-foreground)}
+  nav{margin-top:8px;display:flex;flex-direction:column;gap:2px}
+  nav .grp{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:12px 10px 4px}
+  nav a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:var(--radius);color:var(--sidebar-foreground);text-decoration:none;font-size:14px;cursor:pointer}
+  nav a:hover{background:rgba(255,255,255,.06);color:#fff} nav a.active{background:var(--primary);color:#fff;font-weight:600}
+
+  .main{display:flex;flex-direction:column;min-width:0}
+  .topbar{height:58px;display:flex;align-items:center;gap:14px;padding:0 22px;background:var(--card);border-bottom:1px solid var(--border)}
+  .crumbs{font-size:14px;color:var(--muted-foreground)} .crumbs .slug{font-family:var(--font-mono);font-size:12px}
+  .tspacer{margin-left:auto}
+  .iconbtn{font-size:13px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:7px 11px}
+  .demoswitch{display:inline-flex;background:var(--muted);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);padding:3px}
+  .demoswitch button{border:0;background:transparent;color:var(--muted-foreground);padding:5px 11px;border-radius:var(--radius);cursor:pointer;font-size:12.5px}
+  .demoswitch button[aria-pressed="true"]{background:var(--card);color:var(--foreground);box-shadow:var(--shadow-sm)}
+  .content{padding:24px;overflow:auto}
+
+  .phead{margin-bottom:16px} .phead h1{font-size:22px} .phead p{color:var(--muted-foreground);font-size:14px;margin:6px 0 0}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px}
+  .fg{display:flex;flex-direction:column;gap:5px} .fg label{font-size:12px;color:var(--muted-foreground);font-weight:550}
+  .select,.input{font:inherit;font-size:13.5px;background:var(--input);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:8px 11px}
+  .select:focus,.input:focus{outline:none;border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 22%,transparent)}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm);overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  thead th{text-align:left;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted-foreground);font-weight:600;padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0} tbody tr:hover{background:var(--muted)}
+  .ts{font-family:var(--font-mono);font-size:12.5px;color:var(--muted-foreground);white-space:nowrap}
+  .actor{display:flex;align-items:center;gap:9px} .avatar{width:28px;height:28px;border-radius:50%;background:var(--secondary);color:var(--secondary-foreground);display:grid;place-items:center;font-weight:650;font-size:11px;flex:none}
+  .actor .nm{font-weight:550;font-size:13px} .actor.sys .avatar{background:var(--muted);color:var(--muted-foreground)}
+  .chip{font-family:var(--font-mono);font-size:11.5px;padding:3px 8px;border-radius:5px;background:var(--secondary);color:var(--secondary-foreground)}
+  .chip.warn{background:color-mix(in srgb,var(--warning) 15%,var(--card));color:var(--warning)}
+  .chip.danger{background:color-mix(in srgb,var(--destructive) 12%,var(--card));color:var(--destructive)}
+  .tt{font-family:var(--font-mono);font-size:12px;color:var(--muted-foreground)}
+  .pager{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--border);gap:12px;flex-wrap:wrap}
+  .pager .info{font-size:13px;color:var(--muted-foreground)} .pager .info b{color:var(--foreground);font-family:var(--font-mono)}
+  .pager .ctrls{display:flex;gap:8px;align-items:center}
+
+  .empty{text-align:center;padding:46px 20px;color:var(--muted-foreground)}
+  .empty .ic{width:50px;height:50px;border-radius:14px;background:var(--secondary);color:var(--secondary-foreground);display:grid;place-items:center;margin:0 auto 12px}
+  .empty h3{color:var(--foreground);font-size:16px;margin-bottom:6px}
+  .forbidden{max-width:460px;margin:40px auto;text-align:center;border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);background:var(--card);padding:34px}
+  .forbidden .ic{width:56px;height:56px;border-radius:16px;background:color-mix(in srgb,var(--destructive) 12%,var(--card));color:var(--destructive);display:grid;place-items:center;margin:0 auto 14px}
+  .forbidden .code{font-family:var(--font-mono);font-size:11px;color:var(--destructive);border:1px solid var(--destructive);border-radius:999px;padding:3px 10px;display:inline-block;margin-bottom:12px}
+  .surface{display:none} .surface.on{display:block}
+  @media (max-width:860px){.app{grid-template-columns:1fr}aside{display:none}}
+  @media (max-width:640px){.hide-sm{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><span class="logo" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg></span>Scaffold Reference</div>
+    <div class="orgpill"><span class="oi">NW</span><div><div class="n">Northwind Clinic Group</div><div class="s">/o/northwind</div></div></div>
+    <nav aria-label="Primary">
+      <div class="grp">Product</div><a><span>▦</span> Dashboard</a><a><span>✎</span> Workspaces</a>
+      <div class="grp">Settings</div><a><span>◈</span> Organization</a><a class="active"><span>▣</span> Audit Log</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs"><span class="slug">/o/northwind</span> · Settings · Audit Log</div>
+      <div class="tspacer"></div>
+      <div class="demoswitch" role="group" aria-label="Scenario">
+        <button aria-pressed="true" onclick="scenario('happy',this)">Results</button>
+        <button aria-pressed="false" onclick="scenario('empty',this)">No matches</button>
+        <button aria-pressed="false" onclick="scenario('forbidden',this)">Non-admin</button>
+      </div>
+      <button class="iconbtn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
+    </div>
+
+    <main class="content">
+      <!-- ADMIN VIEW -->
+      <section class="surface on" id="surf-admin">
+        <div class="phead"><h1>Audit Log</h1><p>Append-only, org-scoped by RLS — this org’s events only. Admin permission <span class="mono">platform.audit.read</span> required.</p></div>
+
+        <div class="filters">
+          <div class="fg"><label for="f-action">Action</label>
+            <select class="select" id="f-action" onchange="applyFilters()">
+              <option value="">All actions</option>
+              <option>member.role_changed</option><option>member.added</option><option>member.removed</option>
+              <option>invitation.sent</option><option>invitation.accepted</option>
+              <option>org.created</option><option>entitlement.changed</option>
+              <option>auth.sign_in.success</option><option>auth.sign_in.failure</option>
+            </select></div>
+          <div class="fg"><label for="f-actor">Actor</label>
+            <select class="select" id="f-actor" onchange="applyFilters()">
+              <option value="">All actors</option>
+              <option>Priya Raghavan</option><option>Marcus Bello</option><option>Elif Demir</option><option>system:cli</option>
+            </select></div>
+          <button class="btn btn-ghost btn-sm" onclick="resetFilters()">Clear</button>
+          <div class="tspacer" style="margin-left:auto"></div>
+          <div class="api" style="align-self:center">GET&nbsp; /api/orgs/:orgId/audit?action=&actor=&limit=25&offset=0</div>
+        </div>
+
+        <div class="card">
+          <div id="tableWrap">
+            <table>
+              <thead><tr><th>created_at</th><th>actor</th><th>action</th><th class="hide-sm">target_type</th><th class="hide-sm">target_id</th><th>ip</th></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <div id="emptyWrap" style="display:none"><div class="empty">
+            <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+            <h3>No events match your filters</h3><p style="margin:0">Try a different action or actor, or clear the filters.</p>
+          </div></div>
+          <div class="pager" id="pager">
+            <div class="info">Showing <b id="rangeLo">1</b>–<b id="rangeHi">25</b> of <b id="total">143</b></div>
+            <div class="ctrls">
+              <span class="tt" id="offsetLabel">offset=0 · limit=25</span>
+              <button class="btn btn-ghost btn-sm" id="prevBtn" onclick="page(-1)" disabled>← Prev</button>
+              <button class="btn btn-ghost btn-sm" id="nextBtn" onclick="page(1)">Next →</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FORBIDDEN (non-admin) -->
+      <section class="surface" id="surf-forbidden">
+        <div class="forbidden">
+          <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+          <span class="code">FORBIDDEN</span>
+          <h1 style="font-size:19px">Admin access required</h1>
+          <p style="color:var(--muted-foreground);margin:10px auto 0;max-width:40ch">Your role (<span class="mono">member</span>) can’t view the audit log. It requires <span class="mono">platform.audit.read</span>. The nav item is hidden for non-admins.</p>
+          <div class="api" style="justify-content:center;margin-top:16px">GET&nbsp; /api/orgs/:orgId/audit → 403</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+  function toggleTheme(){var e=document.documentElement,d=e.getAttribute('data-theme')==='dark';
+    e.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙 Dark':'☀ Light';}
+
+  // mock audit rows — field names: created_at, actor, action, target_type, target_id, ip
+  var ALL=[
+    {created_at:'2026-07-15 14:22:07',actor:'Priya Raghavan',ini:'PR',action:'member.role_changed',target_type:'member',target_id:'m_03',ip:'203.0.113.24',kind:'warn'},
+    {created_at:'2026-07-15 13:58:41',actor:'Marcus Bello',ini:'MB',action:'invitation.sent',target_type:'invitation',target_id:'inv_02',ip:'203.0.113.61',kind:''},
+    {created_at:'2026-07-15 11:04:19',actor:'system:cli',ini:'SY',action:'entitlement.changed',target_type:'entitlement_override',target_id:'workspace.maxTasks',ip:'10.0.0.4',kind:'warn',sys:true},
+    {created_at:'2026-07-15 09:47:53',actor:'Elif Demir',ini:'ED',action:'auth.sign_in.failure',target_type:'user',target_id:'u_03',ip:'198.51.100.9',kind:'danger'},
+    {created_at:'2026-07-14 18:12:30',actor:'Priya Raghavan',ini:'PR',action:'org.created',target_type:'organization',target_id:'org_01',ip:'203.0.113.24',kind:''},
+    {created_at:'2026-07-14 16:39:02',actor:'Marcus Bello',ini:'MB',action:'invitation.accepted',target_type:'invitation',target_id:'inv_01',ip:'203.0.113.61',kind:''},
+    {created_at:'2026-07-14 15:20:44',actor:'Priya Raghavan',ini:'PR',action:'member.added',target_type:'member',target_id:'m_04',ip:'203.0.113.24',kind:''},
+    {created_at:'2026-07-13 10:05:11',actor:'Elif Demir',ini:'ED',action:'auth.sign_in.success',target_type:'session',target_id:'sess_88',ip:'198.51.100.9',kind:''}
+  ];
+  var TOTAL=143, LIMIT=25, offset=0, filtered=ALL;
+
+  function chipCls(k){return k?('chip '+k):'chip';}
+  function render(){
+    var body=ALL.map(function(r){
+      return '<tr><td class="ts">'+r.created_at+'</td>'+
+        '<td><div class="actor'+(r.sys?' sys':'')+'"><span class="avatar">'+r.ini+'</span><span class="nm">'+r.actor+'</span></div></td>'+
+        '<td><span class="'+chipCls(r.kind)+'">'+r.action+'</span></td>'+
+        '<td class="hide-sm tt">'+r.target_type+'</td>'+
+        '<td class="hide-sm tt">'+r.target_id+'</td>'+
+        '<td class="tt">'+r.ip+'</td></tr>';
+    }).join('');
+    document.getElementById('rows').innerHTML=body;
+  }
+  function updatePager(){
+    var lo=offset+1, hi=Math.min(offset+LIMIT,TOTAL);
+    document.getElementById('rangeLo').textContent=lo;
+    document.getElementById('rangeHi').textContent=hi;
+    document.getElementById('total').textContent=TOTAL;
+    document.getElementById('offsetLabel').textContent='offset='+offset+' · limit='+LIMIT;
+    document.getElementById('prevBtn').disabled=offset===0;
+    document.getElementById('nextBtn').disabled=offset+LIMIT>=TOTAL;
+  }
+  function page(dir){offset=Math.max(0,offset+dir*LIMIT);updatePager();}
+  function applyFilters(){
+    var a=document.getElementById('f-action').value, ac=document.getElementById('f-actor').value;
+    // demo: if both broad -> results; if a very specific combo -> empty state
+    var noMatch = (a==='entitlement.changed' && ac==='Elif Demir');
+    if(noMatch){TOTAL=0;document.getElementById('tableWrap').style.display='none';document.getElementById('emptyWrap').style.display='block';document.getElementById('pager').style.display='none';}
+    else{TOTAL=143;document.getElementById('tableWrap').style.display='block';document.getElementById('emptyWrap').style.display='none';document.getElementById('pager').style.display='flex';offset=0;updatePager();}
+  }
+  function resetFilters(){document.getElementById('f-action').value='';document.getElementById('f-actor').value='';applyFilters();}
+  function scenario(s,btn){
+    document.querySelectorAll('.demoswitch button').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});
+    document.getElementById('surf-admin').classList.toggle('on',s!=='forbidden');
+    document.getElementById('surf-forbidden').classList.toggle('on',s==='forbidden');
+    if(s==='empty'){TOTAL=0;document.getElementById('tableWrap').style.display='none';document.getElementById('emptyWrap').style.display='block';document.getElementById('pager').style.display='none';}
+    else if(s==='happy'){TOTAL=143;offset=0;document.getElementById('tableWrap').style.display='block';document.getElementById('emptyWrap').style.display='none';document.getElementById('pager').style.display='flex';updatePager();}
+  }
+  render();updatePager();
+</script>
+</body>
+</html>

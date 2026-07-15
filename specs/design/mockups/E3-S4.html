@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<!--
+  E3-S4 — Web app shell & route assembly  |  Scaffold Reference
+  ------------------------------------------------------------------------
+  SELF-CONTAINED: no external CSS/JS/font/image/CDN references.
+  The frame every screen lives in: sidebar nav (from manifest nav +
+  navigation.order/hidden), org switcher, user menu, top bar, main content.
+  Surface toggle: CONTENT (happy) · 404 (unknown route) · UPGRADE-NOTICE
+  (ENTITLEMENT_REQUIRED). Active org encoded in URL /o/:orgSlug/... (SPEC §9.2).
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App shell · Scaffold Reference</title>
+<style>
+  :root{
+    --primary:#4f46e5; --primary-hover:#4338ca; --primary-foreground:#ffffff;
+    --secondary:#eef2ff; --secondary-foreground:#3730a3;
+    --destructive:#dc2626; --success:#059669; --warning:#b45309;
+    --background:#f6f7fb; --foreground:#0f172a; --card:#ffffff;
+    --muted:#f1f5f9; --muted-foreground:#64748b; --border:#e2e8f0; --input:#ffffff; --ring:#4f46e5;
+    --sidebar:#0f1430; --sidebar-foreground:#c7cbe6; --sidebar-active:#4f46e5;
+    --radius:0.5rem;
+    --font-sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06); --shadow-md:0 10px 30px -14px rgba(15,23,42,.30);
+  }
+  [data-theme="dark"]{
+    --primary:#818cf8; --primary-hover:#a5b4fc; --primary-foreground:#1e1b4b;
+    --secondary:#1e293b; --secondary-foreground:#c7d2fe; --destructive:#f87171; --success:#34d399; --warning:#fbbf24;
+    --background:#0b1120; --foreground:#e2e8f0; --card:#111a2e; --muted:#1e293b; --muted-foreground:#94a3b8;
+    --border:#24304a; --input:#0f1830; --ring:#818cf8; --sidebar:#070b1c; --sidebar-foreground:#aab0d6;
+  }
+  *{box-sizing:border-box} html,body{margin:0;height:100%}
+  body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{margin:0;letter-spacing:-.01em}
+  .mono{font-family:var(--font-mono)} .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}
+  .api{display:inline-flex;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);border-left:2px solid var(--primary);padding:2px 0 2px 8px}
+  button{font:inherit} .btn{font-size:14px;font-weight:550;cursor:pointer;border-radius:var(--radius);padding:9px 15px;border:1px solid transparent}
+  .btn-primary{background:var(--primary);color:var(--primary-foreground)} .btn-primary:hover{background:var(--primary-hover)}
+  .btn-ghost{background:var(--card);color:var(--foreground);border-color:var(--border)}
+  .btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+  /* ---------- SIDEBAR ---------- */
+  aside{background:var(--sidebar);color:var(--sidebar-foreground);display:flex;flex-direction:column;padding:14px 12px;gap:6px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 12px;color:#fff;font-weight:650}
+  .brand .logo{width:28px;height:28px;border-radius:8px;background:var(--primary);display:grid;place-items:center;flex:none}
+  /* org switcher */
+  .orgsw{position:relative}
+  .orgsw > button{width:100%;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.10);border-radius:var(--radius);padding:9px 10px;cursor:pointer;text-align:left}
+  .orgsw .oi{width:26px;height:26px;border-radius:6px;background:var(--primary);display:grid;place-items:center;flex:none;font-size:12px;font-weight:700}
+  .orgsw .ot{flex:1;min-width:0} .orgsw .ot .n{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .orgsw .ot .s{font-size:11px;color:var(--sidebar-foreground);font-family:var(--font-mono)}
+  .orgsw .menu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:6px;z-index:30}
+  .orgsw .menu[hidden]{display:none}
+  .orgsw .menu button{display:flex;width:100%;gap:10px;align-items:center;background:none;border:0;color:var(--foreground);text-align:left;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px}
+  .orgsw .menu button:hover{background:var(--muted)}
+  .orgsw .menu .sep{height:1px;background:var(--border);margin:6px 4px}
+  .orgsw .menu .type{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--muted-foreground)}
+
+  nav{margin-top:8px;display:flex;flex-direction:column;gap:2px}
+  nav .grp{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:12px 10px 4px}
+  nav a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:var(--radius);color:var(--sidebar-foreground);text-decoration:none;font-size:14px;cursor:pointer}
+  nav a:hover{background:rgba(255,255,255,.06);color:#fff}
+  nav a.active{background:var(--sidebar-active);color:#fff;font-weight:600}
+  nav a .ic{width:17px;height:17px;flex:none}
+  nav a.hidden-item{display:none}
+  aside .foot{margin-top:auto;font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,.35);padding:8px}
+
+  /* ---------- MAIN ---------- */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .topbar{height:60px;display:flex;align-items:center;gap:14px;padding:0 22px;background:var(--card);border-bottom:1px solid var(--border)}
+  .crumbs{font-size:14px;color:var(--muted-foreground)} .crumbs b{color:var(--foreground)}
+  .crumbs .slug{font-family:var(--font-mono);font-size:12px}
+  .tspacer{margin-left:auto}
+  .iconbtn{font-size:13px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:7px 11px}
+  .iconbtn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+  /* user menu */
+  .usr{position:relative}
+  .usr > button{display:flex;align-items:center;gap:9px;background:none;border:1px solid var(--border);border-radius:999px;padding:4px 10px 4px 4px;cursor:pointer;color:var(--foreground)}
+  .avatar{width:30px;height:30px;border-radius:50%;background:var(--secondary);color:var(--secondary-foreground);display:grid;place-items:center;font-weight:650;font-size:13px;flex:none}
+  .usr .menu{position:absolute;right:0;top:calc(100% + 8px);min-width:220px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:6px;z-index:30}
+  .usr .menu[hidden]{display:none}
+  .usr .menu .uhd{padding:10px 12px;border-bottom:1px solid var(--border);margin-bottom:6px}
+  .usr .menu .uhd .un{font-weight:600;font-size:14px} .usr .menu .uhd .ue{font-size:12px;color:var(--muted-foreground);font-family:var(--font-mono)}
+  .usr .menu button{display:flex;width:100%;gap:10px;align-items:center;background:none;border:0;color:var(--foreground);text-align:left;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:14px}
+  .usr .menu button:hover{background:var(--muted)}
+  .usr .menu .danger{color:var(--destructive)}
+
+  .demoswitch{display:inline-flex;background:var(--muted);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);padding:3px}
+  .demoswitch button{border:0;background:transparent;color:var(--muted-foreground);padding:5px 11px;border-radius:var(--radius);cursor:pointer;font-size:12.5px}
+  .demoswitch button[aria-pressed="true"]{background:var(--card);color:var(--foreground);box-shadow:var(--shadow-sm)}
+
+  .content{padding:26px 24px;overflow:auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm);padding:20px}
+  .stat{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:18px 0}
+  .stat .card .n{font-size:26px;font-weight:700} .stat .card .l{font-size:12px;color:var(--muted-foreground);margin-top:2px}
+
+  /* surfaces */
+  .surface{display:none} .surface.on{display:block}
+  .center{min-height:52vh;display:grid;place-items:center;text-align:center}
+  .big{font-family:var(--font-mono);font-size:64px;font-weight:700;color:var(--primary);line-height:1}
+  .notice{max-width:520px;margin:0 auto;text-align:center;padding:34px}
+  .notice .ic{width:60px;height:60px;border-radius:16px;background:color-mix(in srgb,var(--warning) 16%,var(--card));color:var(--warning);display:grid;place-items:center;margin:0 auto 16px}
+  .notice h2{font-size:20px} .notice p{color:var(--muted-foreground);margin:10px auto 18px;max-width:44ch}
+  .notice .code{font-family:var(--font-mono);font-size:11px;color:var(--warning);border:1px solid var(--warning);border-radius:999px;padding:3px 10px;display:inline-block;margin-bottom:14px}
+
+  @media (max-width:820px){.app{grid-template-columns:1fr}aside{display:none}.stat{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ================= SIDEBAR ================= -->
+  <aside>
+    <div class="brand"><span class="logo" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg></span>Scaffold Reference</div>
+
+    <!-- ORG SWITCHER: appears when user has >1 org (SPEC §9.2) -->
+    <div class="orgsw">
+      <button aria-haspopup="true" aria-expanded="false" id="orgBtn" onclick="toggleOrg()">
+        <span class="oi" id="orgInitial">NW</span>
+        <span class="ot"><span class="n" id="orgName">Northwind Clinic Group</span><span class="s" id="orgSlug">/o/northwind</span></span>
+        <span aria-hidden="true">▾</span>
+      </button>
+      <div class="menu" id="orgMenu" hidden role="menu">
+        <button role="menuitem" onclick="pickOrg('Northwind Clinic Group','NW','northwind','team')">Northwind Clinic Group <span class="type">team</span></button>
+        <button role="menuitem" onclick="pickOrg('Riverside Family Practice','RF','riverside','team')">Riverside Family Practice <span class="type">team</span></button>
+        <button role="menuitem" onclick="pickOrg('Priya Raghavan','PR','priya','personal')">Priya Raghavan <span class="type">personal</span></button>
+        <div class="sep"></div>
+        <button role="menuitem">+ New organization</button>
+        <div class="api" style="padding:6px 8px 2px">GET /api/me · POST /api/orgs</div>
+      </div>
+    </div>
+
+    <!-- NAV: manifest nav + navigation.order/hidden -->
+    <nav aria-label="Primary">
+      <div class="grp">Product</div>
+      <a class="active" data-nav="dashboard"><span class="ic">▦</span> Dashboard</a>
+      <a data-nav="workspaces"><span class="ic">✎</span> Workspaces</a>
+      <a data-nav="reports" class="hidden-item"><span class="ic">▤</span> Reports <span class="mono" style="margin-left:auto;font-size:10px">hidden</span></a>
+      <div class="grp">Settings</div>
+      <a data-nav="members"><span class="ic">◈</span> Members</a>
+      <a data-nav="invitations"><span class="ic">✉</span> Invitations</a>
+      <a data-nav="audit"><span class="ic">▣</span> Audit Log</a>
+      <a data-nav="general"><span class="ic">⚙</span> General</a>
+    </nav>
+    <div class="foot">navigation.order applied · navigation.hidden: ["reports"]</div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs"><span class="slug" id="crumbSlug">/o/northwind</span> · <b>Dashboard</b></div>
+      <div class="tspacer"></div>
+      <div class="demoswitch" role="group" aria-label="surface">
+        <button aria-pressed="true" onclick="showSurface('content',this)">Content</button>
+        <button aria-pressed="false" onclick="showSurface('e404',this)">404</button>
+        <button aria-pressed="false" onclick="showSurface('upgrade',this)">Upgrade notice</button>
+      </div>
+      <button class="iconbtn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
+      <!-- USER MENU -->
+      <div class="usr">
+        <button aria-haspopup="true" aria-expanded="false" id="usrBtn" onclick="toggleUsr()">
+          <span class="avatar">PR</span><span style="font-size:13.5px">Priya</span><span aria-hidden="true">▾</span></button>
+        <div class="menu" id="usrMenu" hidden role="menu">
+          <div class="uhd"><div class="un">Priya Raghavan</div><div class="ue">priya.raghavan@northwind.example</div></div>
+          <button role="menuitem">Profile settings</button>
+          <button role="menuitem">Security &amp; sessions</button>
+          <button role="menuitem" class="danger">Sign out <span class="api" style="margin-left:auto;border:0;padding:0">POST /api/auth/sign-out</span></button>
+        </div>
+      </div>
+    </div>
+
+    <main class="content">
+      <!-- HAPPY: content -->
+      <section class="surface on" id="surf-content">
+        <p class="eyebrow">/o/:orgSlug/dashboard</p>
+        <h1 style="font-size:24px;margin-top:6px">Good afternoon, Priya</h1>
+        <p style="color:var(--muted-foreground);margin:6px 0 0">Route tree assembled from module manifests · nav from <span class="mono">manifest.nav</span> + <span class="mono">navigation</span> config.</p>
+        <div class="stat">
+          <div class="card"><div class="n">3</div><div class="l">Workspaces</div></div>
+          <div class="card"><div class="n">47</div><div class="l">Open tasks</div></div>
+          <div class="card"><div class="n">12</div><div class="l">Members</div></div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px">Active organization</h3>
+          <p style="color:var(--muted-foreground);font-size:14px;margin:8px 0 0">Slug encoded in the URL so deep links are
+            unambiguous — no hidden session state.</p>
+          <div class="api" style="margin-top:12px">GET&nbsp; /api/orgs/:orgId/workspace/workspaces</div>
+        </div>
+      </section>
+
+      <!-- 404 -->
+      <section class="surface" id="surf-e404">
+        <div class="center"><div>
+          <div class="big">404</div>
+          <h2 style="font-size:20px;margin-top:14px">Route not found</h2>
+          <p style="color:var(--muted-foreground);margin:8px 0 18px">No module registered <span class="mono">/o/northwind/reports</span>.</p>
+          <button class="btn btn-primary" onclick="showSurface('content',document.querySelector('.demoswitch button'))">Back to dashboard</button>
+        </div></div>
+      </section>
+
+      <!-- UPGRADE NOTICE: ENTITLEMENT_REQUIRED (SPEC §11) -->
+      <section class="surface" id="surf-upgrade">
+        <div class="center"><div class="notice">
+          <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 .9-4.5 4.3 1.1 6.3L12 16.8 6.4 19.5l1.1-6.3L3 8.9 9 8z"/></svg></div>
+          <span class="code">ENTITLEMENT_REQUIRED</span>
+          <h2>You’ve hit a plan limit</h2>
+          <p>This organization has reached its included limit. Upgrades are handled by our team — reach out and we’ll
+            raise the limit for you.</p>
+          <a class="btn btn-primary" href="mailto:support@scaffold.example?subject=Upgrade%20request%20%E2%80%94%20Northwind%20Clinic%20Group" style="text-decoration:none">Contact us to upgrade</a>
+          <div class="api" style="justify-content:center;margin-top:16px;border:0">CTA = mailto (SPEC §11) — never a checkout</div>
+        </div></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+  function toggleTheme(){var e=document.documentElement,d=e.getAttribute('data-theme')==='dark';
+    e.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙 Dark':'☀ Light';}
+  function toggleOrg(){var m=document.getElementById('orgMenu'),b=document.getElementById('orgBtn');var o=!m.hidden;m.hidden=o;b.setAttribute('aria-expanded',String(!o));}
+  function pickOrg(name,ini,slug,type){
+    document.getElementById('orgName').textContent=name;
+    document.getElementById('orgInitial').textContent=ini;
+    document.getElementById('orgSlug').textContent='/o/'+slug;
+    document.getElementById('crumbSlug').textContent='/o/'+slug;
+    document.getElementById('orgMenu').hidden=true;
+    document.getElementById('orgBtn').setAttribute('aria-expanded','false');
+  }
+  function toggleUsr(){var m=document.getElementById('usrMenu'),b=document.getElementById('usrBtn');var o=!m.hidden;m.hidden=o;b.setAttribute('aria-expanded',String(!o));}
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('.orgsw')){document.getElementById('orgMenu').hidden=true;document.getElementById('orgBtn').setAttribute('aria-expanded','false');}
+    if(!e.target.closest('.usr')){document.getElementById('usrMenu').hidden=true;document.getElementById('usrBtn').setAttribute('aria-expanded','false');}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){document.getElementById('orgMenu').hidden=true;document.getElementById('usrMenu').hidden=true;}});
+  function showSurface(id,btn){
+    ['content','e404','upgrade'].forEach(function(s){document.getElementById('surf-'+s).classList.toggle('on',s===id);});
+    document.querySelectorAll('.demoswitch button').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});
+  }
+</script>
+</body>
+</html>

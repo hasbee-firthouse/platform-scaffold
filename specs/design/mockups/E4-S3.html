@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<!--
+  E4-S3 — Auth screens & end-to-end flows  |  Scaffold Reference
+  ------------------------------------------------------------------------
+  SELF-CONTAINED: no external CSS/JS/font/image/CDN references.
+  Sections (tabs): Sign in · Sign up · Verify email · Forgot password ·
+  Reset password · Accept invite · Magic link (config-gated).
+  Each submit labelled with its API call. Includes ERROR state (invalid
+  credentials + RATE_LIMITED) and the verify-email "check your inbox" state.
+  Auth endpoints are public: /api/auth/* (SPEC §15).
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Authentication · Scaffold Reference</title>
+<style>
+  :root{
+    --primary:#4f46e5; --primary-hover:#4338ca; --primary-foreground:#ffffff;
+    --secondary:#eef2ff; --secondary-foreground:#3730a3;
+    --destructive:#dc2626; --success:#059669; --warning:#b45309;
+    --background:#eef1f9; --foreground:#0f172a; --card:#ffffff;
+    --muted:#f1f5f9; --muted-foreground:#64748b; --border:#e2e8f0; --input:#ffffff; --ring:#4f46e5;
+    --radius:0.5rem;
+    --font-sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06); --shadow-md:0 20px 50px -24px rgba(15,23,42,.40);
+  }
+  [data-theme="dark"]{
+    --primary:#818cf8; --primary-hover:#a5b4fc; --primary-foreground:#1e1b4b;
+    --secondary:#1e293b; --secondary-foreground:#c7d2fe; --destructive:#f87171; --success:#34d399; --warning:#fbbf24;
+    --background:#070b1c; --foreground:#e2e8f0; --card:#111a2e; --muted:#1e293b; --muted-foreground:#94a3b8;
+    --border:#24304a; --input:#0f1830; --ring:#818cf8;
+  }
+  *{box-sizing:border-box} html,body{margin:0;min-height:100%}
+  body{background:
+      radial-gradient(1200px 600px at 15% -5%, color-mix(in srgb,var(--primary) 14%,transparent), transparent 60%),
+      var(--background);
+    color:var(--foreground);font-family:var(--font-sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh}
+  h1,h2,h3{margin:0;letter-spacing:-.01em}
+  .mono{font-family:var(--font-mono)} .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}
+  .api{display:flex;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);border-left:2px solid var(--primary);padding:2px 0 2px 8px;margin-top:12px}
+
+  .top{display:flex;align-items:center;gap:12px;padding:18px 24px}
+  .wordmark{display:flex;align-items:center;gap:10px;font-weight:650}
+  .logo{width:28px;height:28px;border-radius:8px;background:var(--primary);display:grid;place-items:center;color:var(--primary-foreground);flex:none}
+  .spacer{margin-left:auto}
+  .iconbtn{font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px}
+  .iconbtn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:10px 24px 70px;display:grid;grid-template-columns:210px 1fr;gap:30px}
+  .rail{position:sticky;top:16px;align-self:start;display:flex;flex-direction:column;gap:2px}
+  .rail .rl{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-foreground);padding:6px 10px}
+  .rail button{font:inherit;font-size:13.5px;text-align:left;background:none;border:1px solid transparent;border-radius:var(--radius);padding:8px 11px;color:var(--muted-foreground);cursor:pointer}
+  .rail button:hover{background:var(--card)}
+  .rail button[aria-current="true"]{background:var(--card);border-color:var(--border);color:var(--foreground);font-weight:600;box-shadow:var(--shadow-sm)}
+  .rail button:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+
+  .stage{display:grid;place-items:start center}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius) + 6px);box-shadow:var(--shadow-md);width:100%;max-width:420px;padding:28px}
+  .scr{display:none} .scr.on{display:block}
+  .card h2{font-size:21px} .sub{color:var(--muted-foreground);font-size:14px;margin:6px 0 20px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-size:13px;font-weight:550}
+  .input{font:inherit;font-size:14px;width:100%;background:var(--input);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px}
+  .input:focus{outline:none;border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 25%,transparent)}
+  .input[aria-invalid="true"]{border-color:var(--destructive)}
+  .btn{font:inherit;font-size:14px;font-weight:600;cursor:pointer;border-radius:var(--radius);padding:11px 15px;border:1px solid transparent;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:9px}
+  .btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+  .btn-primary{background:var(--primary);color:var(--primary-foreground)} .btn-primary:hover{background:var(--primary-hover)}
+  .btn-oauth{background:var(--card);color:var(--foreground);border-color:var(--border)}
+  .row-between{display:flex;align-items:center;justify-content:space-between;margin:-4px 0 14px}
+  .link{color:var(--primary);font-size:13px;text-decoration:none;cursor:pointer;background:none;border:0}
+  .divider{display:flex;align-items:center;gap:12px;color:var(--muted-foreground);font-size:12px;margin:16px 0}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--border)}
+  .alt{text-align:center;font-size:13px;color:var(--muted-foreground);margin-top:18px}
+  .banner{border-radius:var(--radius);padding:11px 13px;font-size:13px;margin-bottom:16px;display:none}
+  .banner.on{display:block}
+  .banner.err{border:1px solid var(--destructive);background:color-mix(in srgb,var(--destructive) 10%,var(--card));color:var(--destructive)}
+  .banner.rate{border:1px solid var(--warning);background:color-mix(in srgb,var(--warning) 12%,var(--card));color:var(--warning)}
+  .banner .code{font-family:var(--font-mono);font-size:11px}
+  .emailcta{text-align:center}
+  .emailcta .ic{width:56px;height:56px;border-radius:16px;background:var(--secondary);color:var(--secondary-foreground);display:grid;place-items:center;margin:6px auto 16px}
+  .badge-flag{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10.5px;color:var(--muted-foreground);border:1px solid var(--border);border-radius:999px;padding:3px 9px;margin-bottom:14px}
+  .invitecard{background:var(--secondary);border-radius:var(--radius);padding:12px 14px;margin-bottom:18px;font-size:13.5px}
+  .invitecard b{color:var(--secondary-foreground)}
+  .pw-hint{font-size:12px;color:var(--muted-foreground);margin-top:-6px}
+  @media (max-width:760px){.wrap{grid-template-columns:1fr}.rail{position:static;flex-direction:row;flex-wrap:wrap}}
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="wordmark"><span class="logo" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg></span>Scaffold Reference</div>
+    <span class="mono" style="font-size:11px;color:var(--muted-foreground);border:1px solid var(--border);border-radius:999px;padding:3px 10px">E4-S3 · Auth</span>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
+  </header>
+
+  <div class="wrap">
+    <nav class="rail" aria-label="Auth screens">
+      <div class="rl">Screens</div>
+      <button aria-current="true" onclick="show('signin',this)">Sign in</button>
+      <button onclick="show('signup',this)">Sign up</button>
+      <button onclick="show('verify',this)">Verify email</button>
+      <button onclick="show('forgot',this)">Forgot password</button>
+      <button onclick="show('reset',this)">Reset password</button>
+      <button onclick="show('invite',this)">Accept invite</button>
+      <button onclick="show('magic',this)">Magic link</button>
+    </nav>
+
+    <div class="stage">
+      <!-- SIGN IN -->
+      <section class="scr on card" id="scr-signin">
+        <h2>Welcome back</h2><p class="sub">Sign in to Scaffold Reference.</p>
+        <div class="banner err" id="signinErr"><span class="code">UNAUTHENTICATED</span> · Email or password is incorrect.</div>
+        <div class="banner rate" id="signinRate"><span class="code">RATE_LIMITED</span> · Too many attempts. Try again in 60s. <span style="opacity:.8">(failed sign-ins are audited)</span></div>
+        <button class="btn btn-oauth" style="margin-bottom:14px" onclick="fakeGoogle()">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22 12.2c0-.7-.06-1.4-.18-2H12v3.8h5.6a4.8 4.8 0 0 1-2.08 3.15v2.6h3.36C20.9 18 22 15.4 22 12.2z"/><path fill="#34A853" d="M12 22c2.7 0 4.97-.9 6.63-2.43l-3.36-2.6c-.93.62-2.12.98-3.27.98-2.52 0-4.65-1.7-5.42-3.98H3.13v2.68A9.99 9.99 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.58 13.97a6 6 0 0 1 0-3.94V7.35H3.13a10 10 0 0 0 0 9.3l3.45-2.68z"/><path fill="#EA4335" d="M12 6.06c1.47 0 2.79.5 3.83 1.5l2.87-2.87C16.96 3.05 14.7 2 12 2A9.99 9.99 0 0 0 3.13 7.35l3.45 2.68C7.35 7.76 9.48 6.06 12 6.06z"/></svg>
+          Continue with Google</button>
+        <div class="divider">or</div>
+        <form onsubmit="return signin(event)">
+          <div class="field"><label for="si-email">Email</label><input class="input" id="si-email" type="email" value="priya.raghavan@northwind.example"></div>
+          <div class="field"><label for="si-pw">Password</label><input class="input" id="si-pw" type="password" value="············"></div>
+          <div class="row-between"><label style="font-size:13px;display:flex;gap:6px;align-items:center"><input type="checkbox" checked> Remember me</label>
+            <button type="button" class="link" onclick="show('forgot',railBtn(3))">Forgot password?</button></div>
+          <button class="btn btn-primary" type="submit">Sign in</button>
+          <div class="api">POST&nbsp; /api/auth/sign-in/email</div>
+        </form>
+        <p class="alt">No account? <button class="link" onclick="show('signup',railBtn(1))">Create one</button></p>
+      </section>
+
+      <!-- SIGN UP -->
+      <section class="scr card" id="scr-signup">
+        <h2>Create your account</h2><p class="sub">Verification required before password sign-in.</p>
+        <button class="btn btn-oauth" style="margin-bottom:14px" onclick="fakeGoogle()">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22 12.2c0-.7-.06-1.4-.18-2H12v3.8h5.6a4.8 4.8 0 0 1-2.08 3.15v2.6h3.36C20.9 18 22 15.4 22 12.2z"/><path fill="#34A853" d="M12 22c2.7 0 4.97-.9 6.63-2.43l-3.36-2.6c-.93.62-2.12.98-3.27.98-2.52 0-4.65-1.7-5.42-3.98H3.13v2.68A9.99 9.99 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.58 13.97a6 6 0 0 1 0-3.94V7.35H3.13a10 10 0 0 0 0 9.3l3.45-2.68z"/><path fill="#EA4335" d="M12 6.06c1.47 0 2.79.5 3.83 1.5l2.87-2.87C16.96 3.05 14.7 2 12 2A9.99 9.99 0 0 0 3.13 7.35l3.45 2.68C7.35 7.76 9.48 6.06 12 6.06z"/></svg>
+          Sign up with Google</button>
+        <div class="divider">or</div>
+        <form onsubmit="return signup(event)">
+          <div class="field"><label for="su-name">Full name</label><input class="input" id="su-name" value="Elif Demir"></div>
+          <div class="field"><label for="su-email">Email</label><input class="input" id="su-email" type="email" value="elif.demir@northwind.example"></div>
+          <div class="field"><label for="su-pw">Password</label><input class="input" id="su-pw" type="password" value="············"></div>
+          <p class="pw-hint">At least 10 characters (SPEC §21).</p>
+          <button class="btn btn-primary" type="submit">Create account</button>
+          <div class="api">POST&nbsp; /api/auth/sign-up/email</div>
+        </form>
+        <p class="alt">Already have an account? <button class="link" onclick="show('signin',railBtn(0))">Sign in</button></p>
+      </section>
+
+      <!-- VERIFY EMAIL (empty/pending state) -->
+      <section class="scr card" id="scr-verify">
+        <div class="emailcta">
+          <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div>
+          <h2>Check your inbox</h2>
+          <p class="sub">We sent a verification link to <b class="mono" style="font-size:13px">elif.demir@northwind.example</b>. The account can’t password-sign-in until it’s verified.</p>
+          <button class="btn btn-primary" onclick="toast('Verification email resent')">Resend verification email</button>
+          <div class="api" style="justify-content:center">POST&nbsp; /api/auth/send-verification-email</div>
+          <p class="alt">Wrong address? <button class="link" onclick="show('signup',railBtn(1))">Go back</button></p>
+        </div>
+      </section>
+
+      <!-- FORGOT PASSWORD -->
+      <section class="scr card" id="scr-forgot">
+        <h2>Reset your password</h2><p class="sub">We’ll email you a single-use, expiring reset link.</p>
+        <form onsubmit="return forgot(event)">
+          <div class="field"><label for="fp-email">Email</label><input class="input" id="fp-email" type="email" value="priya.raghavan@northwind.example"></div>
+          <button class="btn btn-primary" type="submit">Send reset link</button>
+          <div class="api">POST&nbsp; /api/auth/forget-password</div>
+        </form>
+        <p class="alt"><button class="link" onclick="show('signin',railBtn(0))">Back to sign in</button></p>
+      </section>
+
+      <!-- RESET PASSWORD -->
+      <section class="scr card" id="scr-reset">
+        <h2>Choose a new password</h2><p class="sub">Setting a new password invalidates the old one and other sessions.</p>
+        <div class="banner err" id="resetErr"><span class="code">VALIDATION_FAILED</span> · Passwords don’t match.</div>
+        <form onsubmit="return reset(event)">
+          <div class="field"><label for="rp-pw">New password</label><input class="input" id="rp-pw" type="password" value="············"></div>
+          <div class="field"><label for="rp-pw2">Confirm password</label><input class="input" id="rp-pw2" type="password" value="············"></div>
+          <button class="btn btn-primary" type="submit">Set new password</button>
+          <div class="api">POST&nbsp; /api/auth/reset-password?token=…</div>
+        </form>
+      </section>
+
+      <!-- ACCEPT INVITE -->
+      <section class="scr card" id="scr-invite">
+        <h2>Join Northwind Clinic Group</h2><p class="sub">You’ve been invited to collaborate.</p>
+        <div class="invitecard">Invited by <b>Priya Raghavan</b> · role <b class="mono">admin</b> · expires <span class="mono">2026-07-22</span></div>
+        <button class="btn btn-oauth" style="margin-bottom:12px" onclick="fakeGoogle()">Accept with Google</button>
+        <div class="divider">or set a password</div>
+        <form onsubmit="return accept(event)">
+          <div class="field"><label for="ai-name">Full name</label><input class="input" id="ai-name" value="Marcus Bello"></div>
+          <div class="field"><label for="ai-pw">Password</label><input class="input" id="ai-pw" type="password" value="············"></div>
+          <button class="btn btn-primary" type="submit">Accept invitation</button>
+          <div class="api">POST&nbsp; /api/auth/accept-invitation?token=…</div>
+        </form>
+      </section>
+
+      <!-- MAGIC LINK (config-gated) -->
+      <section class="scr card" id="scr-magic">
+        <span class="badge-flag">⚑ capabilities.magicLink = true</span>
+        <h2>Sign in with a magic link</h2><p class="sub">Enabled only when the product config turns it on (off by default).</p>
+        <form onsubmit="return magic(event)">
+          <div class="field"><label for="ml-email">Email</label><input class="input" id="ml-email" type="email" value="priya.raghavan@northwind.example"></div>
+          <button class="btn btn-primary" type="submit">Email me a link</button>
+          <div class="api">POST&nbsp; /api/auth/sign-in/magic-link</div>
+        </form>
+        <p class="alt"><button class="link" onclick="show('signin',railBtn(0))">Use password instead</button></p>
+      </section>
+    </div>
+  </div>
+
+  <div id="toast" style="position:fixed;right:20px;bottom:20px;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--success);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:12px 14px;font-size:13.5px;display:none"></div>
+
+<script>
+  function toggleTheme(){var e=document.documentElement,d=e.getAttribute('data-theme')==='dark';
+    e.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙 Dark':'☀ Light';}
+  function railBtn(i){return document.querySelectorAll('.rail button')[i];}
+  function show(id,btn){
+    document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
+    document.getElementById('scr-'+id).classList.add('on');
+    document.querySelectorAll('.rail button').forEach(function(b){b.setAttribute('aria-current','false');});
+    if(btn)btn.setAttribute('aria-current','true');
+    ['signinErr','signinRate','resetErr'].forEach(function(x){var el=document.getElementById(x);if(el)el.classList.remove('on');});
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';
+    setTimeout(function(){t.style.display='none';},2600);}
+  function fakeGoogle(){toast('Redirecting to Google OAuth…');}
+
+  // Interactions demonstrate flow + error states (no real auth logic).
+  var siAttempts=0;
+  function signin(e){e.preventDefault();siAttempts++;
+    document.getElementById('signinErr').classList.remove('on');document.getElementById('signinRate').classList.remove('on');
+    if(siAttempts>=3){document.getElementById('signinRate').classList.add('on');return false;}
+    document.getElementById('signinErr').classList.add('on');
+    document.getElementById('si-pw').setAttribute('aria-invalid','true');return false;}
+  function signup(e){e.preventDefault();show('verify',railBtn(2));return false;}
+  function forgot(e){e.preventDefault();toast('If that email exists, a reset link is on its way');return false;}
+  function reset(e){e.preventDefault();
+    var a=document.getElementById('rp-pw').value,b=document.getElementById('rp-pw2').value;
+    if(a!==b){document.getElementById('resetErr').classList.add('on');return false;}
+    document.getElementById('resetErr').classList.remove('on');toast('Password updated — sign in with your new password');
+    setTimeout(function(){show('signin',railBtn(0));},900);return false;}
+  function accept(e){e.preventDefault();toast('Welcome to Northwind Clinic Group');return false;}
+  function magic(e){e.preventDefault();toast('Magic link sent — check your inbox');return false;}
+</script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<!--
+  E8-S3 — Workspace web screens  |  Scaffold Reference (reference-workspace)
+  ------------------------------------------------------------------------
+  SELF-CONTAINED: no external CSS/JS/font/image/CDN references.
+  Workspace list (create/rename/delete) + per-workspace task screen: add,
+  complete/uncomplete, delete, open/done filter, assignee picker over org
+  members. Nouns via useTerm (Workspace/Task). Upgrade-notice shown when the
+  workspace.maxTasks entitlement limit is hit (SPEC §11 / §18).
+  Field names per SPEC §19: workspace{id,org_id,name,created_by};
+  task{id,org_id,workspace_id,title,status:open|done,assignee_member_id,due_date,created_by}.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspaces · Scaffold Reference</title>
+<style>
+  :root{
+    --primary:#4f46e5; --primary-hover:#4338ca; --primary-foreground:#ffffff;
+    --secondary:#eef2ff; --secondary-foreground:#3730a3;
+    --destructive:#dc2626; --success:#059669; --warning:#b45309;
+    --background:#f6f7fb; --foreground:#0f172a; --card:#ffffff;
+    --muted:#f1f5f9; --muted-foreground:#64748b; --border:#e2e8f0; --input:#ffffff; --ring:#4f46e5;
+    --sidebar:#0f1430; --sidebar-foreground:#c7cbe6;
+    --radius:0.5rem;
+    --font-sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06); --shadow-md:0 12px 34px -16px rgba(15,23,42,.32);
+  }
+  [data-theme="dark"]{
+    --primary:#818cf8; --primary-hover:#a5b4fc; --primary-foreground:#1e1b4b;
+    --secondary:#1e293b; --secondary-foreground:#c7d2fe; --destructive:#f87171; --success:#34d399; --warning:#fbbf24;
+    --background:#0b1120; --foreground:#e2e8f0; --card:#111a2e; --muted:#1e293b; --muted-foreground:#94a3b8;
+    --border:#24304a; --input:#0f1830; --ring:#818cf8; --sidebar:#070b1c; --sidebar-foreground:#aab0d6;
+  }
+  *{box-sizing:border-box} html,body{margin:0;height:100%}
+  body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{margin:0;letter-spacing:-.01em}
+  .mono{font-family:var(--font-mono)} .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}
+  .api{display:inline-flex;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);border-left:2px solid var(--primary);padding:2px 0 2px 8px}
+  button{font:inherit}
+  .btn{font-size:13.5px;font-weight:550;cursor:pointer;border-radius:var(--radius);padding:8px 13px;border:1px solid transparent;display:inline-flex;align-items:center;gap:7px}
+  .btn:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+  .btn-primary{background:var(--primary);color:var(--primary-foreground)} .btn-primary:hover{background:var(--primary-hover)}
+  .btn-ghost{background:var(--card);color:var(--foreground);border-color:var(--border)} .btn-ghost:hover{background:var(--muted)}
+  .btn-destructive{background:var(--destructive);color:var(--destructive-foreground)}
+  .btn-sm{padding:6px 10px;font-size:12.5px} .btn[disabled]{opacity:.5;cursor:not-allowed}
+
+  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+  aside{background:var(--sidebar);color:var(--sidebar-foreground);display:flex;flex-direction:column;padding:14px 12px;gap:6px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 12px;color:#fff;font-weight:650}
+  .brand .logo{width:28px;height:28px;border-radius:8px;background:var(--primary);display:grid;place-items:center;flex:none}
+  .orgpill{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:var(--radius);padding:9px 10px;color:#fff}
+  .orgpill .oi{width:26px;height:26px;border-radius:6px;background:var(--primary);display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+  .orgpill .n{font-size:13.5px;font-weight:600} .orgpill .s{font-size:11px;font-family:var(--font-mono);color:var(--sidebar-foreground)}
+  nav{margin-top:8px;display:flex;flex-direction:column;gap:2px}
+  nav .grp{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:12px 10px 4px}
+  nav a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:var(--radius);color:var(--sidebar-foreground);text-decoration:none;font-size:14px;cursor:pointer}
+  nav a:hover{background:rgba(255,255,255,.06);color:#fff} nav a.active{background:var(--primary);color:#fff;font-weight:600}
+
+  .main{display:flex;flex-direction:column;min-width:0}
+  .topbar{height:58px;display:flex;align-items:center;gap:14px;padding:0 22px;background:var(--card);border-bottom:1px solid var(--border)}
+  .crumbs{font-size:14px;color:var(--muted-foreground)} .crumbs .slug{font-family:var(--font-mono);font-size:12px} .crumbs .lnk{color:var(--primary);cursor:pointer}
+  .tspacer{margin-left:auto}
+  .iconbtn{font-size:13px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:7px 11px}
+  .content{padding:24px;overflow:auto}
+
+  .phead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .phead h1{font-size:22px} .phead p{color:var(--muted-foreground);font-size:14px;margin:5px 0 0}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm)}
+
+  /* workspace grid */
+  .wsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .ws{padding:18px;cursor:pointer;position:relative;transition:border-color .12s,box-shadow .12s}
+  .ws:hover{border-color:var(--primary);box-shadow:var(--shadow-md)}
+  .ws .ic{width:38px;height:38px;border-radius:10px;background:var(--secondary);color:var(--secondary-foreground);display:grid;place-items:center;margin-bottom:12px}
+  .ws h3{font-size:16px} .ws .meta{color:var(--muted-foreground);font-size:12.5px;margin-top:4px}
+  .ws .kebab{position:absolute;top:12px;right:12px}
+  .kebab > button{background:none;border:0;color:var(--muted-foreground);cursor:pointer;font-size:18px;line-height:1;padding:4px 8px;border-radius:6px}
+  .kebab > button:hover{background:var(--muted)}
+  .kmenu{position:absolute;right:0;top:calc(100% + 4px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:6px;z-index:20;min-width:150px}
+  .kmenu[hidden]{display:none}
+  .kmenu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--foreground);padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13.5px}
+  .kmenu button:hover{background:var(--muted)} .kmenu .danger{color:var(--destructive)}
+
+  /* task screen */
+  .addbar{display:flex;gap:10px;padding:14px;border-bottom:1px solid var(--border);align-items:center;flex-wrap:wrap}
+  .input{font:inherit;font-size:14px;background:var(--input);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px}
+  .input:focus{outline:none;border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 22%,transparent)}
+  .select{font:inherit;font-size:13px;background:var(--input);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px}
+  .segfilter{display:inline-flex;background:var(--muted);border:1px solid var(--border);border-radius:var(--radius);padding:3px}
+  .segfilter button{border:0;background:transparent;color:var(--muted-foreground);padding:5px 12px;border-radius:calc(var(--radius) - 2px);cursor:pointer;font-size:13px}
+  .segfilter button[aria-pressed="true"]{background:var(--card);color:var(--foreground);box-shadow:var(--shadow-sm);font-weight:600}
+
+  .tasklist{list-style:none;margin:0;padding:0}
+  .task{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)}
+  .task:last-child{border-bottom:0}
+  .check{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border);background:var(--input);cursor:pointer;flex:none;display:grid;place-items:center;color:transparent}
+  .task.done .check{background:var(--success);border-color:var(--success);color:#fff}
+  .task .ttl{flex:1;min-width:0;font-size:14.5px}
+  .task.done .ttl{text-decoration:line-through;color:var(--muted-foreground)}
+  .task .due{font-family:var(--font-mono);font-size:11.5px;color:var(--muted-foreground);white-space:nowrap}
+  .task .asgn{display:flex;align-items:center;gap:8px}
+  .task .avatar{width:26px;height:26px;border-radius:50%;background:var(--secondary);color:var(--secondary-foreground);display:grid;place-items:center;font-weight:650;font-size:10.5px;flex:none}
+  .task .del{background:none;border:0;color:var(--muted-foreground);cursor:pointer;padding:4px 7px;border-radius:6px}
+  .task .del:hover{background:color-mix(in srgb,var(--destructive) 12%,transparent);color:var(--destructive)}
+
+  .usage{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--border);font-size:13px;color:var(--muted-foreground);flex-wrap:wrap}
+  .bar{flex:1;min-width:120px;height:8px;background:var(--muted);border-radius:999px;overflow:hidden}
+  .bar span{display:block;height:100%;background:var(--primary)} .bar span.full{background:var(--warning)}
+
+  /* upgrade notice */
+  .notice{border:1px solid var(--warning);background:color-mix(in srgb,var(--warning) 10%,var(--card));border-radius:calc(var(--radius) + 2px);padding:18px 20px;margin-bottom:16px;display:none;gap:16px;align-items:flex-start}
+  .notice.on{display:flex}
+  .notice .ic{width:44px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--warning) 22%,var(--card));color:var(--warning);display:grid;place-items:center;flex:none}
+  .notice h3{font-size:16px} .notice .code{font-family:var(--font-mono);font-size:11px;color:var(--warning)}
+  .notice p{color:var(--muted-foreground);font-size:13.5px;margin:6px 0 12px}
+
+  .empty{text-align:center;padding:42px 20px;color:var(--muted-foreground)}
+  .empty .ic{width:50px;height:50px;border-radius:14px;background:var(--secondary);color:var(--secondary-foreground);display:grid;place-items:center;margin:0 auto 12px}
+  .empty h3{color:var(--foreground);font-size:16px;margin-bottom:6px}
+
+  .view{display:none} .view.on{display:block}
+  .demoswitch{display:inline-flex;background:var(--muted);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);padding:3px}
+  .demoswitch button{border:0;background:transparent;color:var(--muted-foreground);padding:5px 11px;border-radius:var(--radius);cursor:pointer;font-size:12.5px}
+  .demoswitch button[aria-pressed="true"]{background:var(--card);color:var(--foreground);box-shadow:var(--shadow-sm)}
+  .toast{position:fixed;right:20px;bottom:20px;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--success);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:12px 14px;font-size:13.5px;display:none}
+  @media (max-width:900px){.wsgrid{grid-template-columns:1fr}} @media (max-width:860px){.app{grid-template-columns:1fr}aside{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><span class="logo" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg></span>Scaffold Reference</div>
+    <div class="orgpill"><span class="oi">NW</span><div><div class="n">Northwind Clinic Group</div><div class="s">/o/northwind</div></div></div>
+    <nav aria-label="Primary">
+      <div class="grp">Product</div><a><span>▦</span> Dashboard</a>
+      <a class="active"><span>✎</span> <span class="term-plural">Workspaces</span></a>
+      <div class="grp">Settings</div><a><span>◈</span> Organization</a><a><span>▣</span> Audit Log</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs"><span class="slug">/o/northwind</span> · <span class="lnk" onclick="showList()"><span class="term-plural">Workspaces</span></span><span id="crumbTail"></span></div>
+      <div class="tspacer"></div>
+      <div class="demoswitch" role="group" aria-label="Terminology">
+        <button aria-pressed="true" onclick="setTerm('workspace',this)">Workspace</button>
+        <button aria-pressed="false" onclick="setTerm('project',this)">Project</button>
+      </div>
+      <button class="iconbtn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
+    </div>
+
+    <main class="content">
+      <!-- ============ WORKSPACE LIST ============ -->
+      <section class="view on" id="v-list">
+        <div class="phead">
+          <div><h1><span class="term-plural">Workspaces</span></h1><p>Each <span class="term-single">workspace</span> holds a task list, scoped to this organization.</p></div>
+          <button class="btn btn-primary" onclick="createWs()">+ New <span class="term-single">workspace</span></button>
+        </div>
+        <div class="wsgrid" id="wsGrid"></div>
+        <div class="card" id="wsEmpty" style="display:none">
+          <div class="empty"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+            <h3>No <span class="term-plural">workspaces</span> yet</h3><p style="margin:0 0 14px">Create your first <span class="term-single">workspace</span> to start tracking tasks.</p>
+            <button class="btn btn-primary btn-sm" onclick="createWs()">New <span class="term-single">workspace</span></button></div>
+        </div>
+        <div class="api" style="margin-top:14px">GET&nbsp; /api/orgs/:orgId/workspace/workspaces · POST&nbsp; …/workspaces · PATCH&nbsp; …/workspaces/:workspaceId · DELETE&nbsp; …/workspaces/:workspaceId</div>
+      </section>
+
+      <!-- ============ TASK SCREEN ============ -->
+      <section class="view" id="v-tasks">
+        <div class="phead">
+          <div><h1 id="wsTitle">Q3 Onboarding</h1><p><span class="term-single">Workspace</span> tasks · assign to any org member.</p></div>
+          <div class="segfilter" role="group" aria-label="Filter">
+            <button aria-pressed="true" onclick="setFilter('open',this)">Open</button>
+            <button aria-pressed="false" onclick="setFilter('done',this)">Done</button>
+            <button aria-pressed="false" onclick="setFilter('all',this)">All</button>
+          </div>
+        </div>
+
+        <!-- UPGRADE NOTICE (workspace.maxTasks) -->
+        <div class="notice" id="upNotice">
+          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 .9-4.5 4.3 1.1 6.3L12 16.8 6.4 19.5l1.1-6.3L3 8.9 9 8z"/></svg></div>
+          <div style="flex:1">
+            <span class="code">ENTITLEMENT_REQUIRED · workspace.maxTasks</span>
+            <h3>Task limit reached</h3>
+            <p>This <span class="term-single">workspace</span> hit its included limit of <b id="maxLabel">6</b> tasks. Upgrades are sales-led — contact us and we’ll raise the limit.</p>
+            <a class="btn btn-primary btn-sm" href="mailto:support@scaffold.example?subject=Raise%20workspace.maxTasks%20%E2%80%94%20Northwind%20Clinic%20Group" style="text-decoration:none">Contact us to upgrade</a>
+            <span class="api" style="margin-left:10px">CTA = mailto (SPEC §11) — never a checkout</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <form class="addbar" onsubmit="return addTask(event)">
+            <input class="input" id="newTitle" style="flex:1;min-width:180px" placeholder="Add a task…" value="">
+            <select class="select" id="newAssignee" aria-label="Assignee"></select>
+            <input class="input" id="newDue" type="date" value="2026-07-22" aria-label="Due date">
+            <button class="btn btn-primary" type="submit" id="addBtn">Add task</button>
+          </form>
+          <ul class="tasklist" id="taskList"></ul>
+          <div class="empty" id="taskEmpty" style="display:none"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></div>
+            <h3 id="emptyMsg">No open tasks</h3><p style="margin:0">Add one above to get started.</p></div>
+          <div class="usage">
+            <span>Tasks <b class="mono" id="usageCount">6</b> / <span class="mono" id="usageMax">6</span></span>
+            <div class="bar"><span id="usageBar" style="width:100%"></span></div>
+            <span class="mono" style="font-size:11px">entitlement: workspace.maxTasks</span>
+          </div>
+        </div>
+        <div class="api" style="margin-top:14px">GET&nbsp; …/workspaces/:workspaceId/tasks?status=open · POST&nbsp; …/tasks · PATCH&nbsp; …/tasks/:taskId · DELETE&nbsp; …/tasks/:taskId</div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function toggleTheme(){var e=document.documentElement,d=e.getAttribute('data-theme')==='dark';
+    e.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙 Dark':'☀ Light';}
+  function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none';},2400);}
+
+  // terminology (useTerm demo)
+  var TERMS={workspace:{s:'workspace',p:'workspaces',S:'Workspace',P:'Workspaces'},project:{s:'project',p:'projects',S:'Project',P:'Projects'}};
+  function setTerm(k,btn){var t=TERMS[k];
+    document.querySelectorAll('.demoswitch button').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});
+    document.querySelectorAll('.term-single').forEach(function(el){el.textContent=el.closest('h1,.phead h1')?t.S:t.s;});
+    document.querySelectorAll('.term-plural').forEach(function(el){el.textContent= /nav|crumbs|h1/.test((el.className+el.parentElement.className))?t.P:t.p;});
+    // simpler: title-case in headings/nav, lower in prose — normalize below
+    document.querySelectorAll('h1 .term-plural, nav .term-plural, .crumbs .term-plural').forEach(function(el){el.textContent=t.P;});
+    document.querySelectorAll('h1 .term-single').forEach(function(el){el.textContent=t.S;});
+  }
+
+  // members for assignee picker (SPEC §19: assignee_member_id -> member)
+  var MEMBERS=[
+    {member_id:'m_01',name:'Priya Raghavan',ini:'PR'},
+    {member_id:'m_02',name:'Marcus Bello',ini:'MB'},
+    {member_id:'m_03',name:'Elif Demir',ini:'ED'},
+    {member_id:'m_04',name:'Sofia Lindqvist',ini:'SL'}
+  ];
+  function memberById(id){return MEMBERS.find(function(m){return m.member_id===id;});}
+
+  // workspaces
+  var WORKSPACES=[
+    {id:'ws_01',name:'Q3 Onboarding',created_by:'m_01',taskCount:6,maxTasks:6},
+    {id:'ws_02',name:'Clinic Rollout',created_by:'m_02',taskCount:12,maxTasks:100},
+    {id:'ws_03',name:'Compliance Review',created_by:'m_01',taskCount:0,maxTasks:100}
+  ];
+  var openKebab=null;
+  function renderWs(){
+    var grid=document.getElementById('wsGrid');
+    document.getElementById('wsEmpty').style.display=WORKSPACES.length?'none':'block';
+    grid.innerHTML=WORKSPACES.map(function(w){
+      return '<article class="card ws" onclick="openWs(\''+w.id+'\')">'+
+        '<div class="kebab" onclick="event.stopPropagation()"><button aria-label="Actions" onclick="toggleKebab(\''+w.id+'\')">⋯</button>'+
+        '<div class="kmenu" id="k-'+w.id+'" hidden>'+
+          '<button onclick="renameWs(\''+w.id+'\')">Rename</button>'+
+          '<button class="danger" onclick="deleteWs(\''+w.id+'\')">Delete</button></div></div>'+
+        '<div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>'+
+        '<h3>'+w.name+'</h3>'+
+        '<div class="meta">'+w.taskCount+' tasks · limit '+w.maxTasks+'</div></article>';
+    }).join('');
+  }
+  function toggleKebab(id){var m=document.getElementById('k-'+id);var wasHidden=m.hidden;
+    document.querySelectorAll('.kmenu').forEach(function(k){k.hidden=true;});m.hidden=!wasHidden;}
+  document.addEventListener('click',function(e){if(!e.target.closest('.kebab'))document.querySelectorAll('.kmenu').forEach(function(k){k.hidden=true;});});
+  function createWs(){var name='New workspace '+(WORKSPACES.length+1);
+    WORKSPACES.push({id:'ws_0'+(WORKSPACES.length+1),name:name,created_by:'m_01',taskCount:0,maxTasks:100});renderWs();toast('Workspace created');}
+  function renameWs(id){var w=WORKSPACES.find(function(x){return x.id===id;});w.name=w.name+' (renamed)';renderWs();toast('Workspace renamed');}
+  function deleteWs(id){WORKSPACES=WORKSPACES.filter(function(x){return x.id!==id;});renderWs();toast('Workspace deleted');}
+
+  // tasks (SPEC §19 field names)
+  var TASKS=[
+    {id:'t_01',workspace_id:'ws_01',title:'Draft welcome packet',status:'open',assignee_member_id:'m_03',due_date:'2026-07-18'},
+    {id:'t_02',workspace_id:'ws_01',title:'Provision clinic logins',status:'open',assignee_member_id:'m_02',due_date:'2026-07-19'},
+    {id:'t_03',workspace_id:'ws_01',title:'Schedule kickoff call',status:'done',assignee_member_id:'m_01',due_date:'2026-07-10'},
+    {id:'t_04',workspace_id:'ws_01',title:'Import patient roster',status:'open',assignee_member_id:null,due_date:'2026-07-22'},
+    {id:'t_05',workspace_id:'ws_01',title:'Configure roles & permissions',status:'done',assignee_member_id:'m_02',due_date:'2026-07-08'},
+    {id:'t_06',workspace_id:'ws_01',title:'Verify audit logging',status:'open',assignee_member_id:'m_04',due_date:'2026-07-21'}
+  ];
+  var currentWs='ws_01', filter='open', tid=7;
+  function currentTasks(){return TASKS.filter(function(t){return t.workspace_id===currentWs;});}
+
+  function fillAssigneeSelect(){
+    document.getElementById('newAssignee').innerHTML='<option value="">Unassigned</option>'+
+      MEMBERS.map(function(m){return '<option value="'+m.member_id+'">'+m.name+'</option>';}).join('');
+  }
+  function assigneeSelect(t){
+    var opts='<option value=""'+(t.assignee_member_id?'':' selected')+'>Unassigned</option>'+
+      MEMBERS.map(function(m){return '<option value="'+m.member_id+'"'+(t.assignee_member_id===m.member_id?' selected':'')+'>'+m.name+'</option>';}).join('');
+    return '<select class="select" onchange="reassign(\''+t.id+'\',this.value)" aria-label="Assignee">'+opts+'</select>';
+  }
+  function renderTasks(){
+    var list=currentTasks().filter(function(t){return filter==='all'?true:t.status===filter;});
+    var ul=document.getElementById('taskList');
+    document.getElementById('taskEmpty').style.display=list.length?'none':'block';
+    document.getElementById('emptyMsg').textContent=filter==='done'?'No completed tasks':(filter==='open'?'No open tasks':'No tasks');
+    ul.innerHTML=list.map(function(t){
+      var a=memberById(t.assignee_member_id);
+      var avatar=a?'<span class="avatar" title="'+a.name+'">'+a.ini+'</span>':'<span class="avatar" style="background:var(--muted);color:var(--muted-foreground)">?</span>';
+      return '<li class="task'+(t.status==='done'?' done':'')+'">'+
+        '<button class="check" aria-label="Toggle complete" onclick="toggleTask(\''+t.id+'\')">✓</button>'+
+        '<span class="ttl">'+t.title+'</span>'+
+        '<span class="due">'+(t.due_date||'')+'</span>'+
+        '<span class="asgn">'+avatar+assigneeSelect(t)+'</span>'+
+        '<button class="del" aria-label="Delete task" onclick="delTask(\''+t.id+'\')">✕</button></li>';
+    }).join('');
+    updateUsage();
+  }
+  function updateUsage(){
+    var w=WORKSPACES.find(function(x){return x.id===currentWs;});
+    var count=currentTasks().length;w.taskCount=count;
+    document.getElementById('usageCount').textContent=count;
+    document.getElementById('usageMax').textContent=w.maxTasks;
+    var pct=Math.min(100,Math.round(count/w.maxTasks*100));
+    var bar=document.getElementById('usageBar');bar.style.width=pct+'%';bar.classList.toggle('full',count>=w.maxTasks);
+    var atLimit=count>=w.maxTasks;
+    document.getElementById('upNotice').classList.toggle('on',atLimit);
+    document.getElementById('maxLabel').textContent=w.maxTasks;
+    document.getElementById('addBtn').disabled=atLimit;
+    document.getElementById('addBtn').textContent=atLimit?'Limit reached':'Add task';
+  }
+  function addTask(e){e.preventDefault();
+    var w=WORKSPACES.find(function(x){return x.id===currentWs;});
+    if(currentTasks().length>=w.maxTasks){updateUsage();return false;}
+    var title=document.getElementById('newTitle').value.trim();if(!title){toast('Enter a task title');return false;}
+    TASKS.push({id:'t_0'+(tid++),workspace_id:currentWs,title:title,status:'open',
+      assignee_member_id:document.getElementById('newAssignee').value||null,due_date:document.getElementById('newDue').value||null});
+    document.getElementById('newTitle').value='';renderTasks();toast('Task added');return false;}
+  function toggleTask(id){var t=TASKS.find(function(x){return x.id===id;});t.status=t.status==='open'?'done':'open';renderTasks();
+    toast('Task marked '+t.status);}
+  function delTask(id){TASKS=TASKS.filter(function(x){return x.id!==id;});renderTasks();toast('Task deleted');}
+  function reassign(id,mid){var t=TASKS.find(function(x){return x.id===id;});t.assignee_member_id=mid||null;renderTasks();
+    toast(mid?('Assigned to '+memberById(mid).name):'Unassigned');}
+  function setFilter(f,btn){filter=f;document.querySelectorAll('.segfilter button').forEach(function(b){b.setAttribute('aria-pressed',String(b===btn));});renderTasks();}
+
+  function openWs(id){currentWs=id;filter='open';
+    var w=WORKSPACES.find(function(x){return x.id===id;});
+    document.getElementById('wsTitle').textContent=w.name;
+    document.getElementById('crumbTail').textContent=' · '+w.name;
+    document.querySelectorAll('.segfilter button').forEach(function(b,i){b.setAttribute('aria-pressed',String(i===0));});
+    document.getElementById('v-list').classList.remove('on');document.getElementById('v-tasks').classList.add('on');
+    renderTasks();window.scrollTo(0,0);}
+  function showList(){document.getElementById('v-tasks').classList.remove('on');document.getElementById('v-list').classList.add('on');
+    document.getElementById('crumbTail').textContent='';renderWs();}
+
+  fillAssigneeSelect();renderWs();
+</script>
+</body>
+</html>

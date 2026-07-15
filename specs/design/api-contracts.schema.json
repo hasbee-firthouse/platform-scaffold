@@ -1,0 +1,671 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "platform-scaffold API",
+    "version": "1.0.0",
+    "description": "OpenAPI representation of specs/design/api-contracts.md. Faithful to SPEC.md v1 (LOCKED). Error envelope, pagination, and every request/response body are modeled in components/schemas."
+  },
+  "servers": [
+    { "url": "http://localhost:3000/api", "description": "Local dev (Vite proxies /api)" },
+    { "url": "/api", "description": "Production (Fastify serves API + SPA)" }
+  ],
+  "tags": [
+    { "name": "system" },
+    { "name": "auth" },
+    { "name": "me" },
+    { "name": "organizations" },
+    { "name": "members" },
+    { "name": "invitations" },
+    { "name": "roles" },
+    { "name": "audit" },
+    { "name": "entitlements" },
+    { "name": "workspace" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["system"],
+        "summary": "Liveness probe",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Process is up",
+            "content": { "application/json": { "schema": { "type": "object", "required": ["status"], "properties": { "status": { "type": "string", "example": "ok" } } } } }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": ["system"],
+        "summary": "Readiness probe (DB ping)",
+        "security": [],
+        "responses": {
+          "200": { "description": "Ready", "content": { "application/json": { "schema": { "type": "object", "required": ["status", "db"], "properties": { "status": { "type": "string", "example": "ready" }, "db": { "type": "string", "example": "up" } } } } } },
+          "503": { "description": "DB unreachable", "content": { "application/json": { "schema": { "type": "object", "required": ["status", "db"], "properties": { "status": { "type": "string", "example": "unready" }, "db": { "type": "string", "example": "down" } } } } } }
+        }
+      }
+    },
+    "/auth/sign-up/email": {
+      "post": {
+        "tags": ["auth"], "summary": "Email/password sign-up (verification required)", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SignUpEmailRequest" } } } },
+        "responses": {
+          "200": { "description": "Account created; verification email enqueued", "content": { "application/json": { "schema": { "type": "object", "properties": { "user": { "$ref": "#/components/schemas/UserPublic" } } } } } },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
+    "/auth/sign-in/email": {
+      "post": {
+        "tags": ["auth"], "summary": "Email/password sign-in", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SignInEmailRequest" } } } },
+        "responses": {
+          "200": { "description": "Session established (Set-Cookie)", "content": { "application/json": { "schema": { "type": "object", "properties": { "user": { "$ref": "#/components/schemas/UserPublic" } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/auth/sign-in/social": {
+      "post": {
+        "tags": ["auth"], "summary": "Begin Google OAuth", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["provider"], "properties": { "provider": { "type": "string", "enum": ["google"] }, "callbackURL": { "type": "string" } } } } } },
+        "responses": {
+          "200": { "description": "Redirect URL to provider", "content": { "application/json": { "schema": { "type": "object", "required": ["url"], "properties": { "url": { "type": "string" } } } } } },
+          "422": { "$ref": "#/components/responses/ValidationFailed" }
+        }
+      }
+    },
+    "/auth/callback/google": {
+      "get": {
+        "tags": ["auth"], "summary": "Google OAuth callback (account linking on shared verified email)", "security": [],
+        "parameters": [
+          { "name": "code", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "302": { "description": "Redirect to APP_URL with session cookie" } }
+      }
+    },
+    "/auth/sign-out": {
+      "post": {
+        "tags": ["auth"], "summary": "Sign out current session",
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" } }
+      }
+    },
+    "/auth/get-session": {
+      "get": {
+        "tags": ["auth"], "summary": "Current session or null", "security": [],
+        "responses": { "200": { "description": "Session state", "content": { "application/json": { "schema": { "type": "object", "properties": { "session": { "oneOf": [ { "$ref": "#/components/schemas/Session" }, { "type": "null" } ] }, "user": { "oneOf": [ { "$ref": "#/components/schemas/UserPublic" }, { "type": "null" } ] } } } } } } }
+      }
+    },
+    "/auth/list-sessions": {
+      "post": {
+        "tags": ["auth"], "summary": "List active sessions",
+        "responses": { "200": { "description": "Sessions", "content": { "application/json": { "schema": { "type": "object", "required": ["sessions"], "properties": { "sessions": { "type": "array", "items": { "$ref": "#/components/schemas/Session" } } } } } } }, "401": { "$ref": "#/components/responses/Unauthenticated" } }
+      }
+    },
+    "/auth/revoke-session": {
+      "post": {
+        "tags": ["auth"], "summary": "Revoke one session",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["token"], "properties": { "token": { "type": "string" } } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/auth/revoke-other-sessions": {
+      "post": {
+        "tags": ["auth"], "summary": "Sign out other sessions",
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" } }
+      }
+    },
+    "/auth/send-verification-email": {
+      "post": {
+        "tags": ["auth"], "summary": "Resend verification email", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email"], "properties": { "email": { "type": "string", "format": "email" } } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/auth/verify-email": {
+      "get": {
+        "tags": ["auth"], "summary": "Verify email via token", "security": [],
+        "parameters": [ { "name": "token", "in": "query", "required": true, "schema": { "type": "string" } } ],
+        "responses": { "302": { "description": "Redirect with session established" } }
+      }
+    },
+    "/auth/forget-password": {
+      "post": {
+        "tags": ["auth"], "summary": "Request password reset email", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email"], "properties": { "email": { "type": "string", "format": "email" }, "redirectTo": { "type": "string" } } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": ["auth"], "summary": "Reset password via token", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["token", "newPassword"], "properties": { "token": { "type": "string" }, "newPassword": { "type": "string", "minLength": 10 } } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "tags": ["auth"], "summary": "Change password (authenticated)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["currentPassword", "newPassword"], "properties": { "currentPassword": { "type": "string" }, "newPassword": { "type": "string", "minLength": 10 }, "revokeOtherSessions": { "type": "boolean" } } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/auth/update-user": {
+      "post": {
+        "tags": ["auth"], "summary": "Update user profile fields",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "name": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Updated user", "content": { "application/json": { "schema": { "type": "object", "properties": { "user": { "$ref": "#/components/schemas/UserPublic" } } } } } }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/auth/sign-in/magic-link": {
+      "post": {
+        "tags": ["auth"], "summary": "Request magic link (only when capabilities.magicLink)", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["email"], "properties": { "email": { "type": "string", "format": "email" }, "callbackURL": { "type": "string" } } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/NotFound" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/auth/magic-link/verify": {
+      "get": {
+        "tags": ["auth"], "summary": "Verify magic link (only when capabilities.magicLink)", "security": [],
+        "parameters": [ { "name": "token", "in": "query", "required": true, "schema": { "type": "string" } } ],
+        "responses": { "302": { "description": "Redirect with session established" } }
+      }
+    },
+    "/auth/organization/accept-invitation": {
+      "post": {
+        "tags": ["auth", "invitations"], "summary": "Accept an invitation (better-auth org plugin)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["invitationId"], "properties": { "invitationId": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Now a member", "content": { "application/json": { "schema": { "type": "object", "properties": { "member": { "$ref": "#/components/schemas/MemberView" } } } } } }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/auth/organization/get-invitation": {
+      "post": {
+        "tags": ["auth", "invitations"], "summary": "Preview an invitation", "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["invitationId"], "properties": { "invitationId": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Invitation preview", "content": { "application/json": { "schema": { "type": "object", "properties": { "invitation": { "$ref": "#/components/schemas/InvitationPublic" } } } } } }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/auth/organization/reject-invitation": {
+      "post": {
+        "tags": ["auth", "invitations"], "summary": "Reject an invitation",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["invitationId"], "properties": { "invitationId": { "type": "string" } } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": ["me"], "summary": "Session bootstrap: user, orgs, active-org role + permissions",
+        "responses": { "200": { "description": "Bootstrap payload", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MeResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthenticated" } }
+      }
+    },
+    "/me/profile": {
+      "patch": {
+        "tags": ["me"], "summary": "Update own profile",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 120 } } } } } },
+        "responses": { "200": { "description": "Updated user", "content": { "application/json": { "schema": { "type": "object", "properties": { "user": { "$ref": "#/components/schemas/UserPublic" } } } } } }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/orgs": {
+      "get": {
+        "tags": ["organizations"], "summary": "List the user's organizations",
+        "parameters": [ { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" } ],
+        "responses": { "200": { "description": "Paginated orgs", "content": { "application/json": { "schema": { "allOf": [ { "$ref": "#/components/schemas/Paginated" }, { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/OrgSummary" } } } } ] } } } }, "401": { "$ref": "#/components/responses/Unauthenticated" } }
+      },
+      "post": {
+        "tags": ["organizations"], "summary": "Create an organization (capabilities.organizations)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateOrgRequest" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "type": "object", "properties": { "org": { "$ref": "#/components/schemas/Organization" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "409": { "$ref": "#/components/responses/Conflict" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/orgs/{orgId}": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" } ],
+      "patch": {
+        "tags": ["organizations"], "summary": "Update org name/slug",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 120 }, "slug": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "org": { "$ref": "#/components/schemas/Organization" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      },
+      "delete": {
+        "tags": ["organizations"], "summary": "Soft-delete org (owner-only, name confirmation)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["confirmationName"], "properties": { "confirmationName": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Soft-deleted", "content": { "application/json": { "schema": { "type": "object", "properties": { "org": { "$ref": "#/components/schemas/Organization" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/orgs/{orgId}/transfer-ownership": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" } ],
+      "post": {
+        "tags": ["organizations"], "summary": "Transfer ownership (owner-only)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["toMemberId"], "properties": { "toMemberId": { "type": "string", "format": "uuid" } } } } } },
+        "responses": { "200": { "description": "Ownership transferred", "content": { "application/json": { "schema": { "type": "object", "properties": { "org": { "$ref": "#/components/schemas/Organization" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/orgs/{orgId}/members": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" } ],
+      "get": {
+        "tags": ["members"], "summary": "List members",
+        "parameters": [ { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" } ],
+        "responses": { "200": { "description": "Paginated members", "content": { "application/json": { "schema": { "allOf": [ { "$ref": "#/components/schemas/Paginated" }, { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/MemberView" } } } } ] } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "post": {
+        "tags": ["members"], "summary": "Admin-create a member (sends set-password email)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminCreateMemberRequest" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "type": "object", "properties": { "member": { "$ref": "#/components/schemas/MemberView" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/orgs/{orgId}/members/{memberId}": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/MemberId" } ],
+      "patch": {
+        "tags": ["members"], "summary": "Change a member's role",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["role"], "properties": { "role": { "type": "string" } } } } } },
+        "responses": { "200": { "description": "Updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "member": { "$ref": "#/components/schemas/MemberView" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      },
+      "delete": {
+        "tags": ["members"], "summary": "Remove a member",
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/orgs/{orgId}/invitations": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" } ],
+      "get": {
+        "tags": ["invitations"], "summary": "List invitations",
+        "parameters": [ { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" }, { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["pending", "accepted", "revoked", "expired"] } } ],
+        "responses": { "200": { "description": "Paginated invitations", "content": { "application/json": { "schema": { "allOf": [ { "$ref": "#/components/schemas/Paginated" }, { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Invitation" } } } } ] } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "post": {
+        "tags": ["invitations"], "summary": "Send an invitation",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateInvitationRequest" } } } },
+        "responses": { "201": { "description": "Sent", "content": { "application/json": { "schema": { "type": "object", "properties": { "invitation": { "$ref": "#/components/schemas/Invitation" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/orgs/{orgId}/invitations/{invitationId}/resend": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/InvitationId" } ],
+      "post": {
+        "tags": ["invitations"], "summary": "Resend an invitation",
+        "responses": { "200": { "description": "Resent", "content": { "application/json": { "schema": { "type": "object", "properties": { "invitation": { "$ref": "#/components/schemas/Invitation" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" } }
+      }
+    },
+    "/orgs/{orgId}/invitations/{invitationId}": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/InvitationId" } ],
+      "delete": {
+        "tags": ["invitations"], "summary": "Revoke an invitation",
+        "responses": { "200": { "description": "Revoked", "content": { "application/json": { "schema": { "type": "object", "properties": { "invitation": { "$ref": "#/components/schemas/Invitation" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/orgs/{orgId}/invitations/{invitationId}/accept": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/InvitationId" } ],
+      "post": {
+        "tags": ["invitations"], "summary": "Accept an invitation (convenience route)",
+        "responses": { "200": { "description": "Now a member", "content": { "application/json": { "schema": { "type": "object", "properties": { "member": { "$ref": "#/components/schemas/MemberView" } } } } } }, "401": { "$ref": "#/components/responses/Unauthenticated" }, "404": { "$ref": "#/components/responses/NotFound" }, "409": { "$ref": "#/components/responses/Conflict" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/orgs/{orgId}/roles": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" } ],
+      "get": {
+        "tags": ["roles"], "summary": "Read-only roles + permissions matrix",
+        "responses": { "200": { "description": "Roles matrix", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RolesResponse" } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/orgs/{orgId}/audit-logs": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" } ],
+      "get": {
+        "tags": ["audit"], "summary": "List audit log rows (admin-gated, filterable)",
+        "parameters": [
+          { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" },
+          { "name": "action", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "actorUserId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "targetType", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "from", "in": "query", "required": false, "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "required": false, "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "Paginated audit rows", "content": { "application/json": { "schema": { "allOf": [ { "$ref": "#/components/schemas/Paginated" }, { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/AuditLog" } } } } ] } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/orgs/{orgId}/entitlements": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" } ],
+      "get": {
+        "tags": ["entitlements"], "summary": "List resolved entitlements",
+        "responses": { "200": { "description": "Entitlements", "content": { "application/json": { "schema": { "allOf": [ { "$ref": "#/components/schemas/Paginated" }, { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Entitlement" } } } } ] } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/orgs/{orgId}/entitlements/{key}": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "name": "key", "in": "path", "required": true, "schema": { "type": "string" } } ],
+      "get": {
+        "tags": ["entitlements"], "summary": "Get a single resolved entitlement",
+        "responses": { "200": { "description": "Entitlement", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Entitlement" } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/orgs/{orgId}/workspace/workspaces": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" } ],
+      "get": {
+        "tags": ["workspace"], "summary": "List workspaces",
+        "parameters": [ { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" } ],
+        "responses": { "200": { "description": "Paginated workspaces", "content": { "application/json": { "schema": { "allOf": [ { "$ref": "#/components/schemas/Paginated" }, { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Workspace" } } } } ] } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "post": {
+        "tags": ["workspace"], "summary": "Create a workspace",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 120 } } } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "type": "object", "properties": { "workspace": { "$ref": "#/components/schemas/Workspace" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/orgs/{orgId}/workspace/workspaces/{workspaceId}": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/WorkspaceId" } ],
+      "patch": {
+        "tags": ["workspace"], "summary": "Rename a workspace",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 120 } } } } } },
+        "responses": { "200": { "description": "Renamed", "content": { "application/json": { "schema": { "type": "object", "properties": { "workspace": { "$ref": "#/components/schemas/Workspace" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      },
+      "delete": {
+        "tags": ["workspace"], "summary": "Delete a workspace",
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/orgs/{orgId}/workspace/workspaces/{workspaceId}/tasks": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/WorkspaceId" } ],
+      "get": {
+        "tags": ["workspace"], "summary": "List tasks (open/done filter)",
+        "parameters": [ { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" }, { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["open", "done"] } } ],
+        "responses": { "200": { "description": "Paginated tasks", "content": { "application/json": { "schema": { "allOf": [ { "$ref": "#/components/schemas/Paginated" }, { "type": "object", "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/Task" } } } } ] } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "post": {
+        "tags": ["workspace"], "summary": "Create a task (checks workspace.maxTasks)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateTaskRequest" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "type": "object", "properties": { "task": { "$ref": "#/components/schemas/Task" } } } } } }, "403": { "$ref": "#/components/responses/EntitlementRequiredOrForbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/orgs/{orgId}/workspace/tasks/{taskId}/complete": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/TaskId" } ],
+      "post": {
+        "tags": ["workspace"], "summary": "Complete a task",
+        "responses": { "200": { "description": "Completed", "content": { "application/json": { "schema": { "type": "object", "properties": { "task": { "$ref": "#/components/schemas/Task" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/orgs/{orgId}/workspace/tasks/{taskId}/uncomplete": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/TaskId" } ],
+      "post": {
+        "tags": ["workspace"], "summary": "Uncomplete a task",
+        "responses": { "200": { "description": "Reopened", "content": { "application/json": { "schema": { "type": "object", "properties": { "task": { "$ref": "#/components/schemas/Task" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/orgs/{orgId}/workspace/tasks/{taskId}/assignee": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/TaskId" } ],
+      "patch": {
+        "tags": ["workspace"], "summary": "Assign task to an org member (or clear)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["assigneeMemberId"], "properties": { "assigneeMemberId": { "oneOf": [ { "type": "string", "format": "uuid" }, { "type": "null" } ] } } } } } },
+        "responses": { "200": { "description": "Assigned", "content": { "application/json": { "schema": { "type": "object", "properties": { "task": { "$ref": "#/components/schemas/Task" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" }, "422": { "$ref": "#/components/responses/ValidationFailed" } }
+      }
+    },
+    "/orgs/{orgId}/workspace/tasks/{taskId}": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/TaskId" } ],
+      "delete": {
+        "tags": ["workspace"], "summary": "Delete a task",
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/orgs/{orgId}/workspace/workspaces/{workspaceId}/export": {
+      "parameters": [ { "$ref": "#/components/parameters/OrgId" }, { "$ref": "#/components/parameters/WorkspaceId" } ],
+      "post": {
+        "tags": ["workspace"], "summary": "Enqueue CSV export job (emailed via queue)",
+        "responses": { "202": { "description": "Job enqueued", "content": { "application/json": { "schema": { "type": "object", "required": ["jobId"], "properties": { "jobId": { "type": "string" } } } } } }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": { "type": "apiKey", "in": "cookie", "name": "better-auth.session_token" }
+    },
+    "parameters": {
+      "OrgId": { "name": "orgId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "MemberId": { "name": "memberId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "InvitationId": { "name": "invitationId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "WorkspaceId": { "name": "workspaceId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "TaskId": { "name": "taskId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+      "Limit": { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "default": 25, "minimum": 1, "maximum": 100 } },
+      "Offset": { "name": "offset", "in": "query", "required": false, "schema": { "type": "integer", "default": 0, "minimum": 0 } }
+    },
+    "responses": {
+      "Success": { "description": "Success", "content": { "application/json": { "schema": { "type": "object", "required": ["success"], "properties": { "success": { "type": "boolean", "example": true } } } } } },
+      "Unauthenticated": { "description": "Missing or invalid session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }, "example": { "error": { "code": "UNAUTHENTICATED", "message": "Authentication required" } } } } },
+      "Forbidden": { "description": "Insufficient permission", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }, "example": { "error": { "code": "FORBIDDEN", "message": "Permission denied" } } } } },
+      "NotFound": { "description": "Not found (also used for cross-tenant probes)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }, "example": { "error": { "code": "NOT_FOUND", "message": "Resource not found" } } } } },
+      "Conflict": { "description": "State conflict", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }, "example": { "error": { "code": "CONFLICT", "message": "Conflicting state" } } } } },
+      "ValidationFailed": { "description": "Zod validation failure", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }, "example": { "error": { "code": "VALIDATION_FAILED", "message": "Invalid input", "details": { "fieldErrors": { "email": ["Invalid email"] } } } } } } },
+      "RateLimited": { "description": "Too many requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }, "example": { "error": { "code": "RATE_LIMITED", "message": "Too many requests" } } } } },
+      "EntitlementRequiredOrForbidden": { "description": "Forbidden or entitlement required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }, "example": { "error": { "code": "ENTITLEMENT_REQUIRED", "message": "workspace.maxTasks limit reached", "details": { "key": "workspace.maxTasks", "limit": 100 } } } } } }
+    },
+    "schemas": {
+      "ErrorCode": { "type": "string", "enum": ["UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "VALIDATION_FAILED", "ENTITLEMENT_REQUIRED", "CONFLICT", "RATE_LIMITED", "INTERNAL"] },
+      "ErrorEnvelope": {
+        "type": "object", "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object", "required": ["code", "message"],
+            "properties": {
+              "code": { "$ref": "#/components/schemas/ErrorCode" },
+              "message": { "type": "string" },
+              "details": { "type": "object", "additionalProperties": true }
+            }
+          }
+        }
+      },
+      "Paginated": {
+        "type": "object", "required": ["items", "total"],
+        "properties": {
+          "items": { "type": "array", "items": {} },
+          "total": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "UserPublic": {
+        "type": "object", "required": ["id", "email", "name", "emailVerified"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": "string" },
+          "emailVerified": { "type": "boolean" }
+        }
+      },
+      "Session": {
+        "type": "object", "required": ["id", "userId", "expiresAt", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "token": { "type": "string" },
+          "ipAddress": { "type": "string", "nullable": true },
+          "userAgent": { "type": "string", "nullable": true },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OrgSummary": {
+        "type": "object", "required": ["id", "name", "slug", "type", "role"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "type": { "type": "string", "enum": ["personal", "team"] },
+          "role": { "type": "string" }
+        }
+      },
+      "Organization": {
+        "type": "object", "required": ["id", "name", "slug", "type", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "type": { "type": "string", "enum": ["personal", "team"] },
+          "deletedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "MeResponse": {
+        "type": "object", "required": ["user", "orgs", "activeOrg"],
+        "properties": {
+          "user": { "$ref": "#/components/schemas/UserPublic" },
+          "orgs": { "type": "array", "items": { "$ref": "#/components/schemas/OrgSummary" } },
+          "activeOrg": {
+            "type": "object", "nullable": true, "required": ["id", "slug", "role", "permissions"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "slug": { "type": "string" },
+              "role": { "type": "string" },
+              "permissions": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      },
+      "MemberView": {
+        "type": "object", "required": ["id", "userId", "email", "name", "role", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": "string" },
+          "role": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Invitation": {
+        "type": "object", "required": ["id", "organizationId", "email", "role", "status", "expiresAt", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "organizationId": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "accepted", "revoked", "expired"] },
+          "inviterId": { "type": "string", "format": "uuid", "nullable": true },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "InvitationPublic": {
+        "type": "object", "required": ["id", "organizationName", "email", "role", "status"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "organizationName": { "type": "string" },
+          "inviterName": { "type": "string", "nullable": true },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "accepted", "revoked", "expired"] }
+        }
+      },
+      "RolesResponse": {
+        "type": "object", "required": ["roles", "permissions"],
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object", "required": ["id", "label", "permissions", "builtin"],
+              "properties": {
+                "id": { "type": "string" },
+                "label": { "type": "string" },
+                "permissions": { "type": "array", "items": { "type": "string" } },
+                "builtin": { "type": "boolean" },
+                "module": { "type": "string", "nullable": true }
+              }
+            }
+          },
+          "permissions": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "AuditLog": {
+        "type": "object", "required": ["id", "action", "targetType", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "orgId": { "type": "string", "format": "uuid", "nullable": true },
+          "actorUserId": { "type": "string", "format": "uuid", "nullable": true },
+          "action": { "type": "string" },
+          "targetType": { "type": "string" },
+          "targetId": { "type": "string", "nullable": true },
+          "metadata": { "type": "object", "additionalProperties": true, "nullable": true },
+          "ip": { "type": "string", "nullable": true },
+          "userAgent": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Entitlement": {
+        "type": "object", "required": ["key", "value", "source"],
+        "properties": {
+          "key": { "type": "string" },
+          "value": { "oneOf": [ { "type": "number" }, { "type": "boolean" } ] },
+          "source": { "type": "string", "enum": ["default", "override"] }
+        }
+      },
+      "Workspace": {
+        "type": "object", "required": ["id", "orgId", "name", "createdBy", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "orgId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "createdBy": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Task": {
+        "type": "object", "required": ["id", "orgId", "workspaceId", "title", "status", "createdBy", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "orgId": { "type": "string", "format": "uuid" },
+          "workspaceId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "status": { "type": "string", "enum": ["open", "done"] },
+          "assigneeMemberId": { "type": "string", "format": "uuid", "nullable": true },
+          "dueDate": { "type": "string", "format": "date", "nullable": true },
+          "createdBy": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SignUpEmailRequest": {
+        "type": "object", "required": ["email", "password", "name"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 10 },
+          "name": { "type": "string", "minLength": 1 }
+        }
+      },
+      "SignInEmailRequest": {
+        "type": "object", "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        }
+      },
+      "CreateOrgRequest": {
+        "type": "object", "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "slug": { "type": "string" },
+          "type": { "type": "string", "enum": ["team"] }
+        }
+      },
+      "AdminCreateMemberRequest": {
+        "type": "object", "required": ["email", "name", "role"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "enum": ["admin", "member"] }
+        }
+      },
+      "CreateInvitationRequest": {
+        "type": "object", "required": ["email", "role"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["admin", "member"] }
+        }
+      },
+      "CreateTaskRequest": {
+        "type": "object", "required": ["title"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "assigneeMemberId": { "oneOf": [ { "type": "string", "format": "uuid" }, { "type": "null" } ] },
+          "dueDate": { "oneOf": [ { "type": "string", "format": "date" }, { "type": "null" } ] }
+        }
+      }
+    }
+  },
+  "security": [ { "sessionCookie": [] } ]
+}

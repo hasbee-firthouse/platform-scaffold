@@ -1,14 +1,22 @@
-=== Session 0 ===
-date: 2026-07-15T00:00:00Z
+=== Session 1 ===
+date: 2026-07-15T18:45:00+05:30
 mode: full
+pipeline_position: design APPROVED — ready for /build (implementation phase)
 groups_completed: []
-groups_remaining: []
+groups_remaining: [A, B, C, D, E, F, G, H, I, J]
 current_group: none
 current_stories: []
 sprint_contract: none
 last_commit: none
-features_passing: 0 / 0
+features_passing: 0 / 95
 coverage: 0%
 learned_rules: 0
 blocked_stories: none
-next_action: Run /brd to start
+artifacts_ready:
+  - specs/stories/ (28 stories, dependency-graph A->J)
+  - specs/features.json (95 features F001-F095, all passes:false)
+  - specs/design/ (system-design, api-contracts[.schema], data-models[.schema], folder-structure, component-map, deployment)
+  - specs/design/mockups/ (8 UI mockups + index.html, shapes validated vs contracts)
+notes:
+  - E8-S3 members-picker uses local key member_id (display-only; not a contract field) — cosmetic, non-blocking
+next_action: Run /build (or /auto for autonomous ratcheting; or /implement group A to go one group at a time)

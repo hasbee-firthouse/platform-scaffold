@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<!--
+  E3-S3 — Terminology (useTerm + term helper)  |  Scaffold Reference
+  ------------------------------------------------------------------------
+  SELF-CONTAINED: no external CSS/JS/font/image/CDN references.
+  Demonstrates useTerm(key,{plural,capital}) resolving a platform noun from
+  terminology config, across nav, a settings heading, and a validation
+  message — with a live toggle between two terminology configs
+  (Organization/Organizations  <->  Clinic/Clinics). Unknown key -> default.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terminology · Scaffold Reference</title>
+<style>
+  :root{
+    --primary:#4f46e5; --primary-hover:#4338ca; --primary-foreground:#ffffff;
+    --secondary:#eef2ff; --secondary-foreground:#3730a3;
+    --destructive:#dc2626; --success:#059669; --warning:#b45309;
+    --background:#f6f7fb; --foreground:#0f172a; --card:#ffffff;
+    --muted:#f1f5f9; --muted-foreground:#64748b; --border:#e2e8f0; --input:#ffffff; --ring:#4f46e5;
+    --radius:0.5rem;
+    --font-sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.06); --shadow-md:0 10px 30px -14px rgba(15,23,42,.28);
+  }
+  [data-theme="dark"]{
+    --primary:#818cf8; --primary-hover:#a5b4fc; --primary-foreground:#1e1b4b;
+    --secondary:#1e293b; --secondary-foreground:#c7d2fe; --destructive:#f87171; --success:#34d399; --warning:#fbbf24;
+    --background:#0b1120; --foreground:#e2e8f0; --card:#111a2e; --muted:#1e293b; --muted-foreground:#94a3b8;
+    --border:#24304a; --input:#0f1830; --ring:#818cf8;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{margin:0;letter-spacing:-.01em}
+  .mono{font-family:var(--font-mono)} .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-foreground)}
+  .demobar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:16px;padding:12px 22px;background:var(--card);border-bottom:1px solid var(--border);box-shadow:var(--shadow-sm)}
+  .wordmark{display:flex;align-items:center;gap:10px;font-weight:650}
+  .logo{width:26px;height:26px;border-radius:7px;background:var(--primary);display:grid;place-items:center;color:var(--primary-foreground);flex:none}
+  .storytag{font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);border:1px solid var(--border);border-radius:999px;padding:3px 10px}
+  .spacer{margin-left:auto}
+  .iconbtn{font:inherit;font-size:13px;display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px}
+  .seg{display:inline-flex;background:var(--muted);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);padding:3px}
+  .seg button{font:inherit;font-size:12.5px;border:0;background:transparent;color:var(--muted-foreground);padding:5px 12px;border-radius:var(--radius);cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--card);color:var(--foreground);box-shadow:var(--shadow-sm)}
+  .iconbtn:focus-visible,.seg button:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+  .page{max-width:1000px;margin:0 auto;padding:32px 22px 80px}
+  .lede{color:var(--muted-foreground);max-width:70ch;margin:8px 0 0}
+  .api{display:inline-flex;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);border-left:2px solid var(--primary);padding:2px 0 2px 8px;margin-top:6px}
+  .grid{display:grid;gap:18px;margin-top:24px} .cols3{grid-template-columns:repeat(3,1fr)}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:calc(var(--radius) + 2px);box-shadow:var(--shadow-sm)}
+  .card .hd{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .card .hd h3{font-size:13px} .card .bd{padding:16px}
+  .term{background:color-mix(in srgb,var(--primary) 12%,transparent);color:var(--primary);border-radius:4px;padding:0 3px;font-weight:600}
+  [data-theme="dark"] .term{color:var(--primary-foreground);background:color-mix(in srgb,var(--primary) 40%,transparent)}
+
+  /* nav surface */
+  .navmock{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+  .navmock li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);color:var(--muted-foreground);font-size:14px}
+  .navmock li.active{background:var(--secondary);color:var(--secondary-foreground);font-weight:600}
+  .navmock .ic{width:16px;height:16px;flex:none}
+  /* validation surface */
+  .valid{border:1px solid var(--destructive);background:color-mix(in srgb,var(--destructive) 9%,var(--card));border-radius:var(--radius);padding:12px 14px;font-size:14px}
+  .valid .code{font-family:var(--font-mono);font-size:11px;color:var(--destructive)}
+  .kv{display:flex;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border)}
+  .kv:last-child{border-bottom:0} .kv .k{color:var(--muted-foreground)} .kv .v{font-family:var(--font-mono);font-size:13px}
+  @media (max-width:820px){.cols3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <header class="demobar">
+    <div class="wordmark"><span class="logo" aria-hidden="true">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 7l8-4 8 4-8 4-8-4Z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg></span>Scaffold Reference</div>
+    <span class="storytag">E3-S3 · Terminology</span>
+    <div class="spacer"></div>
+    <div class="seg" role="group" aria-label="terminology config">
+      <button data-cfg="org" aria-pressed="true" onclick="setCfg('org')">Organization</button>
+      <button data-cfg="clinic" aria-pressed="false" onclick="setCfg('clinic')">Clinic</button>
+    </div>
+    <button class="iconbtn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
+  </header>
+
+  <main class="page">
+    <p class="eyebrow">product.config.ts → terminology → useTerm()</p>
+    <h1 style="font-size:28px;margin-top:8px">One noun, three surfaces</h1>
+    <p class="lede">The same platform noun resolves through <span class="mono">useTerm("organization")</span> everywhere.
+      Flip the config above — nav, the settings heading, and the validation message all relabel with zero component
+      edits. The server helper <span class="mono">term()</span> returns the identical string for emails.</p>
+
+    <div class="card" style="margin-top:20px">
+      <div class="kv"><span class="k">useTerm("organization")</span><span class="v" id="r-sing">"Organization"</span></div>
+      <div class="kv"><span class="k">useTerm("organization", &#123; plural: true &#125;)</span><span class="v" id="r-plur">"Organizations"</span></div>
+      <div class="kv"><span class="k">useTerm("organization", &#123; capital: false &#125;)</span><span class="v" id="r-lower">"organization"</span></div>
+      <div class="kv"><span class="k">useTerm("sprocket") &nbsp;// unknown key</span><span class="v" id="r-unknown">"sprocket" (fallback)</span></div>
+    </div>
+    <div class="api">GET&nbsp; /api/me → terminology map served from product.config.ts</div>
+
+    <div class="grid cols3">
+      <!-- NAV -->
+      <section class="card"><div class="hd"><h3>Sidebar nav</h3><span class="eyebrow">useTerm plural</span></div>
+        <div class="bd"><ul class="navmock">
+          <li><span class="ic">▦</span> Dashboard</li>
+          <li class="active"><span class="ic">◈</span> <span id="nav-plur" class="term">Organizations</span></li>
+          <li><span class="ic">✎</span> Workspaces</li>
+          <li><span class="ic">⚙</span> Settings</li>
+        </ul></div>
+      </section>
+
+      <!-- SETTINGS HEADING -->
+      <section class="card"><div class="hd"><h3>Settings heading</h3><span class="eyebrow">useTerm singular</span></div>
+        <div class="bd">
+          <h2 style="font-size:17px"><span id="set-sing" class="term">Organization</span> settings</h2>
+          <p style="color:var(--muted-foreground);font-size:14px;margin:8px 0 0">General details for this
+            <span id="set-lower">organization</span> — name, slug, and deletion.</p>
+        </div>
+      </section>
+
+      <!-- VALIDATION MESSAGE -->
+      <section class="card"><div class="hd"><h3>Validation message</h3><span class="eyebrow">term() server-side</span></div>
+        <div class="bd"><div class="valid" role="alert">
+          <span class="code">VALIDATION_FAILED</span>
+          <p style="margin:6px 0 0" id="val-msg">A <span class="term">Organization</span> name is required.</p>
+        </div>
+        <div class="api" style="margin-top:10px">POST&nbsp; /api/orgs → term("organization") in error message</div>
+        </div>
+      </section>
+    </div>
+
+    <p class="eyebrow" style="margin-top:34px">Active terminology config</p>
+    <div class="card" style="margin-top:10px">
+      <div class="kv"><span class="k">terminology.organization.singular</span><span class="v" id="cfg-sing">"Organization"</span></div>
+      <div class="kv"><span class="k">terminology.organization.plural</span><span class="v" id="cfg-plur">"Organizations"</span></div>
+    </div>
+  </main>
+
+<script>
+  function toggleTheme(){var e=document.documentElement,d=e.getAttribute('data-theme')==='dark';
+    e.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙 Dark':'☀ Light';}
+
+  var CONFIGS={
+    org:{singular:'Organization',plural:'Organizations'},
+    clinic:{singular:'Clinic',plural:'Clinics'}
+  };
+  function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+  function lower(s){return s.charAt(0).toLowerCase()+s.slice(1);}
+  function setCfg(key){
+    var c=CONFIGS[key];
+    document.querySelectorAll('.seg button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.cfg===key));});
+    // resolved-value readout
+    document.getElementById('r-sing').textContent='"'+c.singular+'"';
+    document.getElementById('r-plur').textContent='"'+c.plural+'"';
+    document.getElementById('r-lower').textContent='"'+lower(c.singular)+'"';
+    // three surfaces
+    document.getElementById('nav-plur').textContent=c.plural;
+    document.getElementById('set-sing').textContent=c.singular;
+    document.getElementById('set-lower').textContent=lower(c.singular);
+    document.getElementById('val-msg').innerHTML='A <span class="term">'+c.singular+'</span> name is required.';
+    // config readout
+    document.getElementById('cfg-sing').textContent='"'+c.singular+'"';
+    document.getElementById('cfg-plur').textContent='"'+c.plural+'"';
+  }
+</script>
+</body>
+</html>
