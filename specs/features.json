@@ -1,0 +1,1515 @@
+[
+  {
+    "id": "F001",
+    "category": "integration",
+    "story": "E1-S1",
+    "group": "A",
+    "description": "pnpm workspaces resolve every package under packages, apps, and modules",
+    "steps": [
+      "Run `pnpm install` at the repo root",
+      "Assert the command exits 0",
+      "Assert `pnpm -r list` lists packages from packages/*, apps/*, and modules/*"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F002",
+    "category": "integration",
+    "story": "E1-S1",
+    "group": "A",
+    "description": "Strict TypeScript ESM typecheck passes across all workspaces",
+    "steps": [
+      "Run `pnpm -w tsc --noEmit`",
+      "Assert exit code is 0",
+      "Assert tsconfig sets `strict: true` and `module`/`moduleResolution` for ESM"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F003",
+    "category": "functional",
+    "story": "E1-S1",
+    "group": "A",
+    "description": "Lint and format checks pass on the skeleton",
+    "steps": [
+      "Run `pnpm lint`",
+      "Run `pnpm format --check`",
+      "Assert both exit 0"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F004",
+    "category": "integration",
+    "story": "E1-S1",
+    "group": "A",
+    "description": "CI workflow runs lint, typecheck, and tests on push",
+    "steps": [
+      "Open the GitHub Actions workflow file",
+      "Assert it defines jobs for lint, typecheck, and `vitest run`",
+      "Assert the workflow triggers on push"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F005",
+    "category": "functional",
+    "story": "E1-S2",
+    "group": "B",
+    "description": "Valid product config parses and profile presets set capability defaults",
+    "steps": [
+      "Call `defineProduct` with a valid `b2b-standard` config",
+      "Assert it returns a typed object",
+      "Assert `capabilities.organizations` is true and `personalAccounts` is false for b2b-standard"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F006",
+    "category": "functional",
+    "story": "E1-S2",
+    "group": "B",
+    "description": "Invalid config refuses to boot with a path-level Zod error",
+    "steps": [
+      "Load a config missing `branding.colors.primary`",
+      "Assert a Zod validation error is thrown naming the `branding.colors.primary` path",
+      "Assert the process exits with a non-zero code"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F007",
+    "category": "functional",
+    "story": "E1-S2",
+    "group": "B",
+    "description": "Explicit capability override wins over the profile preset",
+    "steps": [
+      "Define a `b2b-standard` config with explicit `capabilities.personalAccounts: true`",
+      "Resolve capabilities",
+      "Assert `personalAccounts` is true"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F008",
+    "category": "functional",
+    "story": "E1-S2",
+    "group": "B",
+    "description": "b2b-enterprise profile enables enterprise entitlement keys",
+    "steps": [
+      "Call `defineProduct` with `profile: \"b2b-enterprise\"`",
+      "Assert `capabilities.enterpriseEntitlements` resolves to true"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F009",
+    "category": "functional",
+    "story": "E1-S3",
+    "group": "B",
+    "description": "Error envelope schema enforces the stable machine code enum",
+    "steps": [
+      "Parse `{ error: { code: \"NOT_FOUND\", message: \"x\" } }` with the envelope schema",
+      "Assert it validates",
+      "Assert an unlisted code fails and that all eight documented codes are accepted"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F010",
+    "category": "functional",
+    "story": "E1-S3",
+    "group": "B",
+    "description": "Pagination schema defaults limit to 25 and caps at 100",
+    "steps": [
+      "Parse `{}` with the pagination request schema and assert `limit` is 25",
+      "Parse `{ limit: 500 }` and assert it is rejected or clamped to 100",
+      "Assert the response schema requires `items` and `total`"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F011",
+    "category": "integration",
+    "story": "E1-S3",
+    "group": "B",
+    "description": "Contracts package is consumable by both api and web workspaces",
+    "steps": [
+      "Import a shared schema in an apps/api module and an apps/web module",
+      "Run `tsc --noEmit` in each",
+      "Assert both typecheck with no errors"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F012",
+    "category": "integration",
+    "story": "E1-S4",
+    "group": "B",
+    "description": "Migrations apply and are idempotent on re-run",
+    "steps": [
+      "Run `pnpm db:migrate` against a fresh Postgres",
+      "Run `pnpm db:migrate` a second time",
+      "Assert the second run reports no pending migrations and exits 0"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F013",
+    "category": "integration",
+    "story": "E1-S4",
+    "group": "B",
+    "description": "Drizzle client connects via DATABASE_URL",
+    "steps": [
+      "Instantiate the platform-db client with a valid `DATABASE_URL`",
+      "Execute `select 1`",
+      "Assert it returns a single row"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F014",
+    "category": "functional",
+    "story": "E1-S4",
+    "group": "B",
+    "description": "Core tables follow uuid v7 PK and timestamp conventions",
+    "steps": [
+      "Inspect the generated core schema",
+      "Assert primary keys are uuid v7",
+      "Assert `created_at` and `updated_at` columns exist on core tables"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F015",
+    "category": "integration",
+    "story": "E1-S4",
+    "group": "B",
+    "description": "db:generate emits a migration from the Drizzle schema",
+    "steps": [
+      "Run `pnpm db:generate` after a schema change",
+      "Assert a new migration file is written to the migrations directory"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F016",
+    "category": "functional",
+    "story": "E2-S1",
+    "group": "C",
+    "description": "Health returns 200 and ready reflects DB connectivity",
+    "steps": [
+      "GET /api/health",
+      "Assert status 200",
+      "Stop the DB, GET /api/ready and assert 503; start DB, assert 200"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F017",
+    "category": "security",
+    "story": "E2-S1",
+    "group": "C",
+    "description": "Boot fails fast on missing required env",
+    "steps": [
+      "Start the API with DATABASE_URL unset",
+      "Assert the process exits non-zero",
+      "Assert the log names the missing env var"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F018",
+    "category": "functional",
+    "story": "E2-S1",
+    "group": "C",
+    "description": "OpenAPI docs served in dev and errors return the envelope",
+    "steps": [
+      "In dev, GET /api/docs and assert the OpenAPI UI loads",
+      "Trigger a handler that throws",
+      "Assert the response body is `{ error: { code, message } }` with no stack trace"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F019",
+    "category": "functional",
+    "story": "E2-S1",
+    "group": "C",
+    "description": "SPA history fallback and graceful shutdown",
+    "steps": [
+      "GET a non-API path like /some/app/route",
+      "Assert index.html is returned",
+      "Send SIGTERM and assert connections drain and the pool closes before exit"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F020",
+    "category": "functional",
+    "story": "E2-S2",
+    "group": "D",
+    "description": "Job payloads are Zod-validated before enqueue",
+    "steps": [
+      "Define a job with a Zod schema",
+      "Enqueue an invalid payload and assert it is rejected",
+      "Enqueue a valid payload and assert the handler runs and the job is marked complete"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F021",
+    "category": "functional",
+    "story": "E2-S2",
+    "group": "D",
+    "description": "Cron-scheduled job fires on schedule",
+    "steps": [
+      "Register a scheduled job with a short cron interval",
+      "Wait past one interval",
+      "Assert the handler executed at least once"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F022",
+    "category": "integration",
+    "story": "E2-S2",
+    "group": "D",
+    "description": "Email send enqueues a job and delivers to Mailpit with branding",
+    "steps": [
+      "Call `email.send` with the verify template in dev",
+      "Query the Mailpit API",
+      "Assert a message exists whose subject/body contain `branding.productName` and resolved terminology"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F023",
+    "category": "functional",
+    "story": "E2-S2",
+    "group": "D",
+    "description": "Platform ships email-delivery, invite-expiry, and org-purge jobs",
+    "steps": [
+      "Enumerate registered jobs",
+      "Assert handlers exist for email delivery, invite expiry sweep, and soft-deleted-org purge"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F024",
+    "category": "functional",
+    "story": "E2-S3",
+    "group": "D",
+    "description": "audit_log is append-only with the full column set",
+    "steps": [
+      "Inspect the audit_log schema",
+      "Assert all documented columns exist with correct nullability",
+      "Assert the writer API exposes only an append/log method (no update/delete)"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F025",
+    "category": "functional",
+    "story": "E2-S3",
+    "group": "D",
+    "description": "ctx.audit.log captures actor, target, and request context",
+    "steps": [
+      "Call `ctx.audit.log` from within a request",
+      "Assert a row is written with the action, target_type, target_id, actor_user_id",
+      "Assert ip and user_agent are captured from the request"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F026",
+    "category": "security",
+    "story": "E2-S3",
+    "group": "D",
+    "description": "Auth events are audited with correct action codes",
+    "steps": [
+      "Perform a successful sign-in, a failed sign-in, and a sign-out",
+      "Query audit_log",
+      "Assert rows exist with the corresponding sign-in-success, sign-in-failure, and sign-out actions"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F027",
+    "category": "ui",
+    "story": "E3-S1",
+    "group": "C",
+    "description": "Branding colors are emitted as CSS custom properties on root",
+    "steps": [
+      "Boot the web app with a config",
+      "Read `getComputedStyle(document.documentElement)`",
+      "Assert `--color-primary` (and the derived dark token) equal the configured values"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F028",
+    "category": "ui",
+    "story": "E3-S1",
+    "group": "C",
+    "description": "Changing primary color and product name rebrands with no component edits",
+    "steps": [
+      "Set `colors.primary` to a new hex and change `productName` in config only",
+      "Reload the app",
+      "Assert the computed primary token and document.title reflect the new values"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F029",
+    "category": "ui",
+    "story": "E3-S1",
+    "group": "C",
+    "description": "Logo, favicon, font, and radius are sourced from config",
+    "steps": [
+      "Set logo, favicon, fontFamily, and radius in config",
+      "Render the shell",
+      "Assert the DOM references the configured logo/favicon and the font-family/radius tokens match config"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F030",
+    "category": "ui",
+    "story": "E3-S2",
+    "group": "D",
+    "description": "Components render token-driven with no literal hex colors",
+    "steps": [
+      "Render each platform-ui component",
+      "Grep `packages/platform-ui` component styles for hex color literals",
+      "Assert zero matches and that components reference CSS token variables"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F031",
+    "category": "ui",
+    "story": "E3-S2",
+    "group": "D",
+    "description": "Dialog and dropdown manage focus and keyboard interaction",
+    "steps": [
+      "Open the Dialog, Tab through it and assert focus is trapped",
+      "Press Esc and assert it closes and focus returns to the trigger",
+      "Repeat keyboard checks for Dropdown"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F032",
+    "category": "ui",
+    "story": "E3-S2",
+    "group": "D",
+    "description": "Form primitives surface Zod validation errors with labels",
+    "steps": [
+      "Render a form using the form primitives with a Zod resolver",
+      "Submit invalid data",
+      "Assert an accessible error is shown and associated with its labeled field"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F033",
+    "category": "functional",
+    "story": "E3-S3",
+    "group": "C",
+    "description": "useTerm resolves singular, plural, and unknown-key fallback",
+    "steps": [
+      "Call `useTerm(\"organization\")` and assert the configured singular",
+      "Call with `{ plural: true }` and assert the plural",
+      "Call with an unknown key and assert a sensible default is returned"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F034",
+    "category": "ui",
+    "story": "E3-S3",
+    "group": "C",
+    "description": "Relabeling organization to Clinic propagates across UI with no code edits",
+    "steps": [
+      "Set `terminology.organization` to Clinic/Clinics in config only",
+      "Render settings screens and nav",
+      "Assert the noun reads \"Clinic\"/\"Clinics\" in screens, nav, and an error message"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F035",
+    "category": "functional",
+    "story": "E3-S3",
+    "group": "C",
+    "description": "Server term() matches client resolution for emails and messages",
+    "steps": [
+      "Call server `term(\"organization\")`",
+      "Assert it returns the same resolved value as `useTerm`",
+      "Assert an email template rendered server-side uses the resolved noun"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F036",
+    "category": "ui",
+    "story": "E3-S4",
+    "group": "E",
+    "description": "Module route trees mount under the org-scoped path",
+    "steps": [
+      "Register a module with `webRoutes`",
+      "Navigate to `/o/:orgSlug/<module>`",
+      "Assert the module screen renders (and `/app/<module>` for personal-only)"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F037",
+    "category": "ui",
+    "story": "E3-S4",
+    "group": "E",
+    "description": "Sidebar nav honors manifest contributions and navigation config",
+    "steps": [
+      "Configure `navigation.order` and `navigation.hidden`",
+      "Render the sidebar",
+      "Assert items appear in the configured order and hidden items are absent"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F038",
+    "category": "ui",
+    "story": "E3-S4",
+    "group": "E",
+    "description": "404 and upgrade-notice surfaces render for unknown routes and entitlement errors",
+    "steps": [
+      "Navigate to a nonexistent route and assert the 404 surface renders",
+      "Return an ENTITLEMENT_REQUIRED error from an API call",
+      "Assert the upgrade-notice surface renders"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F039",
+    "category": "security",
+    "story": "E4-S1",
+    "group": "C",
+    "description": "better-auth is only imported inside platform-identity",
+    "steps": [
+      "Grep the repo for imports of `better-auth` outside `packages/platform-identity`",
+      "Assert zero matches"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F040",
+    "category": "functional",
+    "story": "E4-S1",
+    "group": "C",
+    "description": "Auth methods configured; magic-link gated by capability",
+    "steps": [
+      "Boot with `capabilities.magicLink: false` and assert the magic-link plugin is not registered",
+      "Boot with it true and assert the plugin is registered",
+      "Assert email/password, Google, and organization plugins are always present"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F041",
+    "category": "security",
+    "story": "E4-S1",
+    "group": "C",
+    "description": "Sessions are httpOnly cookies with sliding expiry, no JWT",
+    "steps": [
+      "Sign in and inspect the Set-Cookie header",
+      "Assert the session cookie is httpOnly, SameSite=Lax (Secure in prod)",
+      "Assert no JWT is returned to the browser and the session is revocable"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F042",
+    "category": "security",
+    "story": "E4-S1",
+    "group": "C",
+    "description": "Account linking merges same-verified-email accounts",
+    "steps": [
+      "Create a password account with a verified email",
+      "Sign in with Google using the same verified email",
+      "Assert both resolve to a single user record"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F043",
+    "category": "functional",
+    "story": "E4-S2",
+    "group": "D",
+    "description": "Auth routes mounted under /api/auth",
+    "steps": [
+      "GET/POST a known better-auth route under /api/auth/*",
+      "Assert it responds (not 404)",
+      "Assert only platform-identity registers the auth handler"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F044",
+    "category": "security",
+    "story": "E4-S2",
+    "group": "D",
+    "description": "requireUser gates protected routes",
+    "steps": [
+      "Call a requireUser-protected route with no session",
+      "Assert 401 with code UNAUTHENTICATED",
+      "Call again with a valid session cookie and assert it passes"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F045",
+    "category": "functional",
+    "story": "E4-S2",
+    "group": "D",
+    "description": "/api/me returns user, orgs, active role, and permissions",
+    "steps": [
+      "Authenticate and GET /api/me",
+      "Assert the body includes user, orgs list, active-org role",
+      "Assert it includes the resolved permission set"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F046",
+    "category": "functional",
+    "story": "E4-S3",
+    "group": "F",
+    "description": "Email/password signup requires verification before sign-in",
+    "steps": [
+      "Sign up with email/password",
+      "Assert a verification email appears in Mailpit and that password sign-in is blocked until verified",
+      "Click the verify link and assert a session is established"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F047",
+    "category": "functional",
+    "story": "E4-S3",
+    "group": "F",
+    "description": "Password reset sets a new password and invalidates the old",
+    "steps": [
+      "Request a password reset and open the emailed link",
+      "Set a new password",
+      "Assert sign-in works with the new password and fails with the old one"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F048",
+    "category": "security",
+    "story": "E4-S3",
+    "group": "F",
+    "description": "Sign out other sessions revokes them",
+    "steps": [
+      "Sign in from two sessions",
+      "Use \"sign out other sessions\" in Security settings",
+      "Assert the other session’s subsequent request returns 401"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F049",
+    "category": "security",
+    "story": "E4-S3",
+    "group": "F",
+    "description": "Auth endpoints are rate-limited and failed sign-ins audited",
+    "steps": [
+      "Exceed the sign-in attempt threshold",
+      "Assert a 429 with code RATE_LIMITED",
+      "Assert each failed sign-in wrote an audit row"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F050",
+    "category": "functional",
+    "story": "E5-S1",
+    "group": "E",
+    "description": "Built-in roles resolve to correct permission sets",
+    "steps": [
+      "Resolve permissions for owner, admin, and member",
+      "Assert owner has all, admin lacks org-delete/ownership-transfer, member has read + module defaults",
+      "Assert wildcard permissions are expanded at definition time"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F051",
+    "category": "security",
+    "story": "E5-S1",
+    "group": "E",
+    "description": "Registry rejects unknown or duplicate permission references",
+    "steps": [
+      "Register a manifest referencing an unknown permission and assert boot fails",
+      "Register a manifest with a duplicate permission id",
+      "Assert boot fails with a descriptive error"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F052",
+    "category": "security",
+    "story": "E5-S1",
+    "group": "E",
+    "description": "requirePermission enforces access on the server",
+    "steps": [
+      "Call a requirePermission route as a member lacking it and assert 403 FORBIDDEN",
+      "Grant the permission via role",
+      "Assert the same call now passes"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F053",
+    "category": "security",
+    "story": "E5-S1",
+    "group": "E",
+    "description": "CI static check fails routes missing a permission or public marker",
+    "steps": [
+      "Add a route with no permission and no `public: true`",
+      "Run the static route check",
+      "Assert it fails and names the offending route"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F054",
+    "category": "functional",
+    "story": "E5-S2",
+    "group": "F",
+    "description": "Personal org auto-created on signup in the same transaction",
+    "steps": [
+      "Enable `personalAccounts` and sign up",
+      "Assert a personal org (type=personal, owner=user) exists",
+      "Assert it exposes no invite/members endpoints"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F055",
+    "category": "functional",
+    "story": "E5-S2",
+    "group": "F",
+    "description": "Org creation assigns owner and enforces at-least-one-owner",
+    "steps": [
+      "Create an org and assert the creator is owner",
+      "Attempt to remove/demote the only owner and assert it is rejected",
+      "Transfer ownership and assert the new owner holds owner role"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F056",
+    "category": "functional",
+    "story": "E5-S2",
+    "group": "F",
+    "description": "Org deletion is owner-only soft-delete with confirmation",
+    "steps": [
+      "As a non-owner, attempt org deletion and assert it is rejected",
+      "As owner, delete with correct name confirmation",
+      "Assert `deleted_at` is set and the org is retained (not hard-deleted)"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F057",
+    "category": "functional",
+    "story": "E5-S2",
+    "group": "F",
+    "description": "Invitation lifecycle: send, resend, revoke, accept",
+    "steps": [
+      "Send an invite with an email and role and assert a 7-day single-use token is issued",
+      "Resend and revoke and assert token state changes",
+      "Accept a valid invite and assert the invitee becomes a member with the assigned role"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F058",
+    "category": "ui",
+    "story": "E5-S3",
+    "group": "G",
+    "description": "Org switcher shows only with multiple orgs and reflects URL",
+    "steps": [
+      "Sign in as a user with one org and assert no switcher is shown",
+      "Add a second org and assert the switcher appears",
+      "Switch orgs and assert the URL slug (`/o/:orgSlug`) updates"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F059",
+    "category": "ui",
+    "story": "E5-S3",
+    "group": "G",
+    "description": "Members screen supports role change, remove, and admin-create",
+    "steps": [
+      "Open the Members screen and change a member’s role",
+      "Remove a member",
+      "Admin-create a member and assert a set-password email is sent"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F060",
+    "category": "ui",
+    "story": "E5-S3",
+    "group": "G",
+    "description": "Invitations list and read-only roles matrix render",
+    "steps": [
+      "Open the Invitations screen and resend then revoke a pending invite",
+      "Open Roles & Permissions",
+      "Assert a read-only matrix of code-defined roles is shown"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F061",
+    "category": "integration",
+    "story": "E6-S1",
+    "group": "G",
+    "description": "withOrg opens a transaction and sets app.org_id",
+    "steps": [
+      "Call `withOrg(orgId, cb)`",
+      "Inside cb, run `SELECT current_setting('app.org_id', true)`",
+      "Assert it equals the passed orgId and that the work runs inside one transaction"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F062",
+    "category": "security",
+    "story": "E6-S1",
+    "group": "G",
+    "description": "Membership middleware returns 404 for non-members before handlers",
+    "steps": [
+      "Call `/api/orgs/:orgId/...` as a user who is not a member of :orgId",
+      "Assert the response is 404 (not 403)",
+      "Assert no handler-side effect occurred"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F063",
+    "category": "security",
+    "story": "E6-S1",
+    "group": "G",
+    "description": "No tenant-table access outside withOrg",
+    "steps": [
+      "Run the architecture/grep test scanning for tenant-table access",
+      "Assert every tenant query is routed through `withOrg`",
+      "Assert the test fails if a direct access is introduced"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F064",
+    "category": "security",
+    "story": "E6-S2",
+    "group": "H",
+    "description": "Tenant tables enforce FORCE RLS with the org_id policy",
+    "steps": [
+      "Inspect each tenant table",
+      "Assert `org_id uuid not null` exists",
+      "Assert an RLS policy on `current_setting(app.org_id)` is present and FORCE ROW LEVEL SECURITY is enabled"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F065",
+    "category": "security",
+    "story": "E6-S2",
+    "group": "H",
+    "description": "Runtime role is non-owner and cannot bypass RLS",
+    "steps": [
+      "Connect as the runtime DB role",
+      "Attempt to disable RLS or alter policy",
+      "Assert it is denied because the role is not the table owner"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F066",
+    "category": "security",
+    "story": "E6-S2",
+    "group": "H",
+    "description": "RLS blocks cross-tenant reads at the SQL layer",
+    "steps": [
+      "As the runtime role, `SET app.org_id` to org A",
+      "Query a tenant table that also holds org B rows",
+      "Assert zero org B rows are returned"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F067",
+    "category": "security",
+    "story": "E6-S3",
+    "group": "I",
+    "description": "App-layer cross-tenant probe returns 404/403 for every endpoint",
+    "steps": [
+      "Seed org A and org B",
+      "Call each org-scoped endpoint with A’s session against B’s ids",
+      "Assert every response is 404/403 and no B data is returned"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F068",
+    "category": "security",
+    "story": "E6-S3",
+    "group": "I",
+    "description": "Direct-SQL RLS proof with app scoping bypassed",
+    "steps": [
+      "Bypass the app scoping layer and query directly as the runtime role",
+      "Assert RLS still blocks cross-tenant reads",
+      "Assert the test is part of the CI suite"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F069",
+    "category": "integration",
+    "story": "E6-S3",
+    "group": "I",
+    "description": "Migration idempotency verified in CI",
+    "steps": [
+      "Run `db:migrate` twice against a fresh DB in the test",
+      "Assert the second run produces no schema diff and exits 0"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F070",
+    "category": "functional",
+    "story": "E7-S1",
+    "group": "F",
+    "description": "entitlements.get returns override or declared default",
+    "steps": [
+      "Call `entitlements.get(orgId, key)` with no override and assert the declared default",
+      "Set an override",
+      "Assert `get` now returns the override value"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F071",
+    "category": "functional",
+    "story": "E7-S1",
+    "group": "F",
+    "description": "entitlements.require throws typed 403 when unmet",
+    "steps": [
+      "Call `entitlements.require(orgId, key)` where the entitlement is unmet",
+      "Assert a typed 403 with code ENTITLEMENT_REQUIRED is thrown"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F072",
+    "category": "functional",
+    "story": "E7-S1",
+    "group": "F",
+    "description": "Overrides persist and are audited",
+    "steps": [
+      "Write an entitlement override",
+      "Assert a row exists in `entitlement_override`",
+      "Assert an audit row records the change"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F073",
+    "category": "ui",
+    "story": "E7-S1",
+    "group": "F",
+    "description": "Upgrade notice CTA is a contact link, not a checkout",
+    "steps": [
+      "Trigger an ENTITLEMENT_REQUIRED response in the web client",
+      "Assert the upgrade notice renders",
+      "Assert the CTA is a mailto to email.fromAddress (or branding.supportUrl) and there is no plan picker/checkout"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F074",
+    "category": "functional",
+    "story": "E7-S2",
+    "group": "G",
+    "description": "CLI sets and reads entitlement overrides",
+    "steps": [
+      "Run `pnpm ops entitlement set <org> <key> <value>`",
+      "Run `pnpm ops entitlement get <org> <key>`",
+      "Assert the value round-trips and `list` includes it"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F075",
+    "category": "functional",
+    "story": "E7-S2",
+    "group": "G",
+    "description": "CLI lists and restores soft-deleted orgs",
+    "steps": [
+      "Soft-delete an org, then run `pnpm ops org list`",
+      "Run `pnpm ops org restore <id>` within retention",
+      "Assert `deleted_at` is cleared"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F076",
+    "category": "security",
+    "story": "E7-S2",
+    "group": "G",
+    "description": "CLI mutations are audited as system:cli",
+    "steps": [
+      "Run any mutating ops command",
+      "Query audit_log",
+      "Assert the new row has actor `system:cli`"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F077",
+    "category": "security",
+    "story": "E7-S3",
+    "group": "F",
+    "description": "Audit viewer requires admin permission",
+    "steps": [
+      "Open the Audit Log screen as a non-admin member",
+      "Assert it is hidden or the API returns 403",
+      "Open as an admin and assert rows load"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F078",
+    "category": "ui",
+    "story": "E7-S3",
+    "group": "F",
+    "description": "Audit rows paginate and filter by action and actor",
+    "steps": [
+      "Load the Audit Log with more than one page of rows",
+      "Apply an action filter and an actor filter",
+      "Assert pagination uses `{ items, total }` and filters narrow the list"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F079",
+    "category": "security",
+    "story": "E7-S3",
+    "group": "F",
+    "description": "Audit viewer is org-scoped and never leaks other orgs",
+    "steps": [
+      "Seed audit events for org A and org B",
+      "View the Audit Log while active in org A",
+      "Assert only org A events appear"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F080",
+    "category": "functional",
+    "story": "E8-S1",
+    "group": "G",
+    "description": "Workspace and task schema match the spec shape",
+    "steps": [
+      "Inspect the reference-workspace Drizzle schema",
+      "Assert `workspace` and `task` tables have the specified columns",
+      "Assert task.status is open|done and assignee_member_id is a nullable FK to member"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F081",
+    "category": "functional",
+    "story": "E8-S1",
+    "group": "G",
+    "description": "Manifest declares permissions, role, and entitlement",
+    "steps": [
+      "Load the module manifest",
+      "Assert it declares the three workspace permissions and the Workspace Manager role",
+      "Assert it declares entitlement `workspace.maxTasks` with default 100"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F082",
+    "category": "integration",
+    "story": "E8-S1",
+    "group": "G",
+    "description": "Module contracts appear in OpenAPI",
+    "steps": [
+      "Boot the API in dev and fetch the OpenAPI document",
+      "Assert the workspace/task request and response schemas are present"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F083",
+    "category": "functional",
+    "story": "E8-S2",
+    "group": "H",
+    "description": "Workspace and task CRUD enforce declared permissions",
+    "steps": [
+      "Call workspace create/rename/delete and task add/complete/delete/filter under `/api/orgs/:orgId/workspace/...`",
+      "Assert each succeeds for a permitted role",
+      "Assert a role lacking the permission gets 403"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F084",
+    "category": "functional",
+    "story": "E8-S2",
+    "group": "H",
+    "description": "Task assignee must be a current org member",
+    "steps": [
+      "Assign a task to a current org member and assert success",
+      "Assign to a non-member and assert rejection",
+      "Remove a member and assert their assignment is handled per membership rules"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F085",
+    "category": "functional",
+    "story": "E8-S2",
+    "group": "H",
+    "description": "Task creation beyond maxTasks returns ENTITLEMENT_REQUIRED",
+    "steps": [
+      "Create tasks up to `workspace.maxTasks`",
+      "Create one more",
+      "Assert the response is 403 with code ENTITLEMENT_REQUIRED"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F086",
+    "category": "security",
+    "story": "E8-S2",
+    "group": "H",
+    "description": "Workspace events audited and tables isolation-covered",
+    "steps": [
+      "Create and delete a workspace",
+      "Assert audit rows for created/deleted",
+      "Assert both workspace and task tables are included in the isolation suite"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F087",
+    "category": "ui",
+    "story": "E8-S3",
+    "group": "I",
+    "description": "Task screen supports add, complete, delete, and open/done filter",
+    "steps": [
+      "Open a workspace task screen",
+      "Add a task, complete it, uncomplete it, and delete another",
+      "Toggle the open/done filter and assert the list updates via the real API"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F088",
+    "category": "ui",
+    "story": "E8-S3",
+    "group": "I",
+    "description": "Assignee picker lists org members and assigns",
+    "steps": [
+      "Open the assignee picker on a task",
+      "Assert current org members are listed",
+      "Select one and assert the task shows the assignee"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F089",
+    "category": "ui",
+    "story": "E8-S3",
+    "group": "I",
+    "description": "Screens use terminology and show the upgrade notice at the limit",
+    "steps": [
+      "Assert module nouns render via `useTerm`",
+      "Create tasks up to the limit",
+      "Assert the upgrade notice renders when the entitlement limit is hit"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F090",
+    "category": "functional",
+    "story": "E8-S4",
+    "group": "I",
+    "description": "Export enqueues a job that produces a task CSV",
+    "steps": [
+      "Trigger \"Export workspace\"",
+      "Assert a job is enqueued",
+      "Assert the handler produces a CSV containing the workspace’s tasks"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F091",
+    "category": "integration",
+    "story": "E8-S4",
+    "group": "I",
+    "description": "CSV export is emailed via the queue to Mailpit",
+    "steps": [
+      "Run the export in dev",
+      "Query the Mailpit API",
+      "Assert an email with the CSV attachment/body is present"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F092",
+    "category": "functional",
+    "story": "E8-S4",
+    "group": "I",
+    "description": "Export job payload validated and retried on failure",
+    "steps": [
+      "Enqueue an invalid export payload and assert rejection",
+      "Force a handler failure",
+      "Assert the job retries per pg-boss config"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F093",
+    "category": "integration",
+    "story": "E8-S5",
+    "group": "J",
+    "description": "Local stack and production image both boot",
+    "steps": [
+      "Run `docker compose up` then `pnpm db:migrate && pnpm seed && pnpm dev`",
+      "Assert the app is reachable locally",
+      "Build the production image and assert it boots serving /api and the SPA"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F094",
+    "category": "integration",
+    "story": "E8-S5",
+    "group": "J",
+    "description": "Deleting the reference module leaves the platform green",
+    "steps": [
+      "Delete `modules/reference-workspace` and its registry line",
+      "Run `pnpm db:generate` and `pnpm build`",
+      "Assert the platform builds, migrates, and passes platform tests"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  },
+  {
+    "id": "F095",
+    "category": "security",
+    "story": "E8-S5",
+    "group": "J",
+    "description": "FORKING.md present and seed refuses to run in production",
+    "steps": [
+      "Assert `docs/FORKING.md` documents the fork procedure",
+      "Run the seed with NODE_ENV=production",
+      "Assert it refuses to run"
+    ],
+    "passes": false,
+    "last_evaluated": null,
+    "failure_reason": null,
+    "failure_layer": null
+  }
+]
