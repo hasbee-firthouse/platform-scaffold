@@ -1,0 +1,82 @@
+import { z } from 'zod';
+
+/** The three shipped product profiles (SPEC §7.1). */
+export const profileNameSchema = z.enum(['b2c-simple', 'b2b-standard', 'b2b-enterprise']);
+export type ProfileName = z.infer<typeof profileNameSchema>;
+
+/**
+ * Capability flags. A profile sets defaults for these; an explicit override in
+ * `product.config.ts` wins over the profile preset (SPEC §7.1).
+ */
+export const capabilitiesSchema = z.object({
+  personalAccounts: z.boolean(),
+  organizations: z.boolean(),
+  magicLink: z.boolean(),
+  enterpriseEntitlements: z.boolean(),
+});
+export type Capabilities = z.infer<typeof capabilitiesSchema>;
+
+const hexColorSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, 'must be a 6-digit hex color (e.g. #4f46e5)');
+
+export const brandingSchema = z.object({
+  productName: z.string().min(1),
+  logo: z.object({ light: z.string().min(1), dark: z.string().min(1) }),
+  favicon: z.string().min(1),
+  colors: z.object({
+    primary: hexColorSchema,
+    secondary: hexColorSchema.optional(),
+    accent: hexColorSchema.optional(),
+    destructive: hexColorSchema.optional(),
+    background: hexColorSchema.optional(),
+    foreground: hexColorSchema.optional(),
+    muted: hexColorSchema.optional(),
+    border: hexColorSchema.optional(),
+  }),
+  typography: z.object({
+    fontFamily: z.string().min(1),
+    headingFamily: z.string().min(1).optional(),
+  }),
+  radius: z.string().min(1),
+});
+export type Branding = z.infer<typeof brandingSchema>;
+
+const termSchema = z.object({ singular: z.string().min(1), plural: z.string().min(1) });
+export const terminologySchema = z.record(termSchema);
+export type Terminology = z.infer<typeof terminologySchema>;
+
+export const navigationSchema = z.object({
+  order: z.array(z.string()).optional(),
+  hidden: z.array(z.string()).optional(),
+});
+export type Navigation = z.infer<typeof navigationSchema>;
+
+export const emailIdentitySchema = z.object({
+  fromName: z.string().min(1),
+  fromAddress: z.string().email(),
+});
+export type EmailIdentity = z.infer<typeof emailIdentitySchema>;
+
+/**
+ * The shape a product author writes. `capabilities` and `terminology` are
+ * optional here: the profile and built-in defaults fill the gaps during
+ * resolution in {@link defineProduct}.
+ */
+export const productInputSchema = z.object({
+  name: z.string().min(1),
+  profile: profileNameSchema,
+  capabilities: capabilitiesSchema.partial().optional(),
+  branding: brandingSchema,
+  terminology: terminologySchema.optional(),
+  navigation: navigationSchema.optional(),
+  email: emailIdentitySchema,
+});
+export type ProductInput = z.input<typeof productInputSchema>;
+
+/** The fully resolved product: capabilities and terminology are always present. */
+export const productConfigSchema = productInputSchema.extend({
+  capabilities: capabilitiesSchema,
+  terminology: terminologySchema,
+});
+export type ProductConfig = z.infer<typeof productConfigSchema>;

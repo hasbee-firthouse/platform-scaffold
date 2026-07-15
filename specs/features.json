@@ -74,8 +74,8 @@
       "Assert it returns a typed object",
       "Assert `capabilities.organizations` is true and `personalAccounts` is false for b2b-standard"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -90,8 +90,8 @@
       "Assert a Zod validation error is thrown naming the `branding.colors.primary` path",
       "Assert the process exits with a non-zero code"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -106,8 +106,8 @@
       "Resolve capabilities",
       "Assert `personalAccounts` is true"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -121,8 +121,8 @@
       "Call `defineProduct` with `profile: \"b2b-enterprise\"`",
       "Assert `capabilities.enterpriseEntitlements` resolves to true"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -137,8 +137,8 @@
       "Assert it validates",
       "Assert an unlisted code fails and that all eight documented codes are accepted"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -153,8 +153,8 @@
       "Parse `{ limit: 500 }` and assert it is rejected or clamped to 100",
       "Assert the response schema requires `items` and `total`"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -170,8 +170,8 @@
       "Assert both typecheck with no errors"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
+    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
     "failure_layer": null
   },
   {
@@ -186,8 +186,8 @@
       "Assert the second run reports no pending migrations and exits 0"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
+    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
     "failure_layer": null
   },
   {
@@ -202,8 +202,8 @@
       "Assert it returns a single row"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
+    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
     "failure_layer": null
   },
   {
@@ -218,8 +218,8 @@
       "Assert `created_at` and `updated_at` columns exist on core tables"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
+    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
     "failure_layer": null
   },
   {
@@ -233,8 +233,8 @@
       "Assert a new migration file is written to the migrations directory"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
+    "last_evaluated": "2026-07-15T14:03:02.616Z",
+    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
     "failure_layer": null
   },
   {

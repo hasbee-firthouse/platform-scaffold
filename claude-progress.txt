@@ -1,15 +1,15 @@
 === Session 1 ===
 date: 2026-07-15T19:05:00+05:30
 mode: full
-pipeline_position: BUILD in progress — group A complete, group B next
-groups_completed: [A]
-groups_remaining: [B, C, D, E, F, G, H, I, J]
+pipeline_position: BUILD in progress — groups A,B complete, group C next
+groups_completed: [A, B]
+groups_remaining: [C, D, E, F, G, H, I, J]
 current_group: none (between groups — checkpoint)
 current_stories: []
 sprint_contract: none
 last_commit: group A skeleton (monorepo/tooling/CI, E1-S1)
-features_passing: 4 / 95
-coverage: n/a (skeleton only)
+features_passing: 10 / 95 (group B: F005-F010 pass now; F011-F015 deferred — need apps/* or live Postgres, verified in Group C / evaluate)
+coverage: group B packages fully unit-tested (45 tests green)
 learned_rules: 0
 blocked_stories: none
 artifacts_ready:
@@ -19,4 +19,7 @@ artifacts_ready:
   - specs/design/mockups/ (8 UI mockups + index.html, shapes validated vs contracts)
 notes:
   - E8-S3 members-picker uses local key member_id (display-only; not a contract field) — cosmetic, non-blocking
-next_action: /implement group B (E1-S2 config schema, E1-S3 shared contracts, E1-S4 DB client)
+  - Group B packages use the "internal packages" pattern: exports/types point to ./src/index.ts (no build step); consumers resolve TS source. zod pinned to ^3.25.76 (v4 API differs).
+  - Root package.json now carries db:generate/db:migrate scripts + @platform/config workspace dep for product.config typecheck; root tsconfig includes product.config.ts.
+  - drizzle schema barrel (packages/platform-db/src/schema/index.ts) is intentionally empty; auth/audit/entitlement tables are added by their owning stories (E4-S1, E2-S3, E7-S1).
+next_action: /implement group C (E2-S1 API runtime, E3-S1 theme, E3-S3 terminology, E4-S1 identity)
