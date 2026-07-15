@@ -13,6 +13,8 @@ dist/
 .mypy_cache/
 .ruff_cache/
 .turbo/
+coverage/
+*.tsbuildinfo
 pnpm-debug.log*
 playwright-report/
 test-results/

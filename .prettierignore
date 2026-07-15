@@ -1,0 +1,24 @@
+# Generated / vendored
+node_modules
+dist
+coverage
+.turbo
+pnpm-lock.yaml
+playwright-report
+test-results
+
+# Harness internals (not skeleton source)
+.claude
+
+# Pre-existing planning, spec and design artifacts (owned by earlier pipeline phases)
+specs
+demo
+sprint-contracts
+SPEC.md
+design.md
+CLAUDE.md
+claude-progress.txt
+project-manifest.json
+calibration-profile.json
+features.json
+init.sh

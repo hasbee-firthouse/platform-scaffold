@@ -10,8 +10,8 @@
       "Assert the command exits 0",
       "Assert `pnpm -r list` lists packages from packages/*, apps/*, and modules/*"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T13:35:50.446Z",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -26,8 +26,8 @@
       "Assert exit code is 0",
       "Assert tsconfig sets `strict: true` and `module`/`moduleResolution` for ESM"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T13:35:50.446Z",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -42,8 +42,8 @@
       "Run `pnpm format --check`",
       "Assert both exit 0"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T13:35:50.446Z",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -58,8 +58,8 @@
       "Assert it defines jobs for lint, typecheck, and `vitest run`",
       "Assert the workflow triggers on push"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-15T13:35:50.446Z",
     "failure_reason": null,
     "failure_layer": null
   },

@@ -1,15 +1,15 @@
 === Session 1 ===
-date: 2026-07-15T18:45:00+05:30
+date: 2026-07-15T19:05:00+05:30
 mode: full
-pipeline_position: design APPROVED — ready for /build (implementation phase)
-groups_completed: []
-groups_remaining: [A, B, C, D, E, F, G, H, I, J]
-current_group: none
+pipeline_position: BUILD in progress — group A complete, group B next
+groups_completed: [A]
+groups_remaining: [B, C, D, E, F, G, H, I, J]
+current_group: none (between groups — checkpoint)
 current_stories: []
 sprint_contract: none
-last_commit: none
-features_passing: 0 / 95
-coverage: 0%
+last_commit: group A skeleton (monorepo/tooling/CI, E1-S1)
+features_passing: 4 / 95
+coverage: n/a (skeleton only)
 learned_rules: 0
 blocked_stories: none
 artifacts_ready:
@@ -19,4 +19,4 @@ artifacts_ready:
   - specs/design/mockups/ (8 UI mockups + index.html, shapes validated vs contracts)
 notes:
   - E8-S3 members-picker uses local key member_id (display-only; not a contract field) — cosmetic, non-blocking
-next_action: Run /build (or /auto for autonomous ratcheting; or /implement group A to go one group at a time)
+next_action: /implement group B (E1-S2 config schema, E1-S3 shared contracts, E1-S4 DB client)
