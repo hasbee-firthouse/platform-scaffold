@@ -1,0 +1,682 @@
+<title>Platform Scaffold — Investor Walkthrough</title>
+<style>
+  :root{
+    --ground:#f5f7f9; --panel:#ffffff; --panel-2:#eef1f4; --border:#dde3e9;
+    --ink:#1c232b; --muted:#5b6875; --faint:#8b97a3;
+    --app-bg:#f8fafc; --app-panel:#ffffff; --app-border:#e2e8ee; --app-text:#1e2630; --app-muted:#6b7887;
+    --warn:#b47908; --warn-bg:#fdf6e7; --warn-border:#ecd9a8;
+    --ok:#1a8754;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:system-ui,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#14181d; --panel:#1b2129; --panel-2:#222a33; --border:#2a323c;
+      --ink:#e8edf2; --muted:#9aa6b2; --faint:#6e7a86;
+      --app-bg:#161b21; --app-panel:#1d242c; --app-border:#2b343e; --app-text:#e4eaf0; --app-muted:#93a0ad;
+      --warn:#e0b352; --warn-bg:#2a2416; --warn-border:#4d4020;
+      --ok:#4cc08a;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#14181d; --panel:#1b2129; --panel-2:#222a33; --border:#2a323c;
+    --ink:#e8edf2; --muted:#9aa6b2; --faint:#6e7a86;
+    --app-bg:#161b21; --app-panel:#1d242c; --app-border:#2b343e; --app-text:#e4eaf0; --app-muted:#93a0ad;
+    --warn:#e0b352; --warn-bg:#2a2416; --warn-border:#4d4020;
+    --ok:#4cc08a;
+  }
+  :root[data-theme="light"]{
+    --ground:#f5f7f9; --panel:#ffffff; --panel-2:#eef1f4; --border:#dde3e9;
+    --ink:#1c232b; --muted:#5b6875; --faint:#8b97a3;
+    --app-bg:#f8fafc; --app-panel:#ffffff; --app-border:#e2e8ee; --app-text:#1e2630; --app-muted:#6b7887;
+    --warn:#b47908; --warn-bg:#fdf6e7; --warn-border:#ecd9a8;
+    --ok:#1a8754;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:var(--sans); font-size:15px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px}
+  a{color:inherit}
+
+  /* ---------- header ---------- */
+  header.site{padding:44px 0 8px}
+  .badge{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); border:1px solid var(--border); border-radius:3px;
+    padding:5px 10px; background:var(--panel);
+  }
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:none}
+  header.site h1{
+    font-family:var(--serif); font-weight:500; font-size:clamp(30px,4.5vw,44px);
+    line-height:1.12; letter-spacing:-.01em; margin:18px 0 12px; max-width:17ch; text-wrap:balance;
+  }
+  header.site p.lede{max-width:62ch; color:var(--muted); font-size:16.5px; margin:0 0 6px}
+  header.site p.lede strong{color:var(--ink); font-weight:600}
+
+  /* ---------- walkthrough ---------- */
+  .walk{display:grid; grid-template-columns:264px 1fr; gap:28px; margin:36px 0 12px; align-items:start}
+  .rail{display:flex; flex-direction:column; gap:4px; position:sticky; top:20px}
+  .rail-label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); padding:0 12px 8px}
+  .rail button{
+    display:flex; gap:12px; align-items:baseline; text-align:left; width:100%;
+    background:none; border:1px solid transparent; border-radius:6px; padding:10px 12px;
+    font:inherit; color:var(--muted); cursor:pointer;
+  }
+  .rail button:hover{background:var(--panel)}
+  .rail button[aria-current="step"]{background:var(--panel); border-color:var(--border); color:var(--ink)}
+  .rail button:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+  .rail .num{font-family:var(--mono); font-size:11.5px; color:var(--faint); width:16px; flex:none}
+  .rail button[aria-current="step"] .num{color:var(--ink)}
+  .rail .done-tick{margin-left:auto; color:var(--ok); font-size:12px}
+
+  /* profile toggle */
+  .pbar{display:flex; align-items:center; gap:8px; margin:0 0 10px; font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint)}
+  .pbar button{font-family:var(--mono); font-size:11px; letter-spacing:.04em; padding:4px 11px; border:1px solid var(--border); border-radius:4px; background:var(--panel); color:var(--muted); cursor:pointer}
+  .pbar button.on{background:var(--ink); color:var(--ground); border-color:var(--ink)}
+  .pbar button:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+  .pbar .pnote{margin-left:auto; text-transform:none; letter-spacing:0}
+
+  /* browser frame */
+  .frame{border:1px solid var(--border); border-radius:10px; background:var(--panel); overflow:hidden; box-shadow:0 1px 2px rgba(16,24,32,.06), 0 12px 32px -18px rgba(16,24,32,.18)}
+  .frame-bar{display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--border); background:var(--panel-2)}
+  .dots{display:flex; gap:6px}
+  .dots i{width:10px;height:10px;border-radius:50%;background:var(--border);display:block}
+  .urlbar{
+    flex:1; display:flex; align-items:center; gap:8px; min-width:0;
+    font-family:var(--mono); font-size:12px; color:var(--muted);
+    background:var(--panel); border:1px solid var(--border); border-radius:5px; padding:5px 12px;
+  }
+  .urlbar .lock{color:var(--faint)}
+  .urlbar .sim{margin-left:auto; flex:none; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--warn)}
+  .stage{min-height:430px; background:var(--app-bg); color:var(--app-text); position:relative}
+  @media (prefers-reduced-motion: no-preference){
+    .stage.flip{animation:flip .35s ease}
+    @keyframes flip{from{opacity:.25; transform:scale(.985)}to{opacity:1; transform:none}}
+  }
+
+  /* caption under stage */
+  .caption{display:flex; gap:20px; align-items:flex-start; padding:18px 4px 0}
+  .caption .txt{flex:1}
+  .caption h3{font-family:var(--serif); font-weight:500; font-size:19px; margin:0 0 6px; letter-spacing:-.005em}
+  .caption p{margin:0; color:var(--muted); max-width:64ch}
+  .caption p em{color:var(--ink); font-style:normal; font-weight:600}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+  .chip{font-family:var(--mono); font-size:10.5px; letter-spacing:.04em; color:var(--muted); border:1px solid var(--border); border-radius:3px; padding:3px 8px; background:var(--panel)}
+  .stepnav{display:flex; gap:8px; flex:none; padding-top:2px}
+  .stepnav button{
+    font:inherit; font-size:13.5px; padding:8px 16px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--border); background:var(--panel); color:var(--ink);
+  }
+  .stepnav button.primary{background:var(--ink); color:var(--ground); border-color:var(--ink)}
+  .stepnav button:disabled{opacity:.4; cursor:default}
+  .stepnav button:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+
+  /* ---------- in-app mock styles ---------- */
+  .app{display:flex; min-height:430px}
+  .app-side{width:198px; flex:none; border-right:1px solid var(--app-border); padding:16px 12px; display:flex; flex-direction:column; gap:2px; background:var(--app-panel)}
+  .app-logo{display:flex; align-items:center; gap:9px; font-weight:650; font-size:14.5px; padding:4px 8px 14px; letter-spacing:-.01em}
+  .app-logo svg{flex:none}
+  .app-org{font-size:11px; color:var(--app-muted); padding:0 8px 12px; text-transform:uppercase; letter-spacing:.06em; font-family:var(--mono)}
+  .app-nav{display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:6px; font-size:13.5px; color:var(--app-muted)}
+  .app-nav.active{background:var(--app-bg); color:var(--app-text); font-weight:600; box-shadow:inset 2px 0 0 var(--brand)}
+  .app-main{flex:1; padding:22px 26px; min-width:0}
+  .app-h{display:flex; align-items:baseline; gap:12px; margin-bottom:16px}
+  .app-h h4{margin:0; font-size:17px; letter-spacing:-.01em}
+  .app-h .meta{font-family:var(--mono); font-size:11px; color:var(--app-muted)}
+  .btn{
+    font:inherit; font-size:13.5px; font-weight:600; padding:8px 15px; border-radius:6px; cursor:pointer;
+    background:var(--brand); color:#fff; border:1px solid var(--brand);
+  }
+  .btn:hover{filter:brightness(1.07)}
+  .btn:focus-visible{outline:2px solid var(--app-text); outline-offset:2px}
+  .btn.ghost{background:var(--app-panel); color:var(--app-text); border-color:var(--app-border); font-weight:500}
+  .task-row{display:flex; align-items:center; gap:12px; padding:11px 14px; border:1px solid var(--app-border); border-radius:7px; background:var(--app-panel); margin-bottom:7px}
+  .task-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--brand); cursor:pointer; flex:none}
+  .task-row .t{flex:1; min-width:0; font-size:14px}
+  .task-row.done .t{color:var(--app-muted); text-decoration:line-through}
+  .avatar{width:22px;height:22px;border-radius:50%; background:var(--brand); color:#fff; font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex:none}
+  .avatar.alt{background:var(--app-muted)}
+  .task-add{display:flex; gap:8px; margin-top:14px}
+  .task-add input, .field input, .field select{
+    font:inherit; font-size:13.5px; padding:8px 12px; border:1px solid var(--app-border); border-radius:6px;
+    background:var(--app-panel); color:var(--app-text); width:100%;
+  }
+  .task-add input:focus-visible, .field input:focus-visible, .field select:focus-visible{outline:2px solid var(--brand); outline-offset:1px}
+  .task-add input{flex:1}
+  .task-add .btn{flex:none}
+
+  .center-card{max-width:360px; margin:52px auto; background:var(--app-panel); border:1px solid var(--app-border); border-radius:10px; padding:28px}
+  .center-card h4{margin:0 0 4px; font-size:17px; text-align:center}
+  .center-card .sub{text-align:center; color:var(--app-muted); font-size:13px; margin:0 0 20px}
+  .center-card .brandmark{display:flex; justify-content:center; margin-bottom:14px}
+  .gbtn{
+    display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+    font:inherit; font-size:14px; font-weight:600; padding:10px; border-radius:6px; cursor:pointer;
+    border:1px solid var(--app-border); background:var(--app-panel); color:var(--app-text);
+  }
+  .gbtn:hover{background:var(--app-bg)}
+  .gbtn:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+  .or{display:flex; align-items:center; gap:10px; color:var(--app-muted); font-size:11px; margin:16px 0; text-transform:uppercase; letter-spacing:.06em}
+  .or::before,.or::after{content:""; flex:1; height:1px; background:var(--app-border)}
+  .field{margin-bottom:10px}
+  .field label{display:block; font-size:12px; font-weight:600; margin-bottom:5px; color:var(--app-muted)}
+  .hint{font-size:12px; color:var(--app-muted); text-align:center; margin-top:14px}
+
+  table.mock{width:100%; border-collapse:collapse; font-size:13.5px}
+  table.mock th{font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--app-muted); text-align:left; font-weight:500; padding:8px 12px; border-bottom:1px solid var(--app-border)}
+  table.mock td{padding:10px 12px; border-bottom:1px solid var(--app-border); vertical-align:middle}
+  table.mock select{font:inherit; font-size:12.5px; padding:4px 8px; border:1px solid var(--app-border); border-radius:5px; background:var(--app-panel); color:var(--app-text); cursor:pointer}
+  table.mock select:focus-visible{outline:2px solid var(--brand); outline-offset:1px}
+  .pill{font-size:11px; font-weight:600; padding:2px 9px; border-radius:99px; border:1px solid var(--app-border); color:var(--app-muted)}
+  .pill.owner{color:var(--brand); border-color:var(--brand)}
+  .pill.ok{color:var(--ok); border-color:var(--ok)}
+
+  .mail{border:1px solid var(--app-border); border-radius:8px; overflow:hidden; margin-top:16px; background:var(--app-panel)}
+  .mail-head{padding:9px 14px; border-bottom:1px solid var(--app-border); font-family:var(--mono); font-size:11px; color:var(--app-muted); display:flex; gap:14px; flex-wrap:wrap}
+  .mail-body{padding:20px 22px}
+  .mail-body .mb-brand{display:flex; align-items:center; gap:8px; font-weight:700; margin-bottom:10px}
+  .mail-body p{margin:0 0 14px; font-size:13.5px; color:var(--app-text)}
+
+  .notice{display:flex; gap:12px; align-items:flex-start; border:1px solid var(--warn-border); background:var(--warn-bg); border-radius:8px; padding:13px 16px; margin-bottom:14px}
+  .notice .ic{color:var(--warn); font-weight:700; font-family:var(--mono); flex:none}
+  .notice p{margin:0; font-size:13.5px; color:var(--app-text)}
+  .notice p b{color:var(--warn)}
+  .quota{font-family:var(--mono); font-size:11.5px; color:var(--app-muted); margin-left:auto}
+  .quota b{color:var(--app-text); font-weight:600}
+
+  .cfg{background:var(--panel-2); border:1px solid var(--app-border); border-radius:8px; padding:16px 18px; font-family:var(--mono); font-size:12.5px; line-height:1.7; overflow-x:auto; white-space:pre; color:var(--app-text)}
+  .cfg .k{color:var(--app-muted)} .cfg .v{color:var(--brand); font-weight:600}
+  .rebrand-cta{display:flex; align-items:center; gap:14px; margin:16px 0 20px; flex-wrap:wrap}
+  .flipnote{font-size:12.5px; color:var(--app-muted)}
+
+  /* ---------- lower sections ---------- */
+  section.low{margin:56px 0 0}
+  section.low h2{font-family:var(--serif); font-weight:500; font-size:26px; letter-spacing:-.01em; margin:0 0 6px; text-wrap:balance}
+  section.low > p.sub{color:var(--muted); max-width:64ch; margin:0 0 22px}
+  .honest{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .honest .card{border:1px solid var(--border); border-radius:9px; background:var(--panel); padding:20px 20px 18px}
+  .honest .card .tag{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); display:block; margin-bottom:10px}
+  .honest .card h3{font-family:var(--serif); font-weight:500; font-size:17.5px; margin:0 0 8px}
+  .honest .card p{margin:0; font-size:13.5px; color:var(--muted)}
+  .split{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px}
+  .split .card{border:1px solid var(--border); border-radius:9px; background:var(--panel); padding:20px}
+  .split h3{font-family:var(--serif); font-weight:500; font-size:17.5px; margin:0 0 12px}
+  .split ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:7px}
+  .split li{font-size:13.5px; color:var(--muted); padding-left:18px; position:relative}
+  .split li::before{content:"—"; position:absolute; left:0; color:var(--faint)}
+  .split .card.build li::before{content:"+"; font-family:var(--mono)}
+  .split .foot{margin:14px 0 0; font-size:13px; color:var(--faint); font-style:italic; font-family:var(--serif)}
+  footer.site{margin:52px 0 40px; padding-top:18px; border-top:1px solid var(--border); display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); font-size:11.5px; color:var(--faint)}
+
+  @media (max-width:860px){
+    .walk{grid-template-columns:1fr; gap:16px}
+    .rail{position:static; flex-direction:row; overflow-x:auto; padding-bottom:6px}
+    .rail-label{display:none}
+    .rail button{width:auto; flex:none; padding:8px 12px}
+    .rail .lbl{white-space:nowrap}
+    .pbar{flex-wrap:wrap}
+    .pbar .pnote{display:none}
+    .honest{grid-template-columns:1fr}
+    .split{grid-template-columns:1fr}
+    .caption{flex-direction:column}
+    .app-side{width:150px}
+  }
+</style>
+
+<header class="site">
+  <div class="wrap">
+    <span class="badge"><span class="dot"></span>Concept mockup · simulated data · nothing on this page is live</span>
+    <h1>One scaffold. Every product after it starts at step six.</h1>
+    <p class="lede">This is a clickable preview of the five-minute demo our platform scaffold is <strong>specified to deliver against real code</strong> — authentication, organizations, roles, tenant isolation, entitlements, and full rebranding, inherited by every product forked from it. The little task app you'll see is deliberately thin. <strong>The platform around it is the product.</strong></p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="walk">
+    <nav class="rail" id="rail" aria-label="Demo steps"></nav>
+    <div>
+      <div class="pbar" id="pbar" role="group" aria-label="Product profile"></div>
+      <div class="frame">
+        <div class="frame-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="urlbar"><span class="lock">●</span><span id="url">app.traverse.io</span><span class="sim">simulated</span></span>
+        </div>
+        <div class="stage" id="stage"></div>
+      </div>
+      <div class="caption" id="caption"></div>
+    </div>
+  </div>
+
+  <section class="low">
+    <h2>Honest scope — what this page is, and isn't</h2>
+    <p class="sub">We would rather under-promise here and over-deliver in the repository. Three plain statements:</p>
+    <div class="honest">
+      <div class="card">
+        <span class="tag">This page</span>
+        <h3>A simulation, labeled as one</h3>
+        <p>Every screen above is a front-end mock with canned data. No backend, no real sign-in, no email is sent. It exists to make the specification tangible in a pitch, nothing more.</p>
+      </div>
+      <div class="card">
+        <span class="tag">The specification</span>
+        <h3>The same path, running for real</h3>
+        <p>SPEC.md commits the scaffold to run this exact path end-to-end — real Google OAuth, real invitation emails, PostgreSQL row-level isolation — and to prove it with an automated test that scripts this demo (§18.1, §22).</p>
+      </div>
+      <div class="card">
+        <span class="tag">Deliberately deferred</span>
+        <h3>Scope discipline, on purpose</h3>
+        <p>Enterprise SSO/MFA, payment processing, and group-based access are designed-for but not built. Each enters when a real customer needs it — v1 ships the foundation every product needs on day one.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="low">
+    <h2>The fork economics</h2>
+    <p class="sub">A product team forks the repository, edits one configuration file, and replaces one module directory. Everything on the left is inherited working code, never rebuilt.</p>
+    <div class="split">
+      <div class="card">
+        <h3>Inherited when you fork</h3>
+        <ul>
+          <li>Sign-up, sign-in, sessions, account recovery (Google + email)</li>
+          <li>Organizations, invitations, member lifecycle</li>
+          <li>Roles &amp; permissions, enforced server-side on every route</li>
+          <li>Tenant isolation — app-layer scoping plus row-level security</li>
+          <li>Per-tenant entitlements (the monetization hooks)</li>
+          <li>Audit log, admin settings screens, operator tooling</li>
+          <li>Theming &amp; terminology from one config file</li>
+          <li>Email, background jobs, deploy image, CI, test harness</li>
+        </ul>
+      </div>
+      <div class="card build">
+        <h3>What a product team builds</h3>
+        <ul>
+          <li>Its own screens</li>
+          <li>Its own API routes</li>
+          <li>Its own permissions and roles, declared in a manifest</li>
+        </ul>
+        <p class="foot">The task tracker in the demo above is the entire product-side build. That ratio — one thin module on a deep foundation — is the pitch.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site">
+    <span>Platform Scaffold — investor walkthrough</span>
+    <span>Based on SPEC.md v1 · July 2026</span>
+    <span>Brands “Traverse” and “Meridian” are fictional placeholders</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var BRANDS = {
+    a: {
+      name:"Traverse", domain:"app.traverse.io", color:"#3056d3",
+      terms:{ org:"Organization", member:"Member", members:"Members", workspace:"Workspace" },
+      orgName:"Northwind Ventures",
+      logo:'<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 15 10 3l7 12h-4l-3-5.4L7 15Z" fill="#3056d3"/></svg>'
+    },
+    b: {
+      name:"Meridian", domain:"app.meridianhealth.com", color:"#0e7f6e",
+      terms:{ org:"Clinic", member:"Practitioner", members:"Practitioners", workspace:"Department" },
+      orgName:"Lakeside Family Clinic",
+      logo:'<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="8" y="3" width="4" height="14" rx="1.6" fill="#0e7f6e"/><rect x="3" y="8" width="14" height="4" rx="1.6" fill="#0e7f6e"/></svg>'
+    }
+  };
+
+  var state = {
+    brand:"a", profile:"b2b", step:0, authView:"signup",
+    tasks:[
+      {t:"Draft the investor one-pager", done:true,  who:null},
+      {t:"Set up the demo environment",  done:false, who:null},
+      {t:"Rehearse the live rebrand",    done:false, who:null},
+      {t:"Send follow-up materials",     done:false, who:null}
+    ],
+    invite:"idle",        // idle | sent | accepted
+    assigned:false,
+    removed:false,
+    contacted:false,
+    jordanRole:"m",       // m = member, w = workspace manager (module-defined)
+    limitHit:false,
+    visited:{auth:true}
+  };
+  var LIMIT = 5; // demo value; spec default is 100
+
+  function br(){ return BRANDS[state.brand]; }
+  function T(key){ return br().terms[key]; }
+  function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+  function isB2B(){ return state.profile==="b2b"; }
+
+  var STEP_DEFS = {
+    auth: { lbl:"Sign up",
+      h:"Self-service from the first click",
+      p:"A new customer creates their own account — Google or email, no sales call. Sign-up, sign-in, verification, sessions, and recovery are <em>inherited, not built</em>: every forked product starts with a complete, secure front door.",
+      p_b2c:"A consumer signs up and lands straight in the product — no organization screens at all. Under the hood the platform quietly creates <em>an account of one</em> on the same tenancy and authorization code path as B2B, so there is nothing separate to build or maintain.",
+      chips:["Google OAuth","email + password","verification & recovery","rate-limited"] },
+    org: { lbl:"Create an organization",
+      h:"Self-service tenancy, no admin in the loop",
+      p:"The founder of a customer team creates their own tenant and becomes its owner. In B2C mode the same machinery runs invisibly — <em>a personal account is an organization of one</em>, so there is exactly one code path.",
+      chips:["self-service","creator = owner","B2B and B2C, one model"] },
+    tasks: { lbl:"Work in the product",
+      h:"The sample product: deliberately thin",
+      p:"A task tracker — add, complete, assign. It is real CRUD against the real stack in the shipped scaffold, and it is <em>the entire product-specific build</em>: its screens, its API routes, and its permissions, declared in one module manifest.",
+      chips:["module = one directory","typed API contracts","org-scoped data"] },
+    invite: { lbl:"Manage the team",
+      h:"Membership and roles, inherited",
+      p:"Invite by email; the teammate joins with Google or a password and lands with the right role. Then <em>assign work, change the role, or remove the member</em>. Roles themselves are code-defined in the module manifest — access rules ship reviewed with the code, not improvised in production.",
+      chips:["email invitations","assign / change / remove","roles defined in code"] },
+    limit: { lbl:"Hit the plan limit",
+      h:"Monetization hooks without a payments build",
+      p:"Per-tenant entitlements gate features and quotas server-side. When a customer outgrows a limit, <em>the upgrade conversation starts exactly here</em> — no billing code was needed to enforce it.",
+      chips:["per-tenant entitlements","server-enforced","operator CLI"] },
+    rebrand: { lbl:"Rebrand, live",
+      h:"The thesis, proven in one flip",
+      p:"Change one configuration file and the same running system is a <em>different company's product</em> — name, logo, color, and vocabulary. This is what “fork once, ship many” looks like.",
+      chips:["one config file","zero component edits","terminology included"] }
+  };
+
+  function activeKeys(){
+    return isB2B() ? ["auth","org","tasks","invite","limit","rebrand"]
+                   : ["auth","tasks","limit","rebrand"];
+  }
+  function curKey(){ return activeKeys()[state.step]; }
+
+  var rail = document.getElementById("rail");
+  var stage = document.getElementById("stage");
+  var caption = document.getElementById("caption");
+  var urlEl = document.getElementById("url");
+  var pbar = document.getElementById("pbar");
+
+  /* ---------- screens ---------- */
+
+  function scrAuth(){
+    var signup = state.authView === "signup";
+    var googleBtn = '<button class="gbtn" data-action="google"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7c2.2-2 3.4-5 3.4-8.6Z"/><path fill="#34A853" d="M12 24c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.4 1.1-3.9 1.1-3 0-5.5-2-6.4-4.7H1.8v3A11.5 11.5 0 0 0 12 24Z"/><path fill="#FBBC05" d="M5.6 14.7a7 7 0 0 1 0-4.4v-3H1.8a11.5 11.5 0 0 0 0 10.4l3.8-3Z"/><path fill="#EA4335" d="M12 4.6c1.7 0 3.2.6 4.4 1.7L19.7 3A11.5 11.5 0 0 0 1.8 7.3l3.8 3c.9-2.7 3.4-4.7 6.4-4.7Z"/></svg>'+(signup?"Sign up with Google":"Continue with Google")+'</button>';
+    var fields = signup
+      ? '<div class="field"><label>Full name</label><input value="Alex Rivera" readonly></div>'
+        +'<div class="field"><label>Email</label><input value="alex@northwind.vc" readonly></div>'
+        +'<div class="field"><label>Password</label><input type="password" value="••••••••••" readonly></div>'
+        +'<button class="btn" style="width:100%" data-action="google">Create account</button>'
+        +'<p class="hint">Email accounts get a verification email before first sign-in.</p>'
+      : '<div class="field"><label>Email</label><input value="alex@northwind.vc" readonly></div>'
+        +'<div class="field"><label>Password</label><input type="password" value="••••••••••" readonly></div>'
+        +'<button class="btn" style="width:100%" data-action="google">Sign in</button>'
+        +'<p class="hint">Password reset and session recovery are inherited too.</p>';
+    return '<div class="app" style="justify-content:center">'
+      +'<div style="flex:1"><div class="center-card">'
+      +'<div class="brandmark">'+br().logo+'</div>'
+      +'<h4>'+(signup ? "Create your "+br().name+" account" : "Sign in to "+br().name)+'</h4>'
+      +'<p class="sub">'+(signup ? "Free to start. No sales call." : "Welcome back — sign in to continue.")+'</p>'
+      +googleBtn
+      +'<div class="or">or</div>'
+      +fields
+      +'<p class="hint"><button data-action="switch-auth" style="background:none;border:none;padding:0;font:inherit;color:var(--brand);cursor:pointer;text-decoration:underline">'
+      +(signup ? "Already have an account? Sign in" : "New here? Create an account")+'</button></p>'
+      +'<p class="hint">Simulated — Google or the main button continues the tour.</p>'
+      +'</div></div></div>';
+  }
+
+  function scrCreateOrg(){
+    return '<div class="app" style="justify-content:center">'
+      +'<div style="flex:1"><div class="center-card">'
+      +'<div class="brandmark">'+br().logo+'</div>'
+      +'<h4>Create your '+T("org")+'</h4>'
+      +'<p class="sub">You’ll be its owner. No approval step, no sales call.</p>'
+      +'<div class="field"><label>'+T("org")+' name</label><input value="'+esc(br().orgName)+'" readonly></div>'
+      +'<button class="btn" style="width:100%" data-action="create-org">Create '+T("org")+'</button>'
+      +'<p class="hint">Owner role, tenant isolation, and audit start here.</p>'
+      +'</div></div></div>';
+  }
+
+  function sidebar(active){
+    var html = '<aside class="app-side">'
+      +'<div class="app-logo">'+br().logo+esc(br().name)+'</div>';
+    if(isB2B()){ html += '<div class="app-org">'+esc(br().orgName)+'</div>'; }
+    html += '<div class="app-nav'+(active==="tasks"?" active":"")+'">'+T("workspace")+' · Launch prep</div>';
+    if(isB2B()){ html += '<div class="app-nav'+(active==="members"?" active":"")+'">Settings · '+T("members")+'</div>'; }
+    else { html += '<div class="app-nav">Settings · Profile</div>'; }
+    html += '</aside>';
+    return html;
+  }
+
+  function taskRows(){
+    var rows = "";
+    state.tasks.forEach(function(task, i){
+      var who = task.who ? '<span class="avatar alt" title="'+esc(task.who)+'">'+esc(task.who[0])+'</span>' : "";
+      rows += '<div class="task-row'+(task.done?" done":"")+'">'
+        +'<input type="checkbox" '+(task.done?"checked":"")+' data-action="toggle" data-i="'+i+'" aria-label="Toggle: '+esc(task.t)+'">'
+        +'<span class="t">'+esc(task.t)+'</span>'+who+'</div>';
+    });
+    return rows;
+  }
+
+  function scrTasks(){
+    return '<div class="app">'+sidebar("tasks")
+      +'<div class="app-main">'
+      +'<div class="app-h"><h4>Launch prep</h4><span class="meta">'+T("workspace").toUpperCase()+'</span></div>'
+      +taskRows()
+      +'<div class="task-add"><input id="newtask" placeholder="Add a task…" maxlength="60" aria-label="New task title"><button class="btn" data-action="add">Add</button></div>'
+      +'</div></div>';
+  }
+
+  function scrInvite(){
+    var main = '<div class="app-h"><h4>'+T("members")+'</h4><span class="meta">SETTINGS</span></div>'
+      +'<table class="mock"><thead><tr><th>'+T("member")+'</th><th>Role</th><th>Status</th></tr></thead><tbody>'
+      +'<tr><td><span class="avatar">A</span>&nbsp; Alex Rivera (you)</td><td><span class="pill owner">Owner</span></td><td><span class="pill ok">Active</span></td></tr>';
+    if(state.invite==="accepted" && !state.removed){
+      main += '<tr><td><span class="avatar alt">J</span>&nbsp; Jordan Lee</td>'
+        +'<td><select data-action="role-select" aria-label="Change Jordan\'s role">'
+        +'<option value="m"'+(state.jordanRole==="m"?" selected":"")+'>'+T("member")+'</option>'
+        +'<option value="w"'+(state.jordanRole==="w"?" selected":"")+'>'+T("workspace")+' Manager</option>'
+        +'</select></td>'
+        +'<td><span class="pill ok">Active</span>&nbsp; <button class="btn ghost" style="padding:3px 9px;font-size:11.5px" data-action="remove-member">Remove</button></td></tr>';
+    }
+    main += '</tbody></table>';
+
+    if(state.invite==="idle"){
+      main += '<div class="task-add" style="margin-top:18px"><input value="jordan@northwind.vc" readonly aria-label="Invitee email"><button class="btn" data-action="send-invite">Send invite</button></div>'
+        +'<p style="font-size:12px;color:var(--app-muted);margin:10px 0 0">Roles offered here — Owner, Admin, '+T("member")+', '+T("workspace")+' Manager — are defined in code (platform built-ins plus the module manifest). Admins assign them; nobody authors roles in production.</p>';
+    } else if(state.invite==="sent"){
+      main += '<div class="mail"><div class="mail-head"><span>from: '+esc(br().name)+' &lt;team@'+esc(br().domain)+'&gt;</span><span>to: jordan@northwind.vc</span></div>'
+        +'<div class="mail-body"><div class="mb-brand">'+br().logo+esc(br().name)+'</div>'
+        +'<p>Alex invited you to join <b>'+esc(br().orgName)+'</b> as a '+T("member")+'.</p>'
+        +'<button class="btn" data-action="accept-invite">Accept invitation</button></div></div>'
+        +'<p style="font-size:12px;color:var(--app-muted);margin:10px 0 0">Branded email, real SMTP in the shipped scaffold. Jordan signs in with Google or a password — either way lands with the assigned role.</p>';
+    } else if(state.removed){
+      main += '<p style="font-size:12.5px;color:var(--app-muted);margin:16px 0 10px">Jordan was removed — access revoked immediately, assignments cleared, and the change written to the audit log.</p>'
+        +'<button class="btn ghost" data-action="reinvite">Invite again</button>';
+    } else {
+      if(!state.assigned){
+        main += '<div style="margin-top:18px"><div class="task-row"><input type="checkbox" disabled aria-label="Task"><span class="t">Send follow-up materials</span><button class="btn ghost" style="padding:4px 10px;font-size:12px" data-action="assign">Assign to Jordan</button></div>'
+          +'<p style="font-size:12px;color:var(--app-muted);margin:10px 0 0">Try the role dropdown and Remove, too — assign, change, and revoke are all inherited admin flows.</p></div>';
+      } else {
+        main += '<div style="margin-top:18px"><div class="task-row"><input type="checkbox" disabled aria-label="Task"><span class="t">Send follow-up materials</span><span class="avatar alt">J</span></div>'
+          +'<p style="font-size:12px;color:var(--app-muted);margin:10px 0 0">Invited, joined, assigned — and the role dropdown and Remove above complete the lifecycle. All platform code.</p></div>';
+      }
+    }
+    return '<div class="app">'+sidebar("members")+'<div class="app-main">'+main+'</div></div>';
+  }
+
+  function scrLimit(){
+    var n = state.tasks.length;
+    var notice = "";
+    if(state.limitHit){
+      var owner = isB2B() ? "This "+T("org").toLowerCase()+"’s" : "Your";
+      notice = '<div class="notice"><span class="ic">!</span><div style="flex:1"><p><b>Task limit reached.</b> '+owner+' current allowance is '+LIMIT+' tasks per '+T("workspace").toLowerCase()+'. Raising it is a per-tenant entitlement — enforced on the server, changed by the operator in seconds, <b>no payment code required</b> to gate it.</p>'
+        +'<p style="margin-top:10px"><button class="btn" style="font-size:12.5px;padding:6px 13px" data-action="contact">Contact us to upgrade</button>'
+        +(state.contacted?'<span style="font-size:12px;color:var(--ok);margin-left:10px">Request sent — sales-led by design; the operator raises the limit via CLI.</span>':'')
+        +'</p></div></div>';
+    }
+    return '<div class="app">'+sidebar("tasks")
+      +'<div class="app-main">'
+      +'<div class="app-h"><h4>Launch prep</h4><span class="meta">'+T("workspace").toUpperCase()+'</span>'
+      +'<span class="quota">workspace.maxTasks&nbsp; <b>'+Math.min(n,LIMIT)+' / '+LIMIT+'</b> <span title="demo value">(demo value — spec default 100)</span></span></div>'
+      +notice
+      +taskRows()
+      +'<div class="task-add"><input id="newtask" placeholder="Add a task…" maxlength="60" aria-label="New task title"><button class="btn" data-action="add-limited">Add</button></div>'
+      +'</div></div>';
+  }
+
+  function scrRebrand(){
+    var other = state.brand==="a" ? BRANDS.b : BRANDS.a;
+    var profName = isB2B() ? "b2b-standard" : "b2c-simple";
+    var cfg = '<span class="k">// product.config.ts — the entire rebrand surface</span>\n'
+      +'profile: <span class="v">"'+profName+'"</span>,\n'
+      +'name: <span class="v">"'+other.name+'"</span>,\n'
+      +'branding: { colors: { primary: <span class="v">"'+other.color+'"</span> } },\n'
+      +'terminology: {\n'
+      +'  organization: <span class="v">"'+other.terms.org+'"</span>,\n'
+      +'  member: <span class="v">"'+other.terms.member+'"</span>,\n'
+      +'  workspace: <span class="v">"'+other.terms.workspace+'"</span>,\n'
+      +'}';
+    var auditRows = isB2B()
+      ? '<tr><td>member.invited · jordan@northwind.vc</td><td>Alex Rivera</td></tr>'
+        +'<tr><td>member.joined · role='+T("member")+'</td><td>Jordan Lee</td></tr>'
+        +'<tr><td>entitlement.checked · workspace.maxTasks</td><td>system</td></tr>'
+        +'<tr><td>auth.sign_in · google</td><td>Alex Rivera</td></tr>'
+      : '<tr><td>auth.sign_up · google</td><td>Alex Rivera</td></tr>'
+        +'<tr><td>org.created · type=personal (automatic)</td><td>system</td></tr>'
+        +'<tr><td>entitlement.checked · workspace.maxTasks</td><td>system</td></tr>';
+    return '<div class="app">'+sidebar(null)
+      +'<div class="app-main">'
+      +'<div class="app-h"><h4>Rebrand — one file, zero component edits</h4></div>'
+      +'<div class="cfg">'+cfg+'</div>'
+      +'<div class="rebrand-cta"><button class="btn" data-action="flip">Restart as '+esc(other.name)+' →</button>'
+      +'<span class="flipnote">Then click back through the earlier steps — every screen, email, and error message follows.</span></div>'
+      +'<table class="mock"><thead><tr><th>Audit log (inherited)</th><th>Actor</th></tr></thead><tbody>'
+      +auditRows
+      +'</tbody></table>'
+      +'<p style="font-size:12px;color:var(--app-muted);margin:10px 0 0">'+(isB2B()?"Members, roles, invitations, and this audit trail all live in inherited Settings screens.":"In B2C mode the audit trail and settings are still there — only the organization chrome is gone.")+'</p>'
+      +'</div></div>';
+  }
+
+  var SCREENS = { auth:scrAuth, org:scrCreateOrg, tasks:scrTasks, invite:scrInvite, limit:scrLimit, rebrand:scrRebrand };
+
+  var URLS = {
+    auth: function(){ return state.authView==="signup" ? "/signup" : "/signin"; },
+    org: function(){ return "/onboarding/new"; },
+    tasks: function(){ return isB2B() ? "/o/launch-prep" : "/app/launch-prep"; },
+    invite: function(){ return "/o/settings/members"; },
+    limit: function(){ return isB2B() ? "/o/launch-prep" : "/app/launch-prep"; },
+    rebrand: function(){ return isB2B() ? "/o/settings/branding" : "/app/settings"; }
+  };
+
+  /* ---------- render ---------- */
+
+  function render(animate){
+    var b = br(), keys = activeKeys(), key = keys[state.step];
+    stage.style.setProperty("--brand", b.color);
+    urlEl.textContent = b.domain + URLS[key]();
+    stage.innerHTML = SCREENS[key]();
+    if(animate){
+      stage.classList.remove("flip"); void stage.offsetWidth; stage.classList.add("flip");
+    }
+    // profile toggle
+    pbar.innerHTML = '<span>product.config.ts · profile</span>'
+      +'<button data-action="profile" data-p="b2b"'+(isB2B()?' class="on"':'')+'>b2b-standard</button>'
+      +'<button data-action="profile" data-p="b2c"'+(!isB2B()?' class="on"':'')+'>b2c-simple</button>'
+      +'<span class="pnote">'+(isB2B()?"organizations, invitations, member admin":"no org screens — an account of one, same code path")+'</span>';
+    // rail
+    var railHtml = '<span class="rail-label">The five-minute demo</span>';
+    keys.forEach(function(k,i){
+      var s = STEP_DEFS[k];
+      railHtml += '<button data-action="goto" data-i="'+i+'"'+(i===state.step?' aria-current="step"':'')+'>'
+        +'<span class="num">'+(i+1)+'</span><span class="lbl">'+s.lbl+'</span>'
+        +(state.visited[k]&&i!==state.step?'<span class="done-tick">✓</span>':'')+'</button>';
+    });
+    rail.innerHTML = railHtml;
+    // caption
+    var s = STEP_DEFS[key];
+    var ptext = (!isB2B() && s.p_b2c) ? s.p_b2c : s.p;
+    caption.innerHTML = '<div class="txt"><h3>'+s.h+'</h3><p>'+ptext+'</p>'
+      +'<div class="chips">'+s.chips.map(function(c){return '<span class="chip">'+c+'</span>';}).join("")+'</div></div>'
+      +'<div class="stepnav">'
+      +'<button data-action="prev"'+(state.step===0?" disabled":"")+'>← Back</button>'
+      +'<button class="primary" data-action="next"'+(state.step===keys.length-1?" disabled":"")+'>Next →</button>'
+      +'</div>';
+  }
+
+  function go(i, animate){
+    var keys = activeKeys();
+    state.step = Math.max(0, Math.min(keys.length-1, i));
+    state.visited[keys[state.step]] = true;
+    render(animate!==false);
+  }
+
+  function setProfile(p){
+    if(state.profile===p) return;
+    var key = curKey();
+    state.profile = p;
+    var keys = activeKeys();
+    var idx = keys.indexOf(key);
+    state.step = idx >= 0 ? idx : keys.indexOf("tasks");
+    state.visited[keys[state.step]] = true;
+    render(true);
+  }
+
+  /* ---------- events (delegated) ---------- */
+
+  document.addEventListener("click", function(e){
+    var el = e.target.closest("[data-action]");
+    if(!el) return;
+    var a = el.getAttribute("data-action");
+    var i = parseInt(el.getAttribute("data-i")||"-1",10);
+    switch(a){
+      case "goto": go(i); break;
+      case "next": go(state.step+1); break;
+      case "prev": go(state.step-1); break;
+      case "google": go(1); break;
+      case "switch-auth": state.authView = state.authView==="signup" ? "signin" : "signup"; render(false); break;
+      case "create-org": go(activeKeys().indexOf("tasks")); break;
+      case "profile": setProfile(el.getAttribute("data-p")); break;
+      case "toggle":
+        state.tasks[i].done = !state.tasks[i].done; render(false); break;
+      case "add": {
+        var inp = document.getElementById("newtask");
+        var v = inp && inp.value.trim();
+        if(v){ state.tasks.push({t:v, done:false, who:null}); render(false); }
+        break;
+      }
+      case "add-limited": {
+        var inp2 = document.getElementById("newtask");
+        var v2 = (inp2 && inp2.value.trim()) || "Another task";
+        if(state.tasks.length >= LIMIT){ state.limitHit = true; }
+        else { state.tasks.push({t:v2, done:false, who:null}); if(state.tasks.length>=LIMIT){ state.limitHit = true; } }
+        render(false);
+        break;
+      }
+      case "contact": state.contacted=true; render(false); break;
+      case "send-invite": state.invite="sent"; render(false); break;
+      case "accept-invite": state.invite="accepted"; render(false); break;
+      case "assign": state.assigned=true; state.tasks[3].who="Jordan"; render(false); break;
+      case "remove-member":
+        state.removed=true; state.assigned=false; state.tasks[3].who=null; render(false); break;
+      case "reinvite":
+        state.invite="idle"; state.removed=false; state.jordanRole="m"; render(false); break;
+      case "flip":
+        state.brand = state.brand==="a" ? "b" : "a";
+        render(true); break;
+    }
+  });
+
+  document.addEventListener("change", function(e){
+    if(e.target.matches && e.target.matches('[data-action="role-select"]')){
+      state.jordanRole = e.target.value;
+    }
+  });
+
+  document.addEventListener("keydown", function(e){
+    var tag = e.target.tagName;
+    if(tag==="INPUT" || tag==="SELECT" || tag==="TEXTAREA") return;
+    if(e.key==="ArrowRight") go(state.step+1);
+    if(e.key==="ArrowLeft") go(state.step-1);
+  });
+
+  render(false);
+})();
+</script>

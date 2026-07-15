@@ -1,0 +1,65 @@
+{
+  "name": "platform-scaffold",
+  "description": "Reusable scaffold for creating independent SaaS products. Forked per product: select a profile, rebrand via config, replace the reference-workspace module with product modules. Auth, sessions, orgs, membership, authorization, tenant isolation, theming, terminology, entitlements, audit, email, jobs, and operations are inherited. Modular monolith: one React/Vite SPA, one TypeScript/Fastify API, one PostgreSQL database, shipped as a single container image plus a database.",
+  "stack": {
+    "backend": {
+      "language": "typescript",
+      "version": "22",
+      "runtime": "node",
+      "framework": "fastify",
+      "package_manager": "pnpm",
+      "linter": "eslint",
+      "typechecker": "tsc",
+      "test_runner": "vitest",
+      "orm": "drizzle",
+      "migrations": "drizzle-kit"
+    },
+    "frontend": {
+      "language": "typescript",
+      "framework": "react",
+      "bundler": "vite",
+      "package_manager": "pnpm",
+      "linter": "eslint",
+      "typechecker": "tsc",
+      "test_runner": "vitest",
+      "router": "tanstack-router",
+      "data_layer": "tanstack-query",
+      "styling": "tailwindcss-v4"
+    },
+    "database": {
+      "primary": "postgresql",
+      "secondary": "none"
+    },
+    "monorepo": {
+      "workspaces": "pnpm",
+      "task_runner": "turborepo"
+    },
+    "deployment": {
+      "method": "docker-compose",
+      "image": "single multi-stage image; Fastify serves both the API and the built SPA",
+      "services": ["app", "db", "mailpit"]
+    }
+  },
+  "evaluation": {
+    "api_base_url": "http://localhost:3000/api",
+    "ui_base_url": "http://localhost:3000",
+    "health_check": "http://localhost:3000/health",
+    "design_score_threshold": 7,
+    "design_max_iterations": 10,
+    "test_corpus_dir": "specs/test_artefacts"
+  },
+  "execution": {
+    "default_mode": "full",
+    "max_self_heal_attempts": 3,
+    "max_auto_iterations": 50,
+    "coverage_threshold": 80,
+    "session_chaining": true,
+    "agent_team_size": "auto",
+    "teammate_model": "sonnet"
+  },
+  "verification": {
+    "mode": "docker",
+    "health_check": { "url": "http://localhost:3000/health", "retries": 5, "backoff_seconds": 2 },
+    "docker": { "compose_file": "docker-compose.yml", "services": ["app", "db", "mailpit"] }
+  }
+}
