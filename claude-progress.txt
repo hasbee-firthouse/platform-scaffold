@@ -1,48 +1,41 @@
 === Session 1 ===
-date: 2026-07-16T11:05:00+05:30
+date: 2026-07-16T15:35:00+05:30
 mode: full
-pipeline_position: BUILD in progress — groups A,B,C,D complete, group E next
-groups_completed: [A, B, C, D]
-groups_remaining: [E, F, G, H, I, J]
+pipeline_position: BUILD in progress — groups A,B,C,D,E complete, group F next
+groups_completed: [A, B, C, D, E]
+groups_remaining: [F, G, H, I, J]
 current_group: none (between groups — checkpoint)
 current_stories: []
 sprint_contract: none
-last_commit: zod blocker fix (fastify-type-provider-zod@4.0.2) + group C
-features_passing: 35 / 95 (group D adds F020, F023, F024-F026, F030-F032, F043-F045)
-coverage: 248 tests green across 57 files; tsc + eslint clean on all 10 workspaces
+last_commit: group D (jobs/email, audit, components, auth mount)
+features_passing: 42 / 95 (group E adds F036-F038, F050-F053)
+coverage: 318 tests green across ~19 web/authz + prior files; tsc + eslint clean on all workspaces
 learned_rules: 1 (LR-001 zod v3 ↔ fastify-type-provider-zod@4.0.2)
 blocked_stories: none
-resolved_blockers:
-  - zod/fastify-type-provider-zod: pinned fastify-type-provider-zod@4.0.2 (last major on
-    classic zod-3 API). v5+ routes through zod/v4/core which is broken in zod 3.25.x.
-    Type provider now wired: validator/serializer compilers in app.ts, jsonSchemaTransform
-    in swagger; Fastify schema-validation errors map to VALIDATION_FAILED envelope.
-    Proven by end-to-end body-validation test. Recorded as LR-001.
-group_D_stories:
-  - E2-S2 (jobs/email): NEW packages @platform/jobs (pg-boss wrapper: defineJob/enqueue/
-    schedule/registerWorker/start/stop) + @platform/email (EmailPort.send enqueues the
-    email-delivery job; smtp + dev/Mailpit adapters; 6 branded templates). email-delivery
-    job lives in @platform/email to avoid a dep cycle (email→jobs, one-way). Not yet wired
-    into apps/api context (later story). 33 tests.
-  - E2-S3 (audit): NEW @platform/audit (append-only AuditWriter, action codes) +
-    schema/audit.ts (audit_log, uuid v7 PK, text org_id/actor_user_id — better-auth ids
-    aren't uuid; no FKs so rows survive deletes; .enableRLS(), full policy deferred to
-    E8-S1). ctx.audit built inside buildContext from db. onAuthEvent seam added to
-    IdentityConfig + createAuth hooks; main.ts wires it to the writer. Migration
-    0001_hesitant_black_queen.sql. Action codes align to data-models.md §12. 18 tests.
-  - E3-S2 (component library): @platform/ui components (button/input/select/dialog/
-    dropdown/table/tabs/toast/card/form/empty-state/confirm-dialog) on Radix primitives +
-    cva/clsx; react-hook-form + @hookform/resolvers (v3, zod v3). Token-driven, no-hex scan
-    test. 47 new tests, 100% component coverage.
-  - E4-S2 (auth mount + /api/me): apps/api/plugins/auth.ts mounts /api/auth/* by bridging
-    Fastify↔web Request/Response; apps/api/lib/session.ts has requireUser (401
-    UNAUTHENTICATED) + getSession; routes/me.ts GET /api/me + PATCH /api/me/profile.
-    ctx.identity added to PlatformContext; env.ts gains GOOGLE_CLIENT_ID/SECRET.
-    Architecture call: Fastify-specific middleware/mount live in apps/api, NOT
-    platform-identity (kept framework-agnostic) — same precedent as E3-S3. 22 new tests.
-deferred_features:
-  - F021 (cron job actually fires) and F022 (email actually lands in Mailpit): runtime
-    delivery, needs live pg-boss/Postgres/Mailpit — verified in evaluate phase.
-  - Also pending live verification (already marked pass at unit/logic level, re-check in
-    evaluate): real audit rows on sign-in (F026), real org/member data in /api/me (F045).
-next_action: /implement group E
+group_E_stories:
+  - E3-S4 (web app shell): apps/web/src/main.tsx + app.tsx compose Theme/Terminology/
+    QueryClient/Router providers; router/{router.ts,root-route.tsx,assemble-routes.ts}
+    assemble module route trees under /o/$orgSlug/<module> (org) or /app/<module>
+    (personal) from an injectable WebModuleRegistry (empty until modules exist);
+    shell/sidebar.tsx honors config.navigation order/hidden; shell/surfaces/{not-found,
+    upgrade-notice} render 404 + ENTITLEMENT_REQUIRED. NOTE: this story's generator was
+    interrupted mid-run; all files were written but assemble-routes.test.ts had a stale
+    assertion (checked route.path instead of route.options.path — TanStack only populates
+    .path after tree init). Fixed by orchestrator; full suite green.
+  - E5-S1 (authorization): NEW @platform/authz — permissions.ts (ids + wildcard satisfies),
+    roles.ts (owner=all, admin=all except org.delete/org.ownership.transfer, member=read+
+    defaults; wildcards expanded at definition time), registry.ts (throws on unknown/
+    duplicate perm at boot), resolve.ts (resolveRole + hasPermission), require-permission.ts
+    (Fastify preHandler, 403 FORBIDDEN, fastify type-only peer, injectable resolver),
+    static-check.ts (findUnprotectedRoutes / assertRoutesProtected). apps/web/src/lib/can.tsx
+    (<Can> + PermissionsContext/Provider/usePermissions, deny-by-default). 45 tests.
+integration_pending (primitives proven; wiring is a later task, not blocking):
+  - requirePermission is not yet attached to any real apps/api route; static-check not yet
+    invoked by CI. Both unit-proven (F052/F053). Wire when real protected routes land.
+  - /api/me (E4-S2) still uses its own local permissionsForRole map — reconcile to consume
+    @platform/authz resolveRole so client <Can> and server share one source of truth.
+  - platform-jobs/platform-email not yet wired into apps/api context/boot (start workers,
+    ctx.email) — pending.
+deferred_features (need live stack in evaluate phase):
+  - F021 (cron fires), F022 (Mailpit delivery). Also re-verify F026/F045 live.
+next_action: /implement group F

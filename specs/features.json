@@ -567,8 +567,8 @@
       "Navigate to `/o/:orgSlug/<module>`",
       "Assert the module screen renders (and `/app/<module>` for personal-only)"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T15:32:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -583,8 +583,8 @@
       "Render the sidebar",
       "Assert items appear in the configured order and hidden items are absent"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T15:32:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -599,8 +599,8 @@
       "Return an ENTITLEMENT_REQUIRED error from an API call",
       "Assert the upgrade-notice surface renders"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T15:32:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -790,8 +790,8 @@
       "Assert owner has all, admin lacks org-delete/ownership-transfer, member has read + module defaults",
       "Assert wildcard permissions are expanded at definition time"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T15:32:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -806,8 +806,8 @@
       "Register a manifest with a duplicate permission id",
       "Assert boot fails with a descriptive error"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T15:32:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -822,8 +822,8 @@
       "Grant the permission via role",
       "Assert the same call now passes"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T15:32:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -838,8 +838,8 @@
       "Run the static route check",
       "Assert it fails and names the offending route"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T15:32:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
