@@ -3,6 +3,8 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pino from 'pino';
+import { z } from 'zod';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { defineProduct } from '@platform/config';
 import { createDbConnection, type HealthQueryable } from '@platform/db';
 import { buildApp } from './app.js';
@@ -134,6 +136,30 @@ describe('buildApp', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('Acme Suite SPA');
+    await app.close();
+  });
+
+  it('validates a Zod request-body schema: accepts valid input, rejects invalid (SPEC D18)', async () => {
+    const spaDir = createSpaFixture();
+    createdDirs.push(spaDir);
+    const app = await buildApp({ context: testContext(), spaDir, isProduction: false });
+    app.withTypeProvider<ZodTypeProvider>().post(
+      '/api/echo',
+      { schema: { body: z.object({ name: z.string().min(1) }) } },
+      async (request) => {
+        const { name } = request.body as { name: string };
+        return { name };
+      },
+    );
+
+    const ok = await app.inject({ method: 'POST', url: '/api/echo', payload: { name: 'Ada' } });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json()).toEqual({ name: 'Ada' });
+
+    const bad = await app.inject({ method: 'POST', url: '/api/echo', payload: { name: '' } });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json()).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
+
     await app.close();
   });
 

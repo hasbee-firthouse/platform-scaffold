@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { jsonSchemaTransform } from 'fastify-type-provider-zod';
 
 export interface SwaggerOptions {
   isProduction: boolean;
@@ -13,13 +14,9 @@ const DOCS_ROUTE_PREFIX = '/api/docs';
  * Dev-only OpenAPI document + interactive UI at `/api/docs` (E2-S1). Skipped
  * entirely in production so the API surface isn't exposed publicly.
  *
- * NOTE: this deliberately does NOT wire `fastify-type-provider-zod`'s
- * `jsonSchemaTransform`. Importing `fastify-type-provider-zod` throws at
- * module-load time under plain Node ESM with the pinned `zod@3.25.76`
- * (`zod/v4/core` in that release does not export `safeEncode`, which the
- * package's ESM build statically imports) — verified with a bare
- * `node --input-type=module -e "import('fastify-type-provider-zod')"`, not
- * just under vitest. Escalated to the orchestrator; see the sprint report.
+ * `jsonSchemaTransform` (from `fastify-type-provider-zod`) converts the Zod
+ * route schemas into the JSON Schema the OpenAPI document needs, so routes
+ * describe their contracts once in Zod (SPEC D18).
  */
 export async function registerSwagger(app: FastifyInstance, options: SwaggerOptions): Promise<void> {
   if (options.isProduction) {
@@ -29,6 +26,7 @@ export async function registerSwagger(app: FastifyInstance, options: SwaggerOpti
     openapi: {
       info: { title: `${options.productName} API`, version: '0.0.0' },
     },
+    transform: jsonSchemaTransform,
   });
   await app.register(swaggerUi, { routePrefix: DOCS_ROUTE_PREFIX });
 }

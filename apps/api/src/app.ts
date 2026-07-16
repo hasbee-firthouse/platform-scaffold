@@ -1,4 +1,9 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import {
+  serializerCompiler,
+  validatorCompiler,
+  type ZodTypeProvider,
+} from 'fastify-type-provider-zod';
 import type { PlatformContext } from './context.js';
 import { registerHealthRoute } from './routes/health.js';
 import { registerReadyRoute } from './routes/ready.js';
@@ -22,7 +27,13 @@ export interface BuildAppOptions {
  * one {@link PlatformContext}.
  */
 export async function buildApp(options: BuildAppOptions): Promise<FastifyInstance> {
-  const app = Fastify({ logger: { level: options.isProduction ? 'info' : 'debug' } });
+  const app = Fastify({
+    logger: { level: options.isProduction ? 'info' : 'debug' },
+  }).withTypeProvider<ZodTypeProvider>();
+  // Route modules declare request/response schemas as Zod objects; these
+  // compilers validate and serialize them at runtime (SPEC D18).
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
   app.decorate('platform', options.context);
 
   await registerHelmet(app);

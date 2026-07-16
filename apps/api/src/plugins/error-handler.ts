@@ -27,13 +27,22 @@ export function registerErrorHandler(app: FastifyInstance, options: ErrorHandler
 }
 
 function classifyError(error: Error): ClassifiedError {
-  if (error instanceof ZodError) {
+  if (error instanceof ZodError || isSchemaValidationError(error)) {
     return { statusCode: 400, code: 'VALIDATION_FAILED', message: 'Request validation failed' };
   }
   if (hasStatusCode(error) && error.statusCode === 404) {
     return { statusCode: 404, code: 'NOT_FOUND', message: error.message };
   }
   return { statusCode: 500, code: 'INTERNAL', message: 'Internal server error' };
+}
+
+/**
+ * A Fastify request-schema failure — including those produced by the Zod
+ * validator compiler (SPEC D18) — carries a `validation` array rather than
+ * surfacing as a raw {@link ZodError}.
+ */
+function isSchemaValidationError(error: Error): boolean {
+  return Array.isArray((error as { validation?: unknown }).validation);
 }
 
 function hasStatusCode(error: Error): error is Error & { statusCode: number } {
