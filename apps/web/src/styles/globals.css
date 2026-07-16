@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/*
+ * Build-time fallback values only. The real values are set at runtime by
+ * `ThemeProvider` (packages/platform-ui/src/theme) as inline custom
+ * properties on `<html>`, which win the cascade over these defaults. Tailwind
+ * utilities (e.g. `bg-primary`, `rounded-[var(--radius)]`) resolve through
+ * these `@theme` tokens, so rebranding never requires touching this file or
+ * any component.
+ */
+@theme {
+  --color-primary: #4f46e5;
+  --color-secondary: #64748b;
+  --color-accent: #4f46e5;
+  --color-destructive: #ef4444;
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-border: #e2e8f0;
+  --font-family: Inter, sans-serif;
+  --font-family-heading: Inter, sans-serif;
+  --radius: 0.5rem;
+}

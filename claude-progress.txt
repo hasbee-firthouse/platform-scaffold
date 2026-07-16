@@ -1,25 +1,40 @@
 === Session 1 ===
-date: 2026-07-15T19:05:00+05:30
+date: 2026-07-16T08:45:00+05:30
 mode: full
-pipeline_position: BUILD in progress — groups A,B complete, group C next
-groups_completed: [A, B]
-groups_remaining: [C, D, E, F, G, H, I, J]
+pipeline_position: BUILD in progress — groups A,B,C complete, group D next
+groups_completed: [A, B, C]
+groups_remaining: [D, E, F, G, H, I, J]
 current_group: none (between groups — checkpoint)
 current_stories: []
 sprint_contract: none
-last_commit: group A skeleton (monorepo/tooling/CI, E1-S1)
-features_passing: 10 / 95 (group B: F005-F010 pass now; F011-F015 deferred — need apps/* or live Postgres, verified in Group C / evaluate)
-coverage: group B packages fully unit-tested (45 tests green)
+last_commit: group B (config/contracts/db packages, E1-S2/S3/S4)
+features_passing: 24 / 95 (group C adds F011, F015, F016-F019, F029, F033-F035, F039-F042)
+coverage: 131 tests green across 29 files (config/contracts/db/ui/identity/api/web)
 learned_rules: 0
 blocked_stories: none
+carried_forward_blockers:
+  - fastify-type-provider-zod@7 is hard-incompatible with zod@3.25.76 under ESM
+    (SyntaxError: no export 'safeEncode' from 'zod/v4/core'). E2-S1 shipped green
+    WITHOUT the type provider (plain Fastify + @fastify/swagger native JSON-schema
+    mode). Must resolve before any route needs Zod REQUEST-BODY validation (SPEC D18).
+    Planned fix: downgrade the type provider to a zod-3-compatible major. Not blocking
+    Group C (no route needs body validation yet); first bites in Group D+ route work.
+group_C_stories:
+  - E2-S1 (API runtime): env/context/routes/plugins/app/shutdown — 48 tests
+  - E3-S1 (theme): platform-ui tokens + web theme-provider — F029
+  - E3-S3 (terminology): resolveTerm placed in @platform/config (Config layer, NOT
+    platform-ui) so both apps/web useTerm hook AND apps/api term() helper import it
+    without the API depending on UI (architecture.md line 74: API must not import UI).
+    ui/web hook + api context.term() all green.
+  - E4-S1 (identity): platform-identity port + better-auth (sole importer, grep-guarded),
+    auth schema (text IDs), generated migration 0000_hard_tyger_tiger.sql
 artifacts_ready:
-  - specs/stories/ (28 stories, dependency-graph A->J)
-  - specs/features.json (95 features F001-F095, all passes:false)
-  - specs/design/ (system-design, api-contracts[.schema], data-models[.schema], folder-structure, component-map, deployment)
-  - specs/design/mockups/ (8 UI mockups + index.html, shapes validated vs contracts)
+  - apps/api/ (Fastify runtime), apps/web/ (React providers + hooks)
+  - packages/platform-identity/, packages/platform-ui/ (theme), auth schema + migration
 notes:
-  - E8-S3 members-picker uses local key member_id (display-only; not a contract field) — cosmetic, non-blocking
-  - Group B packages use the "internal packages" pattern: exports/types point to ./src/index.ts (no build step); consumers resolve TS source. zod pinned to ^3.25.76 (v4 API differs).
-  - Root package.json now carries db:generate/db:migrate scripts + @platform/config workspace dep for product.config typecheck; root tsconfig includes product.config.ts.
-  - drizzle schema barrel (packages/platform-db/src/schema/index.ts) is intentionally empty; auth/audit/entitlement tables are added by their owning stories (E4-S1, E2-S3, E7-S1).
-next_action: /implement group C (E2-S1 API runtime, E3-S1 theme, E3-S3 terminology, E4-S1 identity)
+  - E3-S3 architecture note: component-map put resolveTerm in packages/platform-ui, but
+    that would force apps/api to import UI (forbidden). Relocated to @platform/config.
+    Deviation from component-map is intentional and correct per architecture rules.
+  - E3-S2 (F030-F032: component/dialog/form primitives) NOT built — belongs to a later
+    wave, correctly left passes:false.
+next_action: /implement group D

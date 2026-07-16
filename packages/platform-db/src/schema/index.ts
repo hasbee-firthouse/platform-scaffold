@@ -4,4 +4,4 @@
  * (`auth.ts`), `audit.ts`, `entitlement.ts` and module tables — are added here
  * by their owning stories in later groups.
  */
-export {};
+export * from './auth.js';

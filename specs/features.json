@@ -169,9 +169,9 @@
       "Run `tsc --noEmit` in each",
       "Assert both typecheck with no errors"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-15T14:03:02.616Z",
-    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
+    "failure_reason": null,
     "failure_layer": null
   },
   {
@@ -232,9 +232,9 @@
       "Run `pnpm db:generate` after a schema change",
       "Assert a new migration file is written to the migrations directory"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-15T14:03:02.616Z",
-    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
+    "failure_reason": null,
     "failure_layer": null
   },
   {
@@ -248,8 +248,8 @@
       "Assert status 200",
       "Stop the DB, GET /api/ready and assert 503; start DB, assert 200"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -264,8 +264,8 @@
       "Assert the process exits non-zero",
       "Assert the log names the missing env var"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -280,8 +280,8 @@
       "Trigger a handler that throws",
       "Assert the response body is `{ error: { code, message } }` with no stack trace"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -296,8 +296,8 @@
       "Assert index.html is returned",
       "Send SIGTERM and assert connections drain and the pool closes before exit"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -455,8 +455,8 @@
       "Render the shell",
       "Assert the DOM references the configured logo/favicon and the font-family/radius tokens match config"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -519,8 +519,8 @@
       "Call with `{ plural: true }` and assert the plural",
       "Call with an unknown key and assert a sensible default is returned"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -535,8 +535,8 @@
       "Render settings screens and nav",
       "Assert the noun reads \"Clinic\"/\"Clinics\" in screens, nav, and an error message"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -551,8 +551,8 @@
       "Assert it returns the same resolved value as `useTerm`",
       "Assert an email template rendered server-side uses the resolved noun"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -614,8 +614,8 @@
       "Grep the repo for imports of `better-auth` outside `packages/platform-identity`",
       "Assert zero matches"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -630,8 +630,8 @@
       "Boot with it true and assert the plugin is registered",
       "Assert email/password, Google, and organization plugins are always present"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -646,8 +646,8 @@
       "Assert the session cookie is httpOnly, SameSite=Lax (Secure in prod)",
       "Assert no JWT is returned to the browser and the session is revocable"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -662,8 +662,8 @@
       "Sign in with Google using the same verified email",
       "Assert both resolve to a single user record"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T08:43:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -756,7 +756,7 @@
     "steps": [
       "Sign in from two sessions",
       "Use \"sign out other sessions\" in Security settings",
-      "Assert the other session’s subsequent request returns 401"
+      "Assert the other session\u00e2\u20ac\u2122s subsequent request returns 401"
     ],
     "passes": false,
     "last_evaluated": null,
@@ -930,7 +930,7 @@
     "group": "G",
     "description": "Members screen supports role change, remove, and admin-create",
     "steps": [
-      "Open the Members screen and change a member’s role",
+      "Open the Members screen and change a member\u00e2\u20ac\u2122s role",
       "Remove a member",
       "Admin-create a member and assert a set-password email is sent"
     ],
@@ -1059,7 +1059,7 @@
     "description": "App-layer cross-tenant probe returns 404/403 for every endpoint",
     "steps": [
       "Seed org A and org B",
-      "Call each org-scoped endpoint with A’s session against B’s ids",
+      "Call each org-scoped endpoint with A\u00e2\u20ac\u2122s session against B\u00e2\u20ac\u2122s ids",
       "Assert every response is 404/403 and no B data is returned"
     ],
     "passes": false,
@@ -1425,7 +1425,7 @@
     "steps": [
       "Trigger \"Export workspace\"",
       "Assert a job is enqueued",
-      "Assert the handler produces a CSV containing the workspace’s tasks"
+      "Assert the handler produces a CSV containing the workspace\u00e2\u20ac\u2122s tasks"
     ],
     "passes": false,
     "last_evaluated": null,
