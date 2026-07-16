@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { IDENTITY_MOUNT_BASE_PATH } from '@platform/identity';
 import { toProxyRequest } from '../lib/session.js';
+import { authRateLimitRouteConfig, buildRateLimitedEnvelope, isRateLimitedError } from './rate-limit.js';
 
 /**
  * Mount the identity handler at `/api/auth/*` (E4-S2 AC#1). Every request under
@@ -21,10 +22,28 @@ export async function registerAuthPlugin(app: FastifyInstance): Promise<void> {
       done(null, body);
     });
 
-    scope.all(`${IDENTITY_MOUNT_BASE_PATH}/*`, async (request, reply) => {
-      const response = await request.server.platform.identity.handler(toProxyRequest(request));
-      await sendWebResponse(reply, response);
+    // Turn the rate limiter's thrown `RateLimitedError` (E4-S3 · AC4) into the
+    // platform `RATE_LIMITED` envelope at 429. Any other error is re-thrown so
+    // the app-level handler classifies it as usual.
+    scope.setErrorHandler((error, _request, reply) => {
+      if (isRateLimitedError(error)) {
+        return reply.status(429).send(buildRateLimitedEnvelope());
+      }
+      throw error;
     });
+
+    // Stricter auth-endpoint rate limit (E4-S3 · AC4): the global
+    // `@fastify/rate-limit` plugin reads this per-route `config.rateLimit`
+    // override, so past the threshold requests get a 429 `RATE_LIMITED`
+    // envelope. Harmless when no limiter is registered (e.g. unit tests).
+    scope.all(
+      `${IDENTITY_MOUNT_BASE_PATH}/*`,
+      { config: authRateLimitRouteConfig() },
+      async (request, reply) => {
+        const response = await request.server.platform.identity.handler(toProxyRequest(request));
+        await sendWebResponse(reply, response);
+      },
+    );
   });
 }
 

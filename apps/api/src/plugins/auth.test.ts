@@ -6,6 +6,7 @@ import { createDbConnection } from '@platform/db';
 import type { IdentityPort } from '@platform/identity';
 import { buildContext, type PlatformContext } from '../context.js';
 import { registerAuthPlugin } from './auth.js';
+import { AUTH_RATE_LIMIT_MAX, registerRateLimit } from './rate-limit.js';
 
 function testConfig(): ReturnType<typeof defineProduct> {
   return defineProduct({
@@ -96,6 +97,29 @@ describe('registerAuthPlugin (/api/auth mount)', () => {
     const response = await app.inject({ method: 'POST', url: '/api/auth/sign-out' });
 
     expect(response.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it('replies 429 RATE_LIMITED once auth requests exceed the threshold (E4-S3 AC4)', async () => {
+    const handler = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const identity: IdentityPort = { handler, getSession: async () => null };
+    const app = buildAppWith(identity);
+    // The global limiter must be present for the per-route auth override to apply.
+    await registerRateLimit(app);
+    await registerAuthPlugin(app);
+
+    const url = '/api/auth/sign-in/email';
+    // Exhaust the stricter auth budget, then one request past it.
+    for (let attempt = 0; attempt < AUTH_RATE_LIMIT_MAX; attempt += 1) {
+      const allowed = await app.inject({ method: 'POST', url });
+      expect(allowed.statusCode).toBe(200);
+    }
+    const blocked = await app.inject({ method: 'POST', url });
+
+    expect(blocked.statusCode).toBe(429);
+    expect(blocked.json()).toEqual({
+      error: { code: 'RATE_LIMITED', message: expect.any(String) },
+    });
     await app.close();
   });
 });

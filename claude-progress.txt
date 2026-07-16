@@ -1,15 +1,15 @@
 === Session 1 ===
 date: 2026-07-16T19:55:00+05:30
 mode: full
-pipeline_position: BUILD in progress — group F PARTIAL (E5-S2, E7-S1 done; E4-S3, E7-S3 pending)
-groups_completed: [A, B, C, D, E]
-groups_remaining: [F (finish E4-S3 + E7-S3), G, H, I, J]
-current_group: F (2 of 4 stories committed; E4-S3 + E7-S3 need a fresh re-run)
-current_stories: [E4-S3, E7-S3]
+pipeline_position: BUILD in progress — groups A,B,C,D,E,F complete, group G next
+groups_completed: [A, B, C, D, E, F]
+groups_remaining: [G, H, I, J]
+current_group: none (between groups — checkpoint)
+current_stories: []
 sprint_contract: none
-last_commit: (about to commit) group F part 1 — E5-S2 orgs + E7-S1 entitlements
-features_passing: 50 / 95 (F part1 adds F054-F057 orgs, F070-F073 entitlements)
-coverage: 406 tests green across 83 files; tsc + eslint clean on all workspaces
+last_commit: (about to commit) group F part 2 — E4-S3 auth screens + E7-S3 audit viewer
+features_passing: 57 / 95 (F complete: +F046-F049 auth, +F077-F079 audit viewer)
+coverage: 487 tests green across 95 files; tsc + eslint clean on all workspaces
 learned_rules: 1 (LR-001)
 blocked_stories: none
 group_F_status:
@@ -26,24 +26,29 @@ group_F_status:
       EntitlementRequiredError carries statusCode 403 + code (route translates, error-handler
       untouched); upgrade-notice CTA = mailto email.fromAddress / branding.supportUrl (added
       optional supportUrl to brandingSchema). No checkout.
-  PENDING — re-run fresh (Wave 3 agents were killed by a session limit, produced ~nothing):
+  DONE + committed (part 2):
     - E4-S3 (auth screens): apps/web/src/screens/auth/* (sign-in/up, verify, forgot/reset,
-      accept-invite, magic-link) + settings-user/security.screen + apps/web/src/lib/auth-client.ts
-      (fetch to /api/auth/*, NOT better-auth SDK); apps/api/plugins/rate-limit.ts + auth.ts
-      (auth thresholds -> 429 RATE_LIMITED). Failed-sign-in audit ALREADY wired via E2-S3's
-      resolveAuthEvent (signin.failure) — just verify+test, don't duplicate. Screens delivered
-      as unit-tested components; router wiring is a follow-up. Features F046-F049.
-    - E7-S3 (audit viewer): packages/platform-audit/src/viewer.ts (listAuditLogs org-scoped +
-      action/actor filters + limit/offset {items,total}); apps/api/routes/orgs/audit-logs.ts
-      (GET, admin-gated via @platform/authz requirePermission, register in app.ts); apps/web/
-      src/screens/settings-org/audit-log.screen.tsx (<Can>-gated, ui Table, pagination/filters).
-      Features F077-F079.
-  Wave-3 fencing (both disjoint, safe to run in parallel):
-    E4-S3 owns web screens/auth + screens/settings-user + lib/auth-client + plugins/rate-limit
-      + plugins/auth + (verify only) identity auth.ts. E7-S3 owns platform-audit/viewer +
-      routes/orgs/audit-logs + app.ts registration + screens/settings-org. NEITHER touches the
-      web router files (router/**, app.tsx, main.tsx, root-route.tsx) — screens unwired for now.
-integration_pending (carried): jobs/email not wired into ctx/boot; requirePermission not on real
-  routes yet (now used by E7-S3 audit route once done); /api/me local perms vs @platform/authz.
-deferred_features (need live stack): F021, F022; re-verify F026/F045/F054/F057/F072 live.
-next_action: re-run Wave 3 (E4-S3 ∥ E7-S3), then finish group F checkpoint.
+      accept-invite, magic-link) + settings-user/security.screen + lib/auth-client.ts (fetch to
+      /api/auth/*, NOT better-auth SDK; grep-guard still green). plugins/rate-limit.ts adds
+      AUTH_RATE_LIMIT_MAX(10) + RateLimitedError; plugins/auth.ts applies it to /api/auth/* with
+      a scoped 429 RATE_LIMITED handler (shared error-handler untouched). Failed-sign-in audit
+      already covered by E2-S3 resolveAuthEvent — not duplicated. Added react-hook-form/
+      @hookform/resolvers/zod/user-event to apps/web (were absent). Screens NOT router-wired
+      (follow-up). 76 tests.
+    - E7-S3 (audit viewer): platform-audit/viewer.ts listAuditLogs (org-scoped, action/actor
+      filters, limit default 50 cap 100, {items,total}, newest-first); routes/orgs/audit-logs.ts
+      GET admin-gated (org.settings.update via the E5-S2 authorizeOrg pattern — requirePermission
+      needs a sync request.permissions the app doesn't attach, so used async role resolution
+      instead; same 403 outcome); registered in app.ts; screens/settings-org/audit-log.screen.tsx
+      <Can>-gated ui Table + filters + pagination. Screen NOT router-wired (follow-up). 38 tests.
+integration_pending (carried debts — not blocking, wire when relevant):
+  - Web screens (auth/*, settings-user/security, settings-org/audit-log) are unit-tested
+    components NOT yet wired into the TanStack router / app.tsx. Needs a routing follow-up.
+  - jobs/email not wired into ctx/boot (start workers, ctx.email; invite + auth emails).
+  - /api/me still uses its own local role→perms map; reconcile to @platform/authz resolveRole.
+  - @platform/authz requirePermission preHandler still unused by real routes (org/audit routes
+    use the async authorizeOrg pattern instead — requirePermission wants a sync request.permissions
+    the app never attaches; reconcile or retire one).
+deferred_features (need live stack in evaluate): F021, F022; re-verify F026/F045/F046/F047/F048/
+  F054/F057/F072/F079 live.
+next_action: /implement group G

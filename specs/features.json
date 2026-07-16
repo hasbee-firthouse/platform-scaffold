@@ -726,8 +726,8 @@
       "Assert a verification email appears in Mailpit and that password sign-in is blocked until verified",
       "Click the verify link and assert a session is established"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T20:10:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -742,8 +742,8 @@
       "Set a new password",
       "Assert sign-in works with the new password and fails with the old one"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T20:10:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -758,8 +758,8 @@
       "Use \"sign out other sessions\" in Security settings",
       "Assert the other session\u00e2\u20ac\u2122s subsequent request returns 401"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T20:10:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -774,8 +774,8 @@
       "Assert a 429 with code RATE_LIMITED",
       "Assert each failed sign-in wrote an audit row"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T20:10:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1220,8 +1220,8 @@
       "Assert it is hidden or the API returns 403",
       "Open as an admin and assert rows load"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T20:10:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1236,8 +1236,8 @@
       "Apply an action filter and an actor filter",
       "Assert pagination uses `{ items, total }` and filters narrow the list"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T20:10:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1252,8 +1252,8 @@
       "View the Audit Log while active in org A",
       "Assert only org A events appear"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T20:10:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
