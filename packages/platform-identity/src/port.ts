@@ -77,6 +77,21 @@ export interface MagicLinkSenderInput {
 /** Delivers a magic-link sign-in email. Required only when `capabilities.magicLink` is enabled. */
 export type MagicLinkSender = (input: MagicLinkSenderInput) => Promise<void>;
 
+/** The freshly-created user handed to the personal-org auto-create hook (E5-S2 · AC#1). */
+export interface NewUserForPersonalOrg {
+  id: string;
+  name: string;
+  email: string;
+}
+
+/**
+ * Creates the personal org-of-one for a newly-signed-up user (E5-S2 · AC#1).
+ * Supplied by `apps/api` (which owns the org tables); the identity adapter only
+ * invokes it from better-auth's user-create hook when `capabilities.personalAccounts`
+ * is on. Kept optional so team-only profiles omit it entirely.
+ */
+export type PersonalOrgCreator = (user: NewUserForPersonalOrg) => Promise<void>;
+
 /**
  * Typed inputs for constructing the identity adapter (AC#2/#3/#4). Nothing in
  * this file imports `better-auth`; the adapter module translates these into
@@ -96,4 +111,10 @@ export interface IdentityConfig {
    * event emission is a no-op and no auth hooks are registered.
    */
   onAuthEvent?: (event: AuthEvent) => void | Promise<void>;
+  /**
+   * Optional personal-org auto-create hook (E5-S2 · AC#1). Invoked after a user
+   * row is created, but only when `capabilities.personalAccounts` is on; team-only
+   * profiles leave it unset so no personal org is ever created.
+   */
+  createPersonalOrg?: PersonalOrgCreator;
 }

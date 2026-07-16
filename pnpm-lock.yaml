@@ -72,6 +72,9 @@ importers:
       '@platform/audit':
         specifier: workspace:*
         version: link:../../packages/platform-audit
+      '@platform/authz':
+        specifier: workspace:*
+        version: link:../../packages/platform-authz
       '@platform/config':
         specifier: workspace:*
         version: link:../../packages/platform-config
@@ -81,6 +84,9 @@ importers:
       '@platform/db':
         specifier: workspace:*
         version: link:../../packages/platform-db
+      '@platform/entitlements':
+        specifier: workspace:*
+        version: link:../../packages/platform-entitlements
       '@platform/identity':
         specifier: workspace:*
         version: link:../../packages/platform-identity
@@ -260,6 +266,25 @@ importers:
       '@types/nodemailer':
         specifier: ^6.4.17
         version: 6.4.24
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/platform-entitlements:
+    dependencies:
+      '@platform/audit':
+        specifier: workspace:*
+        version: link:../platform-audit
+      '@platform/contracts':
+        specifier: workspace:*
+        version: link:../platform-contracts
+      '@platform/db':
+        specifier: workspace:*
+        version: link:../platform-db
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/pg@8.20.0)(kysely@0.29.3)(pg@8.22.0)
+    devDependencies:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3

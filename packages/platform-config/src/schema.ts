@@ -39,6 +39,13 @@ export const brandingSchema = z.object({
     headingFamily: z.string().min(1).optional(),
   }),
   radius: z.string().min(1),
+  /**
+   * Optional support/contact destination for the upgrade-notice CTA and other
+   * "contact us" surfaces (E7-S1 · AC4). When set it takes precedence over the
+   * `mailto:` fallback to `email.fromAddress`. Optional so existing product
+   * configs stay valid without change.
+   */
+  supportUrl: z.string().url().optional(),
 });
 export type Branding = z.infer<typeof brandingSchema>;
 

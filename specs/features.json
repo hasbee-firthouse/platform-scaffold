@@ -854,8 +854,8 @@
       "Assert a personal org (type=personal, owner=user) exists",
       "Assert it exposes no invite/members endpoints"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T19:55:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -870,8 +870,8 @@
       "Attempt to remove/demote the only owner and assert it is rejected",
       "Transfer ownership and assert the new owner holds owner role"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T19:55:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -886,8 +886,8 @@
       "As owner, delete with correct name confirmation",
       "Assert `deleted_at` is set and the org is retained (not hard-deleted)"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T19:55:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -902,8 +902,8 @@
       "Resend and revoke and assert token state changes",
       "Accept a valid invite and assert the invitee becomes a member with the assigned role"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T19:55:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1109,8 +1109,8 @@
       "Set an override",
       "Assert `get` now returns the override value"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T19:55:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1124,8 +1124,8 @@
       "Call `entitlements.require(orgId, key)` where the entitlement is unmet",
       "Assert a typed 403 with code ENTITLEMENT_REQUIRED is thrown"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T19:55:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1140,8 +1140,8 @@
       "Assert a row exists in `entitlement_override`",
       "Assert an audit row records the change"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T19:55:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1156,8 +1156,8 @@
       "Assert the upgrade notice renders",
       "Assert the CTA is a mailto to email.fromAddress (or branding.supportUrl) and there is no plan picker/checkout"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T19:55:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },

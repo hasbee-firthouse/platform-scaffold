@@ -9,6 +9,11 @@ import { loadEnv } from './env.js';
 import { buildContext } from './context.js';
 import { buildApp } from './app.js';
 import { installGracefulShutdown } from './shutdown.js';
+import {
+  createDrizzleOrgRepository,
+  createPersonalOrgCreator,
+  type PersonalOrgUser,
+} from './routes/orgs/index.js';
 
 const SRC_DIR = fileURLToPath(new URL('.', import.meta.url));
 const SPA_DIR = path.resolve(SRC_DIR, '../../web/dist');
@@ -24,6 +29,16 @@ async function main(): Promise<void> {
   // log (E2-S3). This writer is the same append-only surface `buildContext`
   // mounts as `ctx.audit`, over the same database connection.
   const audit = createAuditWriter(connection.db);
+  // Personal-org auto-create (E5-S2 · AC#1): only threaded in when the product
+  // enables personal accounts, so team-only profiles never create one. The
+  // adapter invokes it inside better-auth's user-create transaction.
+  const orgRepository = createDrizzleOrgRepository(connection.db);
+  const personalOrgCreator = createPersonalOrgCreator(orgRepository);
+  const createPersonalOrg = config.capabilities.personalAccounts
+    ? async (user: PersonalOrgUser): Promise<void> => {
+        await personalOrgCreator(user);
+      }
+    : undefined;
   // The only place the concrete identity adapter is constructed; the rest of
   // the API depends solely on the `IdentityPort` carried by the context.
   const identity = toIdentityPort(
@@ -35,6 +50,7 @@ async function main(): Promise<void> {
       db: connection.db,
       google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET },
       onAuthEvent: (event) => audit.log(authEventToEntry(event)),
+      createPersonalOrg,
     }),
   );
   const context = buildContext({ config, connection, logger, identity });

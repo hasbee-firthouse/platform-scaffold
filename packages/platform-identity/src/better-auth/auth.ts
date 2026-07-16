@@ -120,6 +120,37 @@ function buildAuthHooks(input: IdentityConfig): BetterAuthOptions['hooks'] {
 }
 
 /**
+ * Whether the personal-org auto-create hook should run (E5-S2 · AC#1): only
+ * when the product enables `capabilities.personalAccounts` AND a creator was
+ * supplied. Exported so the gating is unit-testable without booting better-auth.
+ */
+export function shouldAutoCreatePersonalOrg(input: IdentityConfig): boolean {
+  return input.capabilities.personalAccounts && input.createPersonalOrg !== undefined;
+}
+
+/**
+ * Build better-auth's `databaseHooks` so a personal org is created right after a
+ * user row is inserted, within better-auth's own signup transaction (AC#1).
+ * Returns `undefined` for team-only profiles so no hook is registered. The end-
+ * to-end signup→org flow is verified in the evaluate phase.
+ */
+export function buildDatabaseHooks(input: IdentityConfig): BetterAuthOptions['databaseHooks'] {
+  if (!shouldAutoCreatePersonalOrg(input)) {
+    return undefined;
+  }
+  const createPersonalOrg = input.createPersonalOrg!;
+  return {
+    user: {
+      create: {
+        after: async (user) => {
+          await createPersonalOrg({ id: user.id, name: user.name, email: user.email });
+        },
+      },
+    },
+  };
+}
+
+/**
  * Configure better-auth (E4-S1): drizzle-backed email/password with required
  * email verification, Google OAuth, the organization plugin, cookie sessions
  * with a 30-day sliding expiry, and account linking across providers that
@@ -162,6 +193,7 @@ export function createAuth(input: IdentityConfig) {
     },
     plugins: buildPlugins(input),
     hooks: buildAuthHooks(input),
+    databaseHooks: buildDatabaseHooks(input),
   });
 }
 

@@ -68,10 +68,23 @@ export const organization = pgTable('organization', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  /**
+   * `'personal'` for the org-of-one auto-created at signup, `'team'` for
+   * self-service orgs (E5-S2 · AC#1, D7 / §9.1). Personal orgs expose no
+   * members/invitations screens. Defaults to `'team'` so better-auth's own
+   * `createOrganization` (which does not set this column) yields a team org.
+   */
+  type: text('type').notNull().default('team'),
   logo: text('logo'),
   /** JSON-serialized metadata; better-auth transforms it to/from an object at the API boundary. */
   metadata: text('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  /**
+   * Soft-delete marker (E5-S2 · AC#3): non-null once an owner deletes the org,
+   * with a 30-day retention window before the `soft-deleted-org-purge` job
+   * (`@platform/jobs`) hard-deletes it. `null` means the org is live.
+   */
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const member = pgTable('member', {

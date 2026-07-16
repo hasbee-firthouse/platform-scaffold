@@ -1,41 +1,49 @@
 === Session 1 ===
-date: 2026-07-16T15:35:00+05:30
+date: 2026-07-16T19:55:00+05:30
 mode: full
-pipeline_position: BUILD in progress — groups A,B,C,D,E complete, group F next
+pipeline_position: BUILD in progress — group F PARTIAL (E5-S2, E7-S1 done; E4-S3, E7-S3 pending)
 groups_completed: [A, B, C, D, E]
-groups_remaining: [F, G, H, I, J]
-current_group: none (between groups — checkpoint)
-current_stories: []
+groups_remaining: [F (finish E4-S3 + E7-S3), G, H, I, J]
+current_group: F (2 of 4 stories committed; E4-S3 + E7-S3 need a fresh re-run)
+current_stories: [E4-S3, E7-S3]
 sprint_contract: none
-last_commit: group D (jobs/email, audit, components, auth mount)
-features_passing: 42 / 95 (group E adds F036-F038, F050-F053)
-coverage: 318 tests green across ~19 web/authz + prior files; tsc + eslint clean on all workspaces
-learned_rules: 1 (LR-001 zod v3 ↔ fastify-type-provider-zod@4.0.2)
+last_commit: (about to commit) group F part 1 — E5-S2 orgs + E7-S1 entitlements
+features_passing: 50 / 95 (F part1 adds F054-F057 orgs, F070-F073 entitlements)
+coverage: 406 tests green across 83 files; tsc + eslint clean on all workspaces
+learned_rules: 1 (LR-001)
 blocked_stories: none
-group_E_stories:
-  - E3-S4 (web app shell): apps/web/src/main.tsx + app.tsx compose Theme/Terminology/
-    QueryClient/Router providers; router/{router.ts,root-route.tsx,assemble-routes.ts}
-    assemble module route trees under /o/$orgSlug/<module> (org) or /app/<module>
-    (personal) from an injectable WebModuleRegistry (empty until modules exist);
-    shell/sidebar.tsx honors config.navigation order/hidden; shell/surfaces/{not-found,
-    upgrade-notice} render 404 + ENTITLEMENT_REQUIRED. NOTE: this story's generator was
-    interrupted mid-run; all files were written but assemble-routes.test.ts had a stale
-    assertion (checked route.path instead of route.options.path — TanStack only populates
-    .path after tree init). Fixed by orchestrator; full suite green.
-  - E5-S1 (authorization): NEW @platform/authz — permissions.ts (ids + wildcard satisfies),
-    roles.ts (owner=all, admin=all except org.delete/org.ownership.transfer, member=read+
-    defaults; wildcards expanded at definition time), registry.ts (throws on unknown/
-    duplicate perm at boot), resolve.ts (resolveRole + hasPermission), require-permission.ts
-    (Fastify preHandler, 403 FORBIDDEN, fastify type-only peer, injectable resolver),
-    static-check.ts (findUnprotectedRoutes / assertRoutesProtected). apps/web/src/lib/can.tsx
-    (<Can> + PermissionsContext/Provider/usePermissions, deny-by-default). 45 tests.
-integration_pending (primitives proven; wiring is a later task, not blocking):
-  - requirePermission is not yet attached to any real apps/api route; static-check not yet
-    invoked by CI. Both unit-proven (F052/F053). Wire when real protected routes land.
-  - /api/me (E4-S2) still uses its own local permissionsForRole map — reconcile to consume
-    @platform/authz resolveRole so client <Can> and server share one source of truth.
-  - platform-jobs/platform-email not yet wired into apps/api context/boot (start workers,
-    ctx.email) — pending.
-deferred_features (need live stack in evaluate phase):
-  - F021 (cron fires), F022 (Mailpit delivery). Also re-verify F026/F045 live.
-next_action: /implement group F
+group_F_status:
+  DONE + committed (part 1):
+    - E5-S2 (orgs & membership): schema/auth.ts +type/+deleted_at; migration 0002; custom
+      /api/orgs routes (create/update/delete/transfer/members/invitations) on ctx.db via a
+      Repository seam; at-least-one-owner invariant; owner-only soft-delete w/ name confirm;
+      invite lifecycle (7-day token = invitation id) send/resend/revoke/accept; personal-org
+      auto-create hook in better-auth (databaseHooks.user.create.after, gated on
+      capabilities.personalAccounts). Invite email delivery deferred (injectable sendInvite).
+    - E7-S1 (entitlements): schema/entitlement.ts (entitlement_override, uuid PK, jsonb value,
+      RLS, unique org_id+key); migration 0003; @platform/entitlements (registry defaults +
+      get/require); ctx.entitlements built in buildContext; GET /api/orgs/:orgId/entitlements;
+      EntitlementRequiredError carries statusCode 403 + code (route translates, error-handler
+      untouched); upgrade-notice CTA = mailto email.fromAddress / branding.supportUrl (added
+      optional supportUrl to brandingSchema). No checkout.
+  PENDING — re-run fresh (Wave 3 agents were killed by a session limit, produced ~nothing):
+    - E4-S3 (auth screens): apps/web/src/screens/auth/* (sign-in/up, verify, forgot/reset,
+      accept-invite, magic-link) + settings-user/security.screen + apps/web/src/lib/auth-client.ts
+      (fetch to /api/auth/*, NOT better-auth SDK); apps/api/plugins/rate-limit.ts + auth.ts
+      (auth thresholds -> 429 RATE_LIMITED). Failed-sign-in audit ALREADY wired via E2-S3's
+      resolveAuthEvent (signin.failure) — just verify+test, don't duplicate. Screens delivered
+      as unit-tested components; router wiring is a follow-up. Features F046-F049.
+    - E7-S3 (audit viewer): packages/platform-audit/src/viewer.ts (listAuditLogs org-scoped +
+      action/actor filters + limit/offset {items,total}); apps/api/routes/orgs/audit-logs.ts
+      (GET, admin-gated via @platform/authz requirePermission, register in app.ts); apps/web/
+      src/screens/settings-org/audit-log.screen.tsx (<Can>-gated, ui Table, pagination/filters).
+      Features F077-F079.
+  Wave-3 fencing (both disjoint, safe to run in parallel):
+    E4-S3 owns web screens/auth + screens/settings-user + lib/auth-client + plugins/rate-limit
+      + plugins/auth + (verify only) identity auth.ts. E7-S3 owns platform-audit/viewer +
+      routes/orgs/audit-logs + app.ts registration + screens/settings-org. NEITHER touches the
+      web router files (router/**, app.tsx, main.tsx, root-route.tsx) — screens unwired for now.
+integration_pending (carried): jobs/email not wired into ctx/boot; requirePermission not on real
+  routes yet (now used by E7-S3 audit route once done); /api/me local perms vs @platform/authz.
+deferred_features (need live stack): F021, F022; re-verify F026/F045/F054/F057/F072 live.
+next_action: re-run Wave 3 (E4-S3 ∥ E7-S3), then finish group F checkpoint.

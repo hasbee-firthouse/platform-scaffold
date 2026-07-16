@@ -4,6 +4,8 @@ import { resolveTerm } from '@platform/config';
 import type { DbConnection } from '@platform/db';
 import type { AuditWriter } from '@platform/audit';
 import { createAuditWriter } from '@platform/audit';
+import type { EntitlementsApi } from '@platform/entitlements';
+import { createDrizzleOverrideStore, createEntitlementRegistry, createEntitlements } from '@platform/entitlements';
 import type { IdentityPort } from '@platform/identity';
 
 /**
@@ -37,6 +39,16 @@ export interface PlatformContext {
    * connection, so existing `buildContext` call sites are unaffected.
    */
   audit: AuditWriter;
+  /**
+   * The entitlements resolver (E7-S1). `entitlements.get(orgId, key)` resolves
+   * the per-org override or the module-declared default; `entitlements.require`
+   * throws a typed 403 `ENTITLEMENT_REQUIRED` when unmet; `setOverride` persists
+   * and audits a change. Constructed internally from the same database
+   * connection and audit writer, so existing `buildContext` call sites are
+   * unaffected. Declared defaults come from the injectable registry — seeded
+   * with the built-in placeholder set until product modules register their own.
+   */
+  entitlements: EntitlementsApi;
 }
 
 export interface BuildContextOptions {
@@ -48,6 +60,7 @@ export interface BuildContextOptions {
 
 /** Assemble the per-process {@link PlatformContext} from its already-built parts. */
 export function buildContext(options: BuildContextOptions): PlatformContext {
+  const audit = createAuditWriter(options.connection.db);
   return {
     config: options.config,
     db: options.connection.db,
@@ -55,7 +68,12 @@ export function buildContext(options: BuildContextOptions): PlatformContext {
     logger: options.logger,
     term: (key, opts) => resolveTerm(options.config.terminology, key, opts),
     identity: options.identity,
-    audit: createAuditWriter(options.connection.db),
+    audit,
+    entitlements: createEntitlements({
+      store: createDrizzleOverrideStore(options.connection.db),
+      registry: createEntitlementRegistry(),
+      audit,
+    }),
   };
 }
 

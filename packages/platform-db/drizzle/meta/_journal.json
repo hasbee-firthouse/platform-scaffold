@@ -15,6 +15,20 @@
       "when": 1784179589722,
       "tag": "0001_hesitant_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784205711579,
+      "tag": "0002_sweet_bruce_banner",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784207829135,
+      "tag": "0003_glossy_wallop",
+      "breakpoints": true
     }
   ]
 }

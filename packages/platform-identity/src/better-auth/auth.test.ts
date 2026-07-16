@@ -3,7 +3,12 @@ import { getCookies } from 'better-auth/cookies';
 import { describe, expect, it, vi } from 'vitest';
 import type { Capabilities } from '@platform/config';
 import type { IdentityConfig } from '../port.js';
-import { createAuth, MissingMagicLinkSenderError } from './auth.js';
+import {
+  buildDatabaseHooks,
+  createAuth,
+  MissingMagicLinkSenderError,
+  shouldAutoCreatePersonalOrg,
+} from './auth.js';
 
 const THIRTY_DAYS_IN_SECONDS = 60 * 60 * 24 * 30;
 const ONE_DAY_IN_SECONDS = 60 * 60 * 24;
@@ -121,5 +126,46 @@ describe('createAuth', () => {
     // verified email is exercised against a live database at the evaluate
     // phase — this test only asserts the configuration that enables it.
     expect(auth.options.account?.accountLinking?.requireLocalEmailVerified).toBe(true);
+  });
+});
+
+describe('personal-org auto-create hook (E5-S2 · AC#1)', () => {
+  it('gates on personalAccounts AND a supplied creator', () => {
+    const creator = vi.fn(async () => undefined);
+    expect(shouldAutoCreatePersonalOrg(buildConfig({ createPersonalOrg: creator }))).toBe(true);
+    expect(shouldAutoCreatePersonalOrg(buildConfig({ createPersonalOrg: undefined }))).toBe(false);
+    expect(
+      shouldAutoCreatePersonalOrg(
+        buildConfig({
+          capabilities: { ...BASE_CAPABILITIES, personalAccounts: false },
+          createPersonalOrg: creator,
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('registers no databaseHooks for a team-only profile', () => {
+    const hooks = buildDatabaseHooks(
+      buildConfig({ capabilities: { ...BASE_CAPABILITIES, personalAccounts: false } }),
+    );
+    expect(hooks).toBeUndefined();
+  });
+
+  it('invokes the creator with the new user after user.create', async () => {
+    const creator = vi.fn(async () => undefined);
+    const hooks = buildDatabaseHooks(buildConfig({ createPersonalOrg: creator }));
+    const after = hooks?.user?.create?.after;
+    expect(after).toBeTypeOf('function');
+
+    await after!(
+      { id: 'user_1', name: 'Ada', email: 'ada@x.io' } as never,
+      null,
+    );
+    expect(creator).toHaveBeenCalledWith({ id: 'user_1', name: 'Ada', email: 'ada@x.io' });
+  });
+
+  it('wires databaseHooks into the constructed auth instance', () => {
+    const auth = createAuth(buildConfig({ createPersonalOrg: vi.fn(async () => undefined) }));
+    expect(auth.options.databaseHooks?.user?.create?.after).toBeTypeOf('function');
   });
 });

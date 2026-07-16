@@ -16,6 +16,8 @@ import { registerErrorHandler } from './plugins/error-handler.js';
 import { registerAuthPlugin } from './plugins/auth.js';
 import { registerAuthSession } from './lib/session.js';
 import { registerMeRoute, buildMeRouteDeps } from './routes/me.js';
+import { registerOrgRoutes } from './routes/orgs/index.js';
+import { registerEntitlementRoutes } from './routes/orgs/entitlements.js';
 import { registerModules } from './register-modules.js';
 
 export interface BuildAppOptions {
@@ -55,6 +57,12 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await registerAuthPlugin(app);
   registerAuthSession(app);
   registerMeRoute(app, buildMeRouteDeps(options.context.db));
+
+  // Organizations & membership (E5-S2): lifecycle, members, invitations under /api/orgs.
+  registerOrgRoutes(app, options.context);
+
+  // Entitlements (E7-S1): resolved per-org entitlement reads under /api/orgs/:orgId/entitlements.
+  registerEntitlementRoutes(app, options.context);
 
   await registerModules(app, options.context);
   await registerStaticSpa(app, { spaDir: options.spaDir });
