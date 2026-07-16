@@ -13,6 +13,9 @@ import { registerRateLimit } from './plugins/rate-limit.js';
 import { registerCookie } from './plugins/cookie.js';
 import { registerStaticSpa } from './plugins/static-spa.js';
 import { registerErrorHandler } from './plugins/error-handler.js';
+import { registerAuthPlugin } from './plugins/auth.js';
+import { registerAuthSession } from './lib/session.js';
+import { registerMeRoute, buildMeRouteDeps } from './routes/me.js';
 import { registerModules } from './register-modules.js';
 
 export interface BuildAppOptions {
@@ -47,6 +50,11 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   registerErrorHandler(app, { isProduction: options.isProduction });
   registerHealthRoute(app);
   registerReadyRoute(app, { pool: options.context.pool });
+
+  // Authentication (E4-S2): mount `/api/auth/*`, enable `requireUser`, expose `/api/me`.
+  await registerAuthPlugin(app);
+  registerAuthSession(app);
+  registerMeRoute(app, buildMeRouteDeps(options.context.db));
 
   await registerModules(app, options.context);
   await registerStaticSpa(app, { spaDir: options.spaDir });

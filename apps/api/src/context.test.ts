@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import pino from 'pino';
 import { defineProduct } from '@platform/config';
 import { createDbConnection } from '@platform/db';
+import type { IdentityPort } from '@platform/identity';
 import { buildContext } from './context.js';
+
+function testIdentity(): IdentityPort {
+  return {
+    handler: async () => new Response('ok'),
+    getSession: async () => null,
+  };
+}
 
 function testConfig(): ReturnType<typeof defineProduct> {
   return defineProduct({
@@ -26,7 +34,7 @@ describe('buildContext', () => {
     const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
     const logger = pino({ level: 'silent' });
 
-    const context = buildContext({ config, connection, logger });
+    const context = buildContext({ config, connection, logger, identity: testIdentity() });
 
     expect(context.config).toBe(config);
     void connection.pool.end();
@@ -36,7 +44,7 @@ describe('buildContext', () => {
     const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
     const logger = pino({ level: 'silent' });
 
-    const context = buildContext({ config: testConfig(), connection, logger });
+    const context = buildContext({ config: testConfig(), connection, logger, identity: testIdentity() });
 
     expect(context.db).toBe(connection.db);
     expect(context.pool).toBe(connection.pool);
@@ -47,9 +55,20 @@ describe('buildContext', () => {
     const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
     const logger = pino({ level: 'silent' });
 
-    const context = buildContext({ config: testConfig(), connection, logger });
+    const context = buildContext({ config: testConfig(), connection, logger, identity: testIdentity() });
 
     expect(context.logger).toBe(logger);
+    void connection.pool.end();
+  });
+
+  it('exposes the injected identity port unchanged (E4-S2)', () => {
+    const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
+    const logger = pino({ level: 'silent' });
+    const identity = testIdentity();
+
+    const context = buildContext({ config: testConfig(), connection, logger, identity });
+
+    expect(context.identity).toBe(identity);
     void connection.pool.end();
   });
 
@@ -58,7 +77,7 @@ describe('buildContext', () => {
     const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
     const logger = pino({ level: 'silent' });
 
-    const context = buildContext({ config, connection, logger });
+    const context = buildContext({ config, connection, logger, identity: testIdentity() });
 
     // testConfig sets no terminology override, so it resolves to DEFAULT_TERMINOLOGY.
     expect(context.term('organization')).toBe('Organization');

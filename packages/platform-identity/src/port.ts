@@ -51,6 +51,23 @@ export interface GoogleProviderConfig {
   clientSecret: string;
 }
 
+/** The auth action codes the identity port emits for auditing (E2-S3 · AC3). */
+export type AuthEventAction = 'auth.sign_in.success' | 'auth.sign_in.failure' | 'auth.sign_out';
+
+/**
+ * A platform authentication event (E2-S3). Emitted for sign-in success, sign-in
+ * failure, and sign-out, carrying the acting user (when known) and the request
+ * ip / user-agent so a consumer — the audit writer wired in `apps/api` — can
+ * record who did what from where. The identity package never writes audit rows
+ * itself; it only announces the event through {@link IdentityConfig.onAuthEvent}.
+ */
+export interface AuthEvent {
+  action: AuthEventAction;
+  actorUserId?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}
+
 export interface MagicLinkSenderInput {
   email: string;
   url: string;
@@ -73,4 +90,10 @@ export interface IdentityConfig {
   db: NodePgDatabase;
   google: GoogleProviderConfig;
   sendMagicLink?: MagicLinkSender;
+  /**
+   * Optional sink for authentication events (E2-S3 · AC3). When provided, the
+   * adapter invokes it for sign-in success/failure and sign-out; when omitted,
+   * event emission is a no-op and no auth hooks are registered.
+   */
+  onAuthEvent?: (event: AuthEvent) => void | Promise<void>;
 }

@@ -7,6 +7,8 @@ function validSource(overrides: Record<string, string | undefined> = {}): Record
     APP_URL: 'https://app.example.com',
     DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/platform',
     BETTER_AUTH_SECRET: 'a-very-long-random-secret-value',
+    GOOGLE_CLIENT_ID: 'google-client-id',
+    GOOGLE_CLIENT_SECRET: 'google-client-secret',
     ...overrides,
   };
 }
@@ -20,6 +22,8 @@ describe('loadEnv', () => {
       APP_URL: 'https://app.example.com',
       DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/platform',
       BETTER_AUTH_SECRET: 'a-very-long-random-secret-value',
+      GOOGLE_CLIENT_ID: 'google-client-id',
+      GOOGLE_CLIENT_SECRET: 'google-client-secret',
     });
   });
 
@@ -68,6 +72,30 @@ describe('loadEnv', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(InvalidEnvError);
       expect((error as Error).message).toContain('NODE_ENV');
+    }
+  });
+
+  it('throws InvalidEnvError naming GOOGLE_CLIENT_ID when it is missing', () => {
+    const source = validSource({ GOOGLE_CLIENT_ID: undefined });
+
+    try {
+      loadEnv(source);
+      throw new Error('expected loadEnv to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvalidEnvError);
+      expect((error as Error).message).toContain('GOOGLE_CLIENT_ID');
+    }
+  });
+
+  it('throws InvalidEnvError naming GOOGLE_CLIENT_SECRET when it is missing', () => {
+    const source = validSource({ GOOGLE_CLIENT_SECRET: undefined });
+
+    try {
+      loadEnv(source);
+      throw new Error('expected loadEnv to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvalidEnvError);
+      expect((error as Error).message).toContain('GOOGLE_CLIENT_SECRET');
     }
   });
 

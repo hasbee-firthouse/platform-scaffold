@@ -8,6 +8,13 @@
       "when": 1784144353723,
       "tag": "0000_hard_tyger_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784179589722,
+      "tag": "0001_hesitant_black_queen",
+      "breakpoints": true
     }
   ]
 }

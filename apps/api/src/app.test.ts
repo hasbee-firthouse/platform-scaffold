@@ -7,8 +7,16 @@ import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { defineProduct } from '@platform/config';
 import { createDbConnection, type HealthQueryable } from '@platform/db';
+import type { IdentityPort } from '@platform/identity';
 import { buildApp } from './app.js';
 import { buildContext, type PlatformContext } from './context.js';
+
+function testIdentity(): IdentityPort {
+  return {
+    handler: async () => new Response('ok'),
+    getSession: async () => null,
+  };
+}
 
 function testConfig(): ReturnType<typeof defineProduct> {
   return defineProduct({
@@ -28,7 +36,12 @@ function testConfig(): ReturnType<typeof defineProduct> {
 
 function testContext(pool?: HealthQueryable): PlatformContext {
   const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
-  const context = buildContext({ config: testConfig(), connection, logger: pino({ level: 'silent' }) });
+  const context = buildContext({
+    config: testConfig(),
+    connection,
+    logger: pino({ level: 'silent' }),
+    identity: testIdentity(),
+  });
   return pool ? { ...context, pool: pool as PlatformContext['pool'] } : context;
 }
 

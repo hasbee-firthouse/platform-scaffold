@@ -10,6 +10,8 @@ const envSchema = z.object({
   APP_URL: z.string().min(1, 'is required').url('must be a valid URL'),
   DATABASE_URL: z.string().min(1, 'is required'),
   BETTER_AUTH_SECRET: z.string().min(1, 'is required'),
+  GOOGLE_CLIENT_ID: z.string().min(1, 'is required'),
+  GOOGLE_CLIENT_SECRET: z.string().min(1, 'is required'),
 });
 
 export type Env = z.infer<typeof envSchema>;

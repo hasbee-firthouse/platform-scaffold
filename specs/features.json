@@ -312,8 +312,8 @@
       "Enqueue an invalid payload and assert it is rejected",
       "Enqueue a valid payload and assert the handler runs and the job is marked complete"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -329,9 +329,9 @@
       "Assert the handler executed at least once"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
-    "failure_layer": null
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
+    "failure_reason": "deferred: runtime delivery (live pg-boss cron / Mailpit) \u2014 verified in evaluate phase",
+    "failure_layer": "service"
   },
   {
     "id": "F022",
@@ -345,9 +345,9 @@
       "Assert a message exists whose subject/body contain `branding.productName` and resolved terminology"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
-    "failure_layer": null
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
+    "failure_reason": "deferred: runtime delivery (live pg-boss cron / Mailpit) \u2014 verified in evaluate phase",
+    "failure_layer": "service"
   },
   {
     "id": "F023",
@@ -359,8 +359,8 @@
       "Enumerate registered jobs",
       "Assert handlers exist for email delivery, invite expiry sweep, and soft-deleted-org purge"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -375,8 +375,8 @@
       "Assert all documented columns exist with correct nullability",
       "Assert the writer API exposes only an append/log method (no update/delete)"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -391,8 +391,8 @@
       "Assert a row is written with the action, target_type, target_id, actor_user_id",
       "Assert ip and user_agent are captured from the request"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -407,8 +407,8 @@
       "Query audit_log",
       "Assert rows exist with the corresponding sign-in-success, sign-in-failure, and sign-out actions"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -471,8 +471,8 @@
       "Grep `packages/platform-ui` component styles for hex color literals",
       "Assert zero matches and that components reference CSS token variables"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -487,8 +487,8 @@
       "Press Esc and assert it closes and focus returns to the trigger",
       "Repeat keyboard checks for Dropdown"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -503,8 +503,8 @@
       "Submit invalid data",
       "Assert an accessible error is shown and associated with its labeled field"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -678,8 +678,8 @@
       "Assert it responds (not 404)",
       "Assert only platform-identity registers the auth handler"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -694,8 +694,8 @@
       "Assert 401 with code UNAUTHENTICATED",
       "Call again with a valid session cookie and assert it passes"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -710,8 +710,8 @@
       "Assert the body includes user, orgs list, active-org role",
       "Assert it includes the resolved permission set"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-16T11:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },

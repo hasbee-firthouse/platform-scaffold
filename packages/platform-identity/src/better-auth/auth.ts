@@ -1,10 +1,11 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { createAuthMiddleware } from 'better-auth/api';
 import { organization } from 'better-auth/plugins/organization';
 import { magicLink } from 'better-auth/plugins/magic-link';
-import type { BetterAuthPlugin } from 'better-auth';
+import type { BetterAuthOptions, BetterAuthPlugin } from 'better-auth';
 import { schema } from '@platform/db';
-import type { IdentityConfig } from '../port.js';
+import type { AuthEvent, IdentityConfig } from '../port.js';
 
 const THIRTY_DAYS_IN_SECONDS = 60 * 60 * 24 * 30;
 const ONE_DAY_IN_SECONDS = 60 * 60 * 24;
@@ -33,6 +34,89 @@ function buildPlugins(input: IdentityConfig): BetterAuthPlugin[] {
     plugins.push(buildMagicLinkPlugin(input));
   }
   return plugins;
+}
+
+/** better-auth endpoint path for email/password sign-in. */
+const SIGN_IN_EMAIL_PATH = '/sign-in/email';
+/** better-auth endpoint path for sign-out. */
+const SIGN_OUT_PATH = '/sign-out';
+
+/**
+ * A normalized view of a completed auth endpoint, decoupled from better-auth's
+ * hook-context shape so {@link resolveAuthEvent} stays purely testable (E2-S3).
+ */
+export interface AuthOutcome {
+  path: string;
+  succeeded: boolean;
+  actorUserId?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}
+
+/**
+ * Map a completed auth endpoint to the {@link AuthEvent} it should audit, or
+ * `null` for endpoints that are not audited here (AC3). Sign-in success and
+ * failure share the `/sign-in/email` path and are distinguished by
+ * `outcome.succeeded`.
+ */
+export function resolveAuthEvent(outcome: AuthOutcome): AuthEvent | null {
+  const meta = {
+    actorUserId: outcome.actorUserId ?? null,
+    ipAddress: outcome.ipAddress ?? null,
+    userAgent: outcome.userAgent ?? null,
+  };
+  if (outcome.path === SIGN_OUT_PATH) {
+    return { action: 'auth.sign_out', ...meta };
+  }
+  if (outcome.path === SIGN_IN_EMAIL_PATH) {
+    return {
+      action: outcome.succeeded ? 'auth.sign_in.success' : 'auth.sign_in.failure',
+      ...meta,
+    };
+  }
+  return null;
+}
+
+function extractRequestMeta(headers: Headers | undefined): {
+  ipAddress: string | null;
+  userAgent: string | null;
+} {
+  const userAgent = headers?.get('user-agent') ?? null;
+  const forwardedFor = headers?.get('x-forwarded-for');
+  const ipAddress = forwardedFor ? (forwardedFor.split(',')[0]?.trim() ?? null) : null;
+  return { ipAddress, userAgent };
+}
+
+type AuthAfterHook = NonNullable<NonNullable<BetterAuthOptions['hooks']>['after']>;
+
+/**
+ * Register a better-auth `after` middleware that emits an {@link AuthEvent} for
+ * audited endpoints (AC3). Success is inferred from a freshly-issued session
+ * (`newSession`); the acting user falls back to the ending session on sign-out.
+ * The real request→row flow is verified in the evaluate phase.
+ */
+function buildAfterHook(onAuthEvent: (event: AuthEvent) => void | Promise<void>): AuthAfterHook {
+  return createAuthMiddleware(async (ctx) => {
+    const meta = extractRequestMeta(ctx.headers);
+    const event = resolveAuthEvent({
+      path: ctx.path,
+      succeeded: ctx.context.newSession != null,
+      actorUserId: ctx.context.newSession?.user.id ?? ctx.context.session?.user.id ?? null,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+    });
+    if (event) {
+      await onAuthEvent(event);
+    }
+  });
+}
+
+/** Build the better-auth `hooks` option, present only when an event sink is configured. */
+function buildAuthHooks(input: IdentityConfig): BetterAuthOptions['hooks'] {
+  if (!input.onAuthEvent) {
+    return undefined;
+  }
+  return { after: buildAfterHook(input.onAuthEvent) };
 }
 
 /**
@@ -77,6 +161,7 @@ export function createAuth(input: IdentityConfig) {
       },
     },
     plugins: buildPlugins(input),
+    hooks: buildAuthHooks(input),
   });
 }
 

@@ -5,3 +5,4 @@
  * by their owning stories in later groups.
  */
 export * from './auth.js';
+export * from './audit.js';

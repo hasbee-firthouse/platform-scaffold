@@ -3,8 +3,16 @@ import Fastify from 'fastify';
 import pino from 'pino';
 import { defineProduct } from '@platform/config';
 import { createDbConnection } from '@platform/db';
+import type { IdentityPort } from '@platform/identity';
 import { registerModules, type RegisteredModule } from './register-modules.js';
 import { buildContext } from './context.js';
+
+function testIdentity(): IdentityPort {
+  return {
+    handler: async () => new Response('ok'),
+    getSession: async () => null,
+  };
+}
 
 function testContext(): ReturnType<typeof buildContext> {
   const config = defineProduct({
@@ -21,7 +29,7 @@ function testContext(): ReturnType<typeof buildContext> {
     email: { fromName: 'Acme', fromAddress: 'no-reply@acme.com' },
   });
   const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
-  return buildContext({ config, connection, logger: pino({ level: 'silent' }) });
+  return buildContext({ config, connection, logger: pino({ level: 'silent' }), identity: testIdentity() });
 }
 
 describe('registerModules', () => {
