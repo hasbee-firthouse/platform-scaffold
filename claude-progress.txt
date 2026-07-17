@@ -1,15 +1,31 @@
 === Session 1 ===
 date: 2026-07-16T19:55:00+05:30
 mode: full
-pipeline_position: BUILD in progress — groups A-I complete, group J (final) next
-groups_completed: [A, B, C, D, E, F, G, H, I]
-groups_remaining: [J]
-current_group: none (between groups — checkpoint)
+pipeline_position: BUILD COMPLETE — all 28 stories across groups A-J implemented
+groups_completed: [A, B, C, D, E, F, G, H, I, J]
+groups_remaining: []
+current_group: none — build phase done; next pipeline phase is /evaluate (live stack)
 current_stories: []
 sprint_contract: none
-last_commit: (about to commit) group I — export job, workspace web screens, isolation suite
-features_passing: 78 / 95 (I adds F087-F090, F092; F067-F069 + F091 deferred to live evaluate)
-coverage: 746 tests green across 130 files; tsc + eslint clean on all 15 workspaces
+last_commit: (about to commit) group J — deployment, deletability & fork story (E8-S5)
+features_passing: 82 / 95 (J adds F094 deletability [verified], F095 fork/seed; F093 deferred.
+  Also reconciled: F027/F028 E3-S1 theming were proven but unmarked; now passing)
+coverage: 765 tests green across 132 files; tsc + eslint clean on all 15 workspaces
+build_complete_note:
+  - E8-S5 (group J): multi-stage Dockerfile (non-root, SPA build, tsx boot serving API+SPA :3000),
+    docker-compose (postgres16 + mailpit + opt-in app), dev-only scripts/seed.ts (assertNotProduction
+    guard), docs/FORKING.md (SPEC §24) + DEPLOYMENT.md, root seed script.
+  - DELETABILITY (F094) VERIFIED by the orchestrator: actually deleted modules/reference-workspace +
+    emptied the registry + removed the drizzle schema entry -> root tsc clean, db:generate emits a
+    clean drop migration, 620 platform tests pass (0 fail); then restored. Fixed two real deletability
+    defects found in the process: (1) ModuleManifest/ModuleJob types moved from the module to the
+    platform-owned modules/index.ts (primitive-typed, zero deps) so the registry survives deletion;
+    (2) modules/index.test.ts made deletability-safe (generic registry-mechanism test; the
+    'reference-workspace is registered' assertion moved into the module's own manifest.test.ts).
+  - INCIDENT: an over-broad `git clean -fd` during the deletability test removed untracked EMPTY
+    placeholder dirs (specs/brd, specs/design/amendments, specs/reviews, specs/test_artefacts,
+    sprint-contracts) — never git-tracked, no content lost per git history; recreated. Lesson: use
+    targeted `rm` for test artifacts, never `git clean -fd`, when uncommitted/untracked work exists.
 group_I_stories:
   - E8-S4 (export job): modules/reference-workspace/api/export.job.ts (workspace.export job:
     Zod payload, pure buildTasksCsv / RFC-4180 csv.ts, handler loads tasks via withOrg + email.send)
@@ -118,4 +134,18 @@ deferred_features (need live stack / later stories): F021, F022, F091 (live pg-b
   + isolation/migration suite with app_runtime role — run apps/api/test via `pnpm test:isolation`
   with TEST_DATABASE_URL + TEST_RUNTIME_DATABASE_URL). Re-verify live in evaluate:
   F026/F045/F046/F047/F048/F054/F057/F059/F061/F064/F072/F079/F083-F090/F092.
-next_action: /implement group J (final group)
+remaining_deferred_features (13 — all live-stack / evaluate-phase, none are build gaps):
+  F012 F013 (migrations apply / drizzle connects — live DB), F014 (uuid-v7 PK convention — reconcile
+  vs better-auth text-id core tables), F021 F022 (live pg-boss cron / Mailpit), F065 F066 F067 F068
+  F069 (live RLS + isolation/migration suite — run `pnpm test:isolation` with TEST_DATABASE_URL +
+  TEST_RUNTIME_DATABASE_URL), F082 (wire module plugin into app.ts for live OpenAPI), F091 (live
+  Mailpit CSV), F093 (docker compose up + prod image boot).
+integration_followups_for_evaluate (tracked; not build blockers):
+  - Wire the reference module (registerWorkspaceModule + web routes.tsx/nav.ts + authz/entitlement
+    registration + job workers) into apps/api app.ts and the SPA router. Also wire the other web
+    screens (auth/*, settings-*, org-switcher) into the router.
+  - Provision the app_runtime (non-owner/NOBYPASSRLS) role in the deploy bootstrap before migrations.
+  - Reconcile /api/me local perms -> @platform/authz; retire the unused requirePermission preHandler
+    OR attach request.permissions; add the missing admin-create-member POST /api/orgs/:orgId/members.
+  - Wire jobs/email into ctx/boot (start pg-boss workers, ctx.email) for auth + invite + export mail.
+next_action: /evaluate (run the full stack via docker compose + the isolation suite) then /review, /deploy

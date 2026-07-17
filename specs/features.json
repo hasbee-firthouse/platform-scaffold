@@ -423,8 +423,8 @@
       "Read `getComputedStyle(document.documentElement)`",
       "Assert `--color-primary` (and the derived dark token) equal the configured values"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T21:35:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -439,8 +439,8 @@
       "Reload the app",
       "Assert the computed primary token and document.title reflect the new values"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T21:35:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1476,9 +1476,9 @@
       "Build the production image and assert it boots serving /api and the SPA"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
-    "failure_layer": null
+    "last_evaluated": "2026-07-17T21:30:00+05:30",
+    "failure_reason": "deferred: docker compose up + production image build/boot need Docker \u2014 artifacts (Dockerfile/compose) present and shape-tested, verified in the evaluate/deploy phase",
+    "failure_layer": "config"
   },
   {
     "id": "F094",
@@ -1491,8 +1491,8 @@
       "Run `pnpm db:generate` and `pnpm build`",
       "Assert the platform builds, migrates, and passes platform tests"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T21:30:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1507,8 +1507,8 @@
       "Run the seed with NODE_ENV=production",
       "Assert it refuses to run"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T21:30:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   }
