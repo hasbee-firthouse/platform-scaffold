@@ -18,10 +18,12 @@ import { primaryId } from '../columns.js';
  * organization it references, which FK cascade/restrict semantics would fight.
  *
  * RLS is ENABLED here for the org-scoped viewer (E7-S3). The `FORCE ROW LEVEL
- * SECURITY`, the `USING (org_id = current_setting('app.org_id', true)::uuid)`
- * policy, and the non-owner runtime role grants are added by the tenancy story
- * (E8-S1); enabling-without-forcing keeps writes working for the migration/owner
- * role until then.
+ * SECURITY`, the org-scoping policy, and the non-owner runtime role grants are
+ * added by the tenancy backstop migration (E6-S2). The policy predicate is
+ * `org_id = current_setting('app.org_id', true)` — a TEXT comparison with NO
+ * `::uuid` cast, because `org_id` holds a better-auth text id, not a uuid. This
+ * table's policy also permits `org_id IS NULL` so SYSTEM / cross-org audit rows,
+ * which are written outside any request org-scope, are never blocked.
  */
 export const auditLog = pgTable(
   'audit_log',

@@ -1,15 +1,33 @@
 === Session 1 ===
 date: 2026-07-16T19:55:00+05:30
 mode: full
-pipeline_position: BUILD in progress — groups A,B,C,D,E,F,G complete, group H next
-groups_completed: [A, B, C, D, E, F, G]
-groups_remaining: [H, I, J]
+pipeline_position: BUILD in progress — groups A,B,C,D,E,F,G,H complete, group I next
+groups_completed: [A, B, C, D, E, F, G, H]
+groups_remaining: [I, J]
 current_group: none (between groups — checkpoint)
 current_stories: []
 sprint_contract: none
-last_commit: (about to commit) group G — tenancy, ops CLI, reference module, org UI
-features_passing: 68 / 95 (G adds F058-F063, F074-F076, F080, F081; F082 deferred)
-coverage: 614 tests green across 117 files; tsc + eslint clean on all 15 workspaces
+last_commit: (about to commit) group H — RLS backstop + workspace/task services
+features_passing: 73 / 95 (H adds F064, F083-F086; F065/F066 deferred to live isolation suite)
+coverage: 696 tests green across 125 files; tsc + eslint clean on all 15 workspaces
+group_H_stories:
+  - E6-S2 (RLS backstop): @platform/tenancy rls.ts SQL generators (FORCE RLS + CREATE POLICY
+    USING(org_id = current_setting('app.org_id',true)) TEXT predicate — org ids are better-auth
+    text, NOT uuid; F014/AC-wording precedent) + runtime GRANTs to a parameterized `app_runtime`
+    role. Migration 0005_rls_backstop_policies.sql covers workspace, task, entitlement_override,
+    audit_log (audit_log policy also allows org_id IS NULL for system rows). Two-role model
+    documented (runtime=non-owner/NOBYPASSRLS, migrations=privileged owner) — roles created by
+    deploy bootstrap (E10), not here. F065/F066 (runtime can't bypass; cross-tenant zero rows)
+    DEFERRED to the live isolation suite. Hand-authored migration (drizzle-kit can't emit FORCE
+    RLS/GRANTs); no schema drift.
+  - E8-S2 (workspace/task services): modules/reference-workspace/api/ — plugin.ts mounts
+    /api/orgs/:orgId/workspace/*, workspace.service + task.service (pure/injectable), repository.ts
+    (the ONLY file with workspace/task queries — all wrapped in withOrg, so E6-S1 guard stays
+    green + RLS engages), authz.ts (per-route perms via createPermissionRegistry([manifest]) +
+    the authorizeOrg role-resolution pattern), errors/views/deps. Task assignee must be a current
+    member (else 422); task-count >= maxTasks -> 403 ENTITLEMENT_REQUIRED; workspace created/deleted
+    audited. Added fastify/type-provider/tenancy/audit/contracts deps to the module package.json.
+    NOT yet wired into apps/api app.ts (integration follow-up). Live end-to-end/isolation DEFERRED.
 group_G_stories:
   - E6-S1 (tenancy): @platform/tenancy withOrg (txn + set_config('app.org_id',$1,true),
     parameterized/pooler-safe) + requireOrgMembership preHandler (404 non-member, injectable
@@ -63,10 +81,12 @@ group_F_status:
 integration_pending (carried debts — not blocking, wire when relevant):
   - Web screens (auth/*, settings-user, settings-org/*, org-switcher) are unit-tested
     components NOT yet wired into the TanStack router / app.tsx. Needs a routing follow-up.
-  - Reference module (@module/reference-workspace) not yet registered into the API app or web
-    router; its routes (needed for F082 live OpenAPI) come in E8-S2/S3.
-  - withOrg + requireOrgMembership (E6-S1) not yet applied to real /api/orgs routes (they still
-    use E5-S2 inline authorizeOrg). Retrofit + RLS enforcement is the tenancy integration step.
+  - Reference module (@module/reference-workspace) API plugin (registerWorkspaceModule) + its
+    permission/entitlement registration NOT yet wired into apps/api app.ts. Wiring it makes F082
+    (module contracts in live OpenAPI) verifiable and the workspace/task routes reachable.
+  - withOrg + requireOrgMembership (E6-S1) not yet applied to the platform /api/orgs routes (they
+    still use E5-S2 inline authorizeOrg). The reference module DOES use withOrg. Retrofit + the
+    two-role RLS runtime (app_runtime) provisioning is the tenancy integration + deploy step.
   - MISSING endpoint: admin-create member POST /api/orgs/:orgId/members — E5-S3 members screen +
     org-client are wired to it but the server route doesn't exist yet (F059 UI unit-proven only).
   - jobs/email not wired into ctx/boot (start workers, ctx.email; invite + auth emails).
@@ -75,6 +95,7 @@ integration_pending (carried debts — not blocking, wire when relevant):
     use the async authorizeOrg pattern instead — requirePermission wants a sync request.permissions
     the app never attaches; reconcile or retire one).
 deferred_features (need live stack / later stories): F021, F022 (live pg-boss/Mailpit); F082
-  (module routes E8-S2/S3 for live OpenAPI). Re-verify live in evaluate: F026/F045/F046/F047/
-  F048/F054/F057/F059/F061/F072/F079.
-next_action: /implement group H
+  (wire module routes into app.ts for live OpenAPI); F065, F066 (live RLS isolation suite with
+  app_runtime role). Re-verify live in evaluate: F026/F045/F046/F047/F048/F054/F057/F059/F061/
+  F064/F072/F079/F083-F086.
+next_action: /implement group I

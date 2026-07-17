@@ -197,18 +197,33 @@ importers:
 
   modules/reference-workspace:
     dependencies:
+      '@platform/audit':
+        specifier: workspace:*
+        version: link:../../packages/platform-audit
       '@platform/authz':
         specifier: workspace:*
         version: link:../../packages/platform-authz
+      '@platform/contracts':
+        specifier: workspace:*
+        version: link:../../packages/platform-contracts
       '@platform/db':
         specifier: workspace:*
         version: link:../../packages/platform-db
       '@platform/entitlements':
         specifier: workspace:*
         version: link:../../packages/platform-entitlements
+      '@platform/tenancy':
+        specifier: workspace:*
+        version: link:../../packages/platform-tenancy
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@types/pg@8.20.0)(kysely@0.29.3)(pg@8.22.0)
+      fastify:
+        specifier: ^5.10.0
+        version: 5.10.0
+      fastify-type-provider-zod:
+        specifier: 4.0.2
+        version: 4.0.2(fastify@5.10.0)(zod@3.25.76)
       zod:
         specifier: ^3.25.76
         version: 3.25.76

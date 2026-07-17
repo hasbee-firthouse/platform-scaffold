@@ -23,10 +23,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@platform/audit": "workspace:*",
     "@platform/authz": "workspace:*",
+    "@platform/contracts": "workspace:*",
     "@platform/db": "workspace:*",
     "@platform/entitlements": "workspace:*",
+    "@platform/tenancy": "workspace:*",
     "drizzle-orm": "^0.45.2",
+    "fastify": "^5.10.0",
+    "fastify-type-provider-zod": "4.0.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {

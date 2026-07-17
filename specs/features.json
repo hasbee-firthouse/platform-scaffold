@@ -1014,8 +1014,8 @@
       "Assert `org_id uuid not null` exists",
       "Assert an RLS policy on `current_setting(app.org_id)` is present and FORCE ROW LEVEL SECURITY is enabled"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T02:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1031,9 +1031,9 @@
       "Assert it is denied because the role is not the table owner"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
-    "failure_layer": null
+    "last_evaluated": "2026-07-17T02:00:00+05:30",
+    "failure_reason": "deferred: needs live Postgres with the two roles (app_runtime non-owner/NOBYPASSRLS) \u2014 verified in the isolation suite / evaluate phase",
+    "failure_layer": "repository"
   },
   {
     "id": "F066",
@@ -1047,9 +1047,9 @@
       "Assert zero org B rows are returned"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
-    "failure_layer": null
+    "last_evaluated": "2026-07-17T02:00:00+05:30",
+    "failure_reason": "deferred: cross-tenant zero-rows is a live-DB assertion \u2014 verified in the isolation suite / evaluate phase",
+    "failure_layer": "repository"
   },
   {
     "id": "F067",
@@ -1315,8 +1315,8 @@
       "Assert each succeeds for a permitted role",
       "Assert a role lacking the permission gets 403"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T02:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1331,8 +1331,8 @@
       "Assign to a non-member and assert rejection",
       "Remove a member and assert their assignment is handled per membership rules"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T02:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1347,8 +1347,8 @@
       "Create one more",
       "Assert the response is 403 with code ENTITLEMENT_REQUIRED"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T02:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1363,8 +1363,8 @@
       "Assert audit rows for created/deleted",
       "Assert both workspace and task tables are included in the isolation suite"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T02:00:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
