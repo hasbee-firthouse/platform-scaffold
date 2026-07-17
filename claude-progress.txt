@@ -1,15 +1,34 @@
 === Session 1 ===
 date: 2026-07-16T19:55:00+05:30
 mode: full
-pipeline_position: BUILD in progress — groups A,B,C,D,E,F complete, group G next
-groups_completed: [A, B, C, D, E, F]
-groups_remaining: [G, H, I, J]
+pipeline_position: BUILD in progress — groups A,B,C,D,E,F,G complete, group H next
+groups_completed: [A, B, C, D, E, F, G]
+groups_remaining: [H, I, J]
 current_group: none (between groups — checkpoint)
 current_stories: []
 sprint_contract: none
-last_commit: (about to commit) group F part 2 — E4-S3 auth screens + E7-S3 audit viewer
-features_passing: 57 / 95 (F complete: +F046-F049 auth, +F077-F079 audit viewer)
-coverage: 487 tests green across 95 files; tsc + eslint clean on all workspaces
+last_commit: (about to commit) group G — tenancy, ops CLI, reference module, org UI
+features_passing: 68 / 95 (G adds F058-F063, F074-F076, F080, F081; F082 deferred)
+coverage: 614 tests green across 117 files; tsc + eslint clean on all 15 workspaces
+group_G_stories:
+  - E6-S1 (tenancy): @platform/tenancy withOrg (txn + set_config('app.org_id',$1,true),
+    parameterized/pooler-safe) + requireOrgMembership preHandler (404 non-member, injectable
+    resolver) + AC3 guard test scoped to modules/** (enforces module tenant queries go through
+    withOrg; control-plane/audit/entitlement seams in packages/** are exempt). 12 tests.
+    NOT YET wired onto real routes (E5-S2 routes still use inline authorizeOrg) — integration debt.
+  - E8-S1 (reference module): modules/reference-workspace (@module/reference-workspace) —
+    workspace+task drizzle schema (migration 0004), Zod contracts (open|done), ModuleManifest
+    (perms workspace.workspaces.manage / tasks.read / tasks.write, Workspace Manager role,
+    workspace.maxTasks=100) registrable with authz+entitlements registries; modules/index.ts
+    registry. drizzle.config.ts schema now an array incl the module. F082 deferred: contracts
+    are OpenAPI-convertible but need module ROUTES (E8-S2/S3) to appear in live /api/docs.
+  - E7-S2 (ops CLI): @ops/cli (ops/) — entitlement set/get/list, org list/restore (30-day
+    window), user deactivate, invite resend; every mutation audits actorUserId 'system:cli'.
+    Added ops to pnpm-workspace.yaml + vitest include + root "ops" script. 31 tests.
+  - E5-S3 (org UI): API roles route (GET /api/orgs/:orgId/roles) done earlier; web part —
+    org-switcher (shown only >1 org, links /o/:slug), settings-org general/members/invitations/
+    roles screens + lib/org-client. Screens are standalone components (props-driven), NOT
+    router-wired. 40 tests. Uses native <select> for role (jsdom-reliable vs Radix).
 learned_rules: 1 (LR-001)
 blocked_stories: none
 group_F_status:
@@ -42,13 +61,20 @@ group_F_status:
       instead; same 403 outcome); registered in app.ts; screens/settings-org/audit-log.screen.tsx
       <Can>-gated ui Table + filters + pagination. Screen NOT router-wired (follow-up). 38 tests.
 integration_pending (carried debts — not blocking, wire when relevant):
-  - Web screens (auth/*, settings-user/security, settings-org/audit-log) are unit-tested
+  - Web screens (auth/*, settings-user, settings-org/*, org-switcher) are unit-tested
     components NOT yet wired into the TanStack router / app.tsx. Needs a routing follow-up.
+  - Reference module (@module/reference-workspace) not yet registered into the API app or web
+    router; its routes (needed for F082 live OpenAPI) come in E8-S2/S3.
+  - withOrg + requireOrgMembership (E6-S1) not yet applied to real /api/orgs routes (they still
+    use E5-S2 inline authorizeOrg). Retrofit + RLS enforcement is the tenancy integration step.
+  - MISSING endpoint: admin-create member POST /api/orgs/:orgId/members — E5-S3 members screen +
+    org-client are wired to it but the server route doesn't exist yet (F059 UI unit-proven only).
   - jobs/email not wired into ctx/boot (start workers, ctx.email; invite + auth emails).
   - /api/me still uses its own local role→perms map; reconcile to @platform/authz resolveRole.
   - @platform/authz requirePermission preHandler still unused by real routes (org/audit routes
     use the async authorizeOrg pattern instead — requirePermission wants a sync request.permissions
     the app never attaches; reconcile or retire one).
-deferred_features (need live stack in evaluate): F021, F022; re-verify F026/F045/F046/F047/F048/
-  F054/F057/F072/F079 live.
-next_action: /implement group G
+deferred_features (need live stack / later stories): F021, F022 (live pg-boss/Mailpit); F082
+  (module routes E8-S2/S3 for live OpenAPI). Re-verify live in evaluate: F026/F045/F046/F047/
+  F048/F054/F057/F059/F061/F072/F079.
+next_action: /implement group H

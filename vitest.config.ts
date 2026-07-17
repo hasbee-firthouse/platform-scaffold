@@ -5,7 +5,7 @@ export default defineConfig({
     environment: 'node',
     include: [
       'tests/**/*.test.{ts,tsx}',
-      '{apps,packages,modules}/**/*.test.{ts,tsx}',
+      '{apps,packages,modules,ops}/**/*.test.{ts,tsx}',
     ],
     passWithNoTests: true,
     coverage: {

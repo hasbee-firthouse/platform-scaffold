@@ -19,6 +19,7 @@ import { registerMeRoute, buildMeRouteDeps } from './routes/me.js';
 import { registerOrgRoutes } from './routes/orgs/index.js';
 import { registerEntitlementRoutes } from './routes/orgs/entitlements.js';
 import { registerAuditLogRoutes } from './routes/orgs/audit-logs.js';
+import { registerRolesRoute } from './routes/orgs/roles.js';
 import { registerModules } from './register-modules.js';
 
 export interface BuildAppOptions {
@@ -67,6 +68,9 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   // Audit viewer (E7-S3): admin-gated, org-scoped audit log reads under /api/orgs/:orgId/audit-logs.
   registerAuditLogRoutes(app, options.context);
+
+  // Roles matrix (E5-S3): read-only code-defined roles under /api/orgs/:orgId/roles.
+  registerRolesRoute(app, options.context);
 
   await registerModules(app, options.context);
   await registerStaticSpa(app, { spaDir: options.spaDir });

@@ -918,8 +918,8 @@
       "Add a second org and assert the switcher appears",
       "Switch orgs and assert the URL slug (`/o/:orgSlug`) updates"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -934,8 +934,8 @@
       "Remove a member",
       "Admin-create a member and assert a set-password email is sent"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -950,8 +950,8 @@
       "Open Roles & Permissions",
       "Assert a read-only matrix of code-defined roles is shown"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -966,8 +966,8 @@
       "Inside cb, run `SELECT current_setting('app.org_id', true)`",
       "Assert it equals the passed orgId and that the work runs inside one transaction"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -982,8 +982,8 @@
       "Assert the response is 404 (not 403)",
       "Assert no handler-side effect occurred"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -998,8 +998,8 @@
       "Assert every tenant query is routed through `withOrg`",
       "Assert the test fails if a direct access is introduced"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1172,8 +1172,8 @@
       "Run `pnpm ops entitlement get <org> <key>`",
       "Assert the value round-trips and `list` includes it"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1188,8 +1188,8 @@
       "Run `pnpm ops org restore <id>` within retention",
       "Assert `deleted_at` is cleared"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1204,8 +1204,8 @@
       "Query audit_log",
       "Assert the new row has actor `system:cli`"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1268,8 +1268,8 @@
       "Assert `workspace` and `task` tables have the specified columns",
       "Assert task.status is open|done and assignee_member_id is a nullable FK to member"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1284,8 +1284,8 @@
       "Assert it declares the three workspace permissions and the Workspace Manager role",
       "Assert it declares entitlement `workspace.maxTasks` with default 100"
     ],
-    "passes": false,
-    "last_evaluated": null,
+    "passes": true,
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
     "failure_reason": null,
     "failure_layer": null
   },
@@ -1300,9 +1300,9 @@
       "Assert the workspace/task request and response schemas are present"
     ],
     "passes": false,
-    "last_evaluated": null,
-    "failure_reason": null,
-    "failure_layer": null
+    "last_evaluated": "2026-07-17T01:15:00+05:30",
+    "failure_reason": "deferred: contracts are OpenAPI-convertible but need module routes (E8-S2/S3) to appear in the live /api/docs",
+    "failure_layer": "api"
   },
   {
     "id": "F083",

@@ -1,0 +1,36 @@
+{
+  "name": "@module/reference-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./shared/index.ts",
+  "types": "./shared/index.ts",
+  "exports": {
+    ".": {
+      "types": "./shared/index.ts",
+      "default": "./shared/index.ts"
+    },
+    "./manifest": {
+      "types": "./manifest.ts",
+      "default": "./manifest.ts"
+    },
+    "./api/schema": {
+      "types": "./api/schema.ts",
+      "default": "./api/schema.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@platform/authz": "workspace:*",
+    "@platform/db": "workspace:*",
+    "@platform/entitlements": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "zod-to-json-schema": "^3.25.2"
+  }
+}
