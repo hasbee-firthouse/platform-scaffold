@@ -1,57 +1,15 @@
 import type { PermissionId } from '@platform/authz';
-import type { EntitlementValue } from '@platform/entitlements';
+import type { ModuleJob, ModuleManifest } from '../index.js';
 
 /**
- * A product module's declarative manifest (E8-S1 · AC2). This is the minimal
- * typed shape a module uses to contribute authorization + entitlement state to
- * the platform. `permissions` register with `@platform/authz`'s
- * {@link createPermissionRegistry}; `entitlements` register with
- * `@platform/entitlements`' {@link createEntitlementRegistry}. `roles` maps a
- * human role name to the concrete permission ids it grants.
- *
- * The `permissions` field is intentionally structurally compatible with the
- * authz `ModuleManifest` so the manifest can be passed straight to
- * `createPermissionRegistry`.
+ * The reference module's manifest (E8-S1 · AC2) declares the authorization and
+ * entitlement state it contributes: `permissions` register with `@platform/authz`'s
+ * {@link createPermissionRegistry}, `entitlements` with `@platform/entitlements`'
+ * {@link createEntitlementRegistry}, and `roles` maps a human role name to the
+ * permission ids it grants. The {@link ModuleManifest}/{@link ModuleJob} contract
+ * is owned by the platform registry (`modules/index.ts`) — defining it there,
+ * not here, is what keeps the module deletable (SPEC deletability).
  */
-/**
- * The pg-boss retry policy applied to a module job when the worker/enqueue is
- * wired (E8-S4 · AC3). Mirrors pg-boss' `retryLimit`/`retryDelay`/`retryBackoff`
- * options; the actual retry-on-failure execution is exercised in the evaluate
- * phase against live pg-boss.
- */
-export interface JobRetryOptions {
-  /** Maximum retry attempts before the job is dead-lettered. */
-  readonly retryLimit: number;
-  /** Base delay (seconds) before the first retry. */
-  readonly retryDelay: number;
-  /** Whether the retry delay grows exponentially between attempts. */
-  readonly retryBackoff: boolean;
-}
-
-/**
- * A background job a module contributes to the platform (E8-S4). Declarative
- * metadata only — the platform pairs `name` with the module's job factory to
- * register the worker; `retry` carries the pg-boss policy for that worker.
- */
-export interface ModuleJob {
-  /** The stable queue/job name (matches the {@link JobDefinition} name). */
-  readonly name: string;
-  /** The pg-boss retry policy for this job's worker/enqueue. */
-  readonly retry: JobRetryOptions;
-}
-
-export interface ModuleManifest {
-  /** Stable module id (matches the module directory name). */
-  id: string;
-  /** Concrete permission ids this module introduces. */
-  permissions: PermissionId[];
-  /** Named roles this module ships, each mapped to the permission ids it grants. */
-  roles: Record<string, PermissionId[]>;
-  /** Declared entitlement defaults (feature flags / numeric limits). */
-  entitlements: Record<string, EntitlementValue>;
-  /** Background jobs this module contributes to the platform queue (E8-S4). */
-  jobs: ModuleJob[];
-}
 
 /** The permission ids owned by the reference-workspace module. */
 export const WORKSPACE_PERMISSIONS = {
