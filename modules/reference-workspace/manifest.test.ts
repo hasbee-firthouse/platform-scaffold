@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createPermissionRegistry } from '@platform/authz';
 import { BUILT_IN_ENTITLEMENTS, createEntitlementRegistry } from '@platform/entitlements';
+import { MODULE_MANIFESTS } from '../index.js';
 import {
   WORKSPACE_EXPORT_JOB_NAME,
   referenceWorkspaceManifest,
@@ -10,6 +11,12 @@ import {
 describe('reference-workspace manifest (AC2)', () => {
   it('is identified as reference-workspace', () => {
     expect(referenceWorkspaceManifest.id).toBe('reference-workspace');
+  });
+
+  it('is registered in the platform module registry', () => {
+    // This module-owned assertion is deleted with the module, so removing
+    // reference-workspace never leaves a dangling registry test (deletability).
+    expect(MODULE_MANIFESTS).toContain(referenceWorkspaceManifest);
   });
 
   it('declares exactly the three workspace permission ids', () => {
