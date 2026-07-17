@@ -18,16 +18,20 @@
     "test:isolation": "vitest run --config vitest.isolation.config.ts",
     "ops": "tsx ops/src/cli.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx packages/platform-db/src/migrate.ts"
+    "db:migrate": "tsx packages/platform-db/src/migrate.ts",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@platform/config": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@platform/db": "workspace:*",
+    "@platform/identity": "workspace:*",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "^2.1.8",
     "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
     "eslint": "^9.17.0",
     "globals": "^15.14.0",
     "prettier": "^3.4.2",

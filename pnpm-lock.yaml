@@ -15,6 +15,12 @@ importers:
       '@eslint/js':
         specifier: ^9.17.0
         version: 9.39.5
+      '@platform/db':
+        specifier: workspace:*
+        version: link:packages/platform-db
+      '@platform/identity':
+        specifier: workspace:*
+        version: link:packages/platform-identity
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.1
@@ -24,6 +30,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/pg@8.20.0)(kysely@0.29.3)(pg@8.22.0)
       eslint:
         specifier: ^9.17.0
         version: 9.39.5(jiti@2.7.0)
