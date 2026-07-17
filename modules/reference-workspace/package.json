@@ -25,16 +25,31 @@
   "dependencies": {
     "@platform/audit": "workspace:*",
     "@platform/authz": "workspace:*",
+    "@platform/config": "workspace:*",
     "@platform/contracts": "workspace:*",
     "@platform/db": "workspace:*",
+    "@platform/email": "workspace:*",
     "@platform/entitlements": "workspace:*",
+    "@platform/jobs": "workspace:*",
     "@platform/tenancy": "workspace:*",
+    "@platform/ui": "workspace:*",
+    "@tanstack/react-query": "^5.101.2",
+    "@tanstack/react-router": "^1.170.18",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.10.0",
     "fastify-type-provider-zod": "4.0.2",
+    "react": "^19.2.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^29.1.1",
+    "react-dom": "^19.2.7",
     "typescript": "^5.6.3",
     "zod-to-json-schema": "^3.25.2"
   }

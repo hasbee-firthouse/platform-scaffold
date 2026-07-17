@@ -1,7 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
     "types": ["node"]
   },
-  "include": ["**/*.ts", "../index.ts", "../index.test.ts"]
+  "include": ["**/*.ts", "**/*.tsx", "../index.ts", "../index.test.ts"]
 }

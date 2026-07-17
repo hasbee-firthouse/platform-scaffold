@@ -10,8 +10,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { AUDIT_ACTIONS } from '@platform/audit';
-import { registerWorkspaceRoutes } from './plugin.js';
-import type { WorkspaceRouteDeps } from './deps.js';
+import { registerWorkspaceRoutes, type WorkspaceRoutesDeps } from './plugin.js';
+import type { WorkspaceExportPayload } from './export.job.js';
 import {
   makeMembership,
   makeRecordingAudit,
@@ -32,12 +32,14 @@ const ROLES = { 'owner-user': 'owner', 'member-user': 'member' } as const;
 interface Harness {
   app: FastifyInstance;
   audit: RecordingAudit;
-  deps: WorkspaceRouteDeps;
+  deps: WorkspaceRoutesDeps;
+  exports: WorkspaceExportPayload[];
 }
 
-function buildHarness(over: Partial<WorkspaceRouteDeps> = {}): Harness {
+function buildHarness(over: Partial<WorkspaceRoutesDeps> = {}): Harness {
   const audit = makeRecordingAudit();
-  const deps: WorkspaceRouteDeps = {
+  const exports: WorkspaceExportPayload[] = [];
+  const deps: WorkspaceRoutesDeps = {
     workspaces: makeWorkspaceRepo([workspaceFixture({ id: WS_ID, orgId: ORG })]),
     tasks: makeTaskRepo([taskFixture({ id: TASK_ID, orgId: ORG, workspaceId: WS_ID })]),
     membership: makeMembership({ roles: { ...ROLES } }),
@@ -47,13 +49,17 @@ function buildHarness(over: Partial<WorkspaceRouteDeps> = {}): Harness {
       const id = request.headers.get('x-test-user');
       return id ? { user: { id } } : null;
     },
+    enqueueExport: async (payload) => {
+      exports.push(payload);
+      return 'job-id';
+    },
     ...over,
   };
   const app = Fastify();
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   registerWorkspaceRoutes(app, deps);
-  return { app, audit, deps };
+  return { app, audit, deps, exports };
 }
 
 function asUser(user: string): Record<string, string> {
@@ -66,7 +72,7 @@ afterEach(async () => {
   current = undefined;
 });
 
-function harness(over: Partial<WorkspaceRouteDeps> = {}): Harness {
+function harness(over: Partial<WorkspaceRoutesDeps> = {}): Harness {
   const built = buildHarness(over);
   current = built.app;
   return built;

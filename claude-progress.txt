@@ -1,15 +1,30 @@
 === Session 1 ===
 date: 2026-07-16T19:55:00+05:30
 mode: full
-pipeline_position: BUILD in progress — groups A,B,C,D,E,F,G,H complete, group I next
-groups_completed: [A, B, C, D, E, F, G, H]
-groups_remaining: [I, J]
+pipeline_position: BUILD in progress — groups A-I complete, group J (final) next
+groups_completed: [A, B, C, D, E, F, G, H, I]
+groups_remaining: [J]
 current_group: none (between groups — checkpoint)
 current_stories: []
 sprint_contract: none
-last_commit: (about to commit) group H — RLS backstop + workspace/task services
-features_passing: 73 / 95 (H adds F064, F083-F086; F065/F066 deferred to live isolation suite)
-coverage: 696 tests green across 125 files; tsc + eslint clean on all 15 workspaces
+last_commit: (about to commit) group I — export job, workspace web screens, isolation suite
+features_passing: 78 / 95 (I adds F087-F090, F092; F067-F069 + F091 deferred to live evaluate)
+coverage: 746 tests green across 130 files; tsc + eslint clean on all 15 workspaces
+group_I_stories:
+  - E8-S4 (export job): modules/reference-workspace/api/export.job.ts (workspace.export job:
+    Zod payload, pure buildTasksCsv / RFC-4180 csv.ts, handler loads tasks via withOrg + email.send)
+    + plugin.ts POST .../workspaces/:id/export (202, enqueues) + manifest jobs field with
+    retry {retryLimit:3, retryDelay:5, retryBackoff:true}. F091 (live Mailpit delivery) deferred.
+  - E8-S3 (workspace web screens): modules/reference-workspace/web/ — workspaces.screen,
+    tasks.screen (add/complete/uncomplete/delete, open/done filter, native-select assignee picker
+    over org members, upgrade notice on 403 ENTITLEMENT_REQUIRED), workspace-client, terminology,
+    routes.tsx/nav.ts contributions. useTerm nouns, token-only (no hex), no better-auth. Module
+    package gained react/ui/query/testing-library. Screens NOT router-wired (follow-up).
+  - E6-S3 (isolation & migration suite): apps/api/test/{isolation,rls-direct-sql,migration-
+    idempotency}.spec.ts — LIVE-DB harnesses, gated by .spec.ts extension (not in default run) +
+    describe.skipIf(!TEST_DATABASE_URL / !TEST_RUNTIME_DATABASE_URL). vitest.isolation.config.ts +
+    root "test:isolation" script for evaluate. F067/F068/F069 deferred (run in evaluate against a
+    migrated Postgres with the app_runtime role). Default suite unchanged (21 specs skip cleanly).
 group_H_stories:
   - E6-S2 (RLS backstop): @platform/tenancy rls.ts SQL generators (FORCE RLS + CREATE POLICY
     USING(org_id = current_setting('app.org_id',true)) TEXT predicate — org ids are better-auth
@@ -94,8 +109,9 @@ integration_pending (carried debts — not blocking, wire when relevant):
   - @platform/authz requirePermission preHandler still unused by real routes (org/audit routes
     use the async authorizeOrg pattern instead — requirePermission wants a sync request.permissions
     the app never attaches; reconcile or retire one).
-deferred_features (need live stack / later stories): F021, F022 (live pg-boss/Mailpit); F082
-  (wire module routes into app.ts for live OpenAPI); F065, F066 (live RLS isolation suite with
-  app_runtime role). Re-verify live in evaluate: F026/F045/F046/F047/F048/F054/F057/F059/F061/
-  F064/F072/F079/F083-F086.
-next_action: /implement group I
+deferred_features (need live stack / later stories): F021, F022, F091 (live pg-boss/Mailpit);
+  F082 (wire module routes into app.ts for live OpenAPI); F065, F066, F067, F068, F069 (live RLS
+  + isolation/migration suite with app_runtime role — run apps/api/test via `pnpm test:isolation`
+  with TEST_DATABASE_URL + TEST_RUNTIME_DATABASE_URL). Re-verify live in evaluate:
+  F026/F045/F046/F047/F048/F054/F057/F059/F061/F064/F072/F079/F083-F090/F092.
+next_action: /implement group J (final group)

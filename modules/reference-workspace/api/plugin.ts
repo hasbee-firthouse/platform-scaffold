@@ -20,6 +20,8 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { makeErrorEnvelope } from '@platform/contracts';
 import type { PermissionId } from '@platform/authz';
+import type { JobDefinition } from '@platform/jobs';
+import type { EmailPort } from '@platform/email';
 import {
   createTaskSchema,
   taskResponseSchema,
@@ -50,6 +52,7 @@ import {
   listWorkspaces,
   renameWorkspace,
 } from './workspace.service.js';
+import { createWorkspaceExportJob, type WorkspaceExportPayload } from './export.job.js';
 import { taskView, workspaceView } from './views.js';
 
 const BASE = '/api/orgs/:orgId/workspace';
@@ -64,6 +67,22 @@ const workspaceEnvelope = z.object({ workspace: workspaceResponseSchema });
 const taskListResponse = z.object({ items: z.array(taskResponseSchema) });
 const taskEnvelope = z.object({ task: taskResponseSchema });
 const successResponse = z.object({ success: z.literal(true) });
+/** Where to deliver the export CSV; validated because the payload requires a real email (E8-S4). */
+const exportRequestBody = z.object({ email: z.string().email() });
+const exportAck = z.object({ status: z.literal('accepted') });
+
+/**
+ * The extra dependency the export route runs on (E8-S4): enqueue the
+ * `workspace.export` job. Kept separate from {@link WorkspaceRouteDeps} (owned by
+ * `deps.ts`) so the route stays unit-testable with a fake enqueuer.
+ */
+export interface WorkspaceExportRouteDeps {
+  /** Enqueue the export job with a fully-formed, to-be-validated payload. */
+  enqueueExport(payload: WorkspaceExportPayload): Promise<unknown>;
+}
+
+/** The full dependency bundle the routes are wired to, including the export enqueuer. */
+export type WorkspaceRoutesDeps = WorkspaceRouteDeps & WorkspaceExportRouteDeps;
 
 /** The authenticated caller id stashed on the request by the auth preHandler. */
 interface WithCaller {
@@ -149,7 +168,7 @@ async function authorize(
 }
 
 /** Mount the workspace/task routes against an explicit deps bundle (used in tests). */
-export function registerWorkspaceRoutes(app: FastifyInstance, deps: WorkspaceRouteDeps): void {
+export function registerWorkspaceRoutes(app: FastifyInstance, deps: WorkspaceRoutesDeps): void {
   const typed = app.withTypeProvider<ZodTypeProvider>();
   const authenticate = makeAuthenticate(deps);
 
@@ -246,6 +265,27 @@ export function registerWorkspaceRoutes(app: FastifyInstance, deps: WorkspaceRou
     }),
   );
 
+  typed.post(
+    `${BASE}/workspaces/:workspaceId/export`,
+    {
+      preHandler: authenticate,
+      schema: { params: workspaceParams, body: exportRequestBody, response: { 202: exportAck } },
+    },
+    withWorkspaceErrors(async (request, reply) => {
+      const { orgId, workspaceId } = request.params as z.infer<typeof workspaceParams>;
+      const userId = callerId(request);
+      await authorize(deps, orgId, userId, WORKSPACE_PERMISSIONS.tasksRead);
+      const { email } = request.body as z.infer<typeof exportRequestBody>;
+      await deps.enqueueExport({
+        orgId,
+        workspaceId,
+        requestedByEmail: email,
+        requestedByMemberId: userId,
+      });
+      return reply.status(202).send({ status: 'accepted' as const });
+    }),
+  );
+
   registerTaskStatusRoutes(app, deps, authenticate);
 }
 
@@ -290,9 +330,30 @@ function registerTaskStatusRoutes(
 }
 
 /**
- * Register the reference-workspace module on `app` using deps derived from the
- * platform context — the {@link RegisteredModule} entry point.
+ * The extra platform context the export job needs (E8-S4): the jobs enqueuer and
+ * the email port. Structurally satisfied by the real `PlatformContext`, so the
+ * module still never imports from `apps/**`. The API composition root (a separate
+ * follow-up) supplies these when it registers the module.
  */
-export function registerWorkspaceModule(app: FastifyInstance, ctx: WorkspaceModuleContext): void {
-  registerWorkspaceRoutes(app, buildWorkspaceRouteDeps(ctx));
+export interface WorkspaceExportModuleContext {
+  jobs: { enqueue<T extends object>(definition: JobDefinition<T>, payload: T): Promise<unknown> };
+  email: EmailPort;
+}
+
+/**
+ * Register the reference-workspace module on `app` using deps derived from the
+ * platform context — the {@link RegisteredModule} entry point. The export job is
+ * constructed with the module's own withOrg task repo and the platform email
+ * port so its handler reads tasks inside `withOrg` (E6-S1 guard).
+ */
+export function registerWorkspaceModule(
+  app: FastifyInstance,
+  ctx: WorkspaceModuleContext & WorkspaceExportModuleContext,
+): void {
+  const deps = buildWorkspaceRouteDeps(ctx);
+  const exportJob = createWorkspaceExportJob({ tasks: deps.tasks, email: ctx.email });
+  registerWorkspaceRoutes(app, {
+    ...deps,
+    enqueueExport: (payload) => ctx.jobs.enqueue(exportJob, payload),
+  });
 }
