@@ -82,6 +82,10 @@ const PROBES: readonly Probe[] = [
     method: 'DELETE',
     template: '/api/orgs/:orgId',
     url: (ids) => `/api/orgs/${ids.orgId}`,
+    // A well-formed confirmation body so the request clears schema validation and
+    // actually reaches the authz guard — the cross-tenant caller must be refused
+    // there (403/404), never merely bounced by body validation (400).
+    body: { confirmationName: 'attempted-cross-tenant-delete' },
     verdict: 'authz',
   },
   {
