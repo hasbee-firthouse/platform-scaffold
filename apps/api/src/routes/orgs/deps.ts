@@ -25,9 +25,14 @@ export interface OrgRouteDeps {
   now: () => Date;
 }
 
-/** Absolute URL an invitee follows to accept an invitation. */
-export function inviteAcceptUrl(appUrl: string, organizationId: string, invitationId: string): string {
-  return `${appUrl}/orgs/${organizationId}/invitations/${invitationId}/accept`;
+/**
+ * Absolute URL an invitee follows to accept an invitation. Targets the SPA's
+ * `/accept-invite` route, which reads `invitationId` from the query string and
+ * calls `auth.acceptInvitation({ invitationId })`. (The org is resolved from the
+ * invitation server-side, so the id alone is sufficient.)
+ */
+export function inviteAcceptUrl(appUrl: string, invitationId: string): string {
+  return `${appUrl}/accept-invite?invitationId=${encodeURIComponent(invitationId)}`;
 }
 
 /** Absolute URL an admin-created member follows to set their first password. */
@@ -47,7 +52,7 @@ export function buildOrgRouteDeps(ctx: PlatformContext): OrgRouteDeps {
         to: invite.email,
         template: 'invite',
         data: {
-          inviteUrl: inviteAcceptUrl(ctx.appUrl, invite.organizationId, invite.invitationId),
+          inviteUrl: inviteAcceptUrl(ctx.appUrl, invite.invitationId),
           organizationName: invite.organizationName,
           inviterName: invite.inviterName,
         },

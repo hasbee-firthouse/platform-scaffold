@@ -33,7 +33,7 @@ describe('buildOrgRouteDeps email wiring', () => {
       to: 'grace@x.io',
       template: 'invite',
       data: {
-        inviteUrl: inviteAcceptUrl('https://app.example.com', 'org_1', 'inv_1'),
+        inviteUrl: inviteAcceptUrl('https://app.example.com', 'inv_1'),
         organizationName: 'Acme',
         inviterName: 'Ada',
       },
