@@ -230,6 +230,9 @@ importers:
       '@platform/jobs':
         specifier: workspace:*
         version: link:../packages/platform-jobs
+      '@tanstack/react-router':
+        specifier: ^1.170.18
+        version: 1.170.18(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@types/pg@8.20.0)(kysely@0.29.3)(pg@8.22.0)

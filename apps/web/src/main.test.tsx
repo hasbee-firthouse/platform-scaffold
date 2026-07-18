@@ -15,9 +15,10 @@ describe('main entrypoint', () => {
 
     await import('./main.js');
 
-    // React renders asynchronously; the shell nav proves App mounted into #root.
+    // React renders asynchronously; with no live `/api/me` the session resolves
+    // unauthenticated and the root redirects to sign-in — proving App mounted.
     await vi.waitFor(() => {
-      expect(root.querySelector('nav[aria-label="Primary"]')).not.toBeNull();
+      expect(root.textContent ?? '').toMatch(/welcome back/i);
     });
   });
 });

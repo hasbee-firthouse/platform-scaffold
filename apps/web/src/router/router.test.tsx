@@ -2,19 +2,37 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import {
   RouterProvider,
   createMemoryHistory,
   createRoute,
   type AnyRoute,
 } from '@tanstack/react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createAppRouter } from './router.js';
 import type { WebModuleManifest } from './assemble-routes.js';
+import type { SessionState } from '../session/session.js';
+import type { MeResponse } from '../lib/org-client.js';
 import { EntitlementRequiredError } from '../shell/surfaces/upgrade-notice.js';
+import { WEB_MODULE_MANIFESTS } from '../../../../modules/register-web.js';
 
 afterEach(cleanup);
 
-function orgReportsManifest(): WebModuleManifest {
+function me(): MeResponse {
+  return {
+    user: { id: 'u1', email: 'ada@acme.co', name: 'Ada' },
+    organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', role: 'admin' }],
+    activeOrganizationId: 'o1',
+    activeRole: 'admin',
+    permissions: ['org.settings.read'],
+  };
+}
+
+const AUTHED: SessionState = { status: 'authenticated', me: me() };
+const ANON: SessionState = { status: 'unauthenticated' };
+
+function orgModuleManifest(): WebModuleManifest {
   return {
     id: 'reports',
     basePath: 'reports',
@@ -29,7 +47,7 @@ function orgReportsManifest(): WebModuleManifest {
   };
 }
 
-function personalNotesManifest(): WebModuleManifest {
+function personalModuleManifest(): WebModuleManifest {
   return {
     id: 'notes',
     basePath: 'notes',
@@ -62,32 +80,81 @@ function gatedManifest(): WebModuleManifest {
   };
 }
 
-function renderAt(path: string, registry: WebModuleManifest[]) {
+function renderAt(
+  path: string,
+  options: { registry?: WebModuleManifest[]; session?: SessionState } = {},
+): void {
+  const { registry = [], session = ANON } = options;
   const router = createAppRouter({
     registry,
+    session,
     history: createMemoryHistory({ initialEntries: [path] }),
   });
-  render(<RouterProvider router={router} />);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const tree: ReactElement = (
+    <QueryClientProvider client={client}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  );
+  render(tree);
 }
 
-describe('createAppRouter route assembly', () => {
-  it('mounts an org module route under /o/:orgSlug/<module> (AC1)', async () => {
-    renderAt('/o/acme/reports', [orgReportsManifest()]);
+describe('public auth routes', () => {
+  it('renders the sign-in screen at /sign-in with no app chrome', async () => {
+    renderAt('/sign-in');
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+  });
+
+  it('redirects an already-authenticated visitor away from /sign-in into the app', async () => {
+    renderAt('/sign-in', { session: AUTHED });
+    expect(await screen.findByRole('heading', { name: /welcome$/i })).toBeInTheDocument();
+  });
+});
+
+describe('authentication guard', () => {
+  it('redirects an unauthenticated app-route visit to /sign-in', async () => {
+    renderAt('/o/acme/settings/members', { session: ANON });
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+  });
+
+  it('renders the shell + primary sidebar for an authenticated org route', async () => {
+    renderAt('/o/acme', { session: AUTHED });
+    expect(await screen.findByRole('navigation', { name: /primary/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /welcome$/i })).toBeInTheDocument();
+  });
+});
+
+describe('module route assembly through the web seam', () => {
+  it('mounts the reference module workspaces screen at /o/:orgSlug/workspace', async () => {
+    renderAt('/o/acme/workspace', { session: AUTHED, registry: WEB_MODULE_MANIFESTS });
+    expect(await screen.findByRole('heading', { name: /workspaces/i })).toBeInTheDocument();
+  });
+
+  it('mounts an injected org module under /o/:orgSlug/<basePath>', async () => {
+    renderAt('/o/acme/reports', { session: AUTHED, registry: [orgModuleManifest()] });
     expect(await screen.findByRole('heading', { name: 'Reports Home' })).toBeInTheDocument();
   });
 
-  it('mounts a personal module route under /app/<module> (AC1)', async () => {
-    renderAt('/app/notes', [personalNotesManifest()]);
+  it('mounts a personal module under /app/<basePath>', async () => {
+    renderAt('/app/notes', { session: AUTHED, registry: [personalModuleManifest()] });
     expect(await screen.findByRole('heading', { name: 'Personal Notes' })).toBeInTheDocument();
   });
 
-  it('renders the 404 surface for an unknown route (AC3)', async () => {
-    renderAt('/no/such/place', [orgReportsManifest()]);
+  it('404s a module route when the registry is empty (deletion-safety)', async () => {
+    renderAt('/o/acme/workspace', { session: AUTHED, registry: [] });
+    expect(await screen.findByRole('heading', { name: /not found/i })).toBeInTheDocument();
+  });
+});
+
+describe('shell surfaces', () => {
+  it('renders the 404 surface for an unknown authenticated route', async () => {
+    renderAt('/no/such/place', { session: AUTHED });
     expect(await screen.findByRole('heading', { name: /not found/i })).toBeInTheDocument();
   });
 
-  it('renders the upgrade-notice surface on an ENTITLEMENT_REQUIRED error (AC3)', async () => {
-    renderAt('/o/acme/premium', [gatedManifest()]);
+  it('renders the upgrade-notice surface on an ENTITLEMENT_REQUIRED error', async () => {
+    renderAt('/o/acme/premium', { session: AUTHED, registry: [gatedManifest()] });
     expect(await screen.findByRole('heading', { name: /upgrade/i })).toBeInTheDocument();
   });
 });

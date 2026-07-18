@@ -7,9 +7,10 @@ import { App } from './app.js';
 afterEach(cleanup);
 
 describe('App', () => {
-  it('composes the providers and mounts the router shell', async () => {
+  it('bootstraps the session and, with no live API, lands on the sign-in screen', async () => {
+    // `/api/me` cannot be reached in jsdom, so the session resolves to
+    // unauthenticated and the root route redirects to the public sign-in screen.
     render(<App />);
-    // The router root layout renders the primary sidebar nav once mounted.
-    expect(await screen.findByRole('navigation', { name: /primary/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
   });
 });

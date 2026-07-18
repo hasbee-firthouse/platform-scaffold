@@ -70,3 +70,27 @@ export function assembleRoutes(rootRoute: AnyRoute, registry: WebModuleRegistry)
     return moduleRoute.addChildren(manifest.webRoutes(moduleRoute)) as AnyRoute;
   });
 }
+
+/**
+ * Assembles the ORG-scoped modules as children of the authenticated org layout
+ * route (whose own path is `/o/$orgSlug`). Mounting them here — rather than
+ * under the root — is what makes a module route inherit the shell chrome, the
+ * auth guard and the active-org context the layout resolves. The mount path is
+ * therefore RELATIVE (`<basePath>`), joining to `/o/$orgSlug/<basePath>`.
+ * Personal-scoped modules are ignored here (they mount via {@link assembleRoutes}
+ * at `/app/<basePath>`), so the two calls together cover the whole registry.
+ */
+export function assembleOrgModuleRoutes(
+  orgLayoutRoute: AnyRoute,
+  registry: WebModuleRegistry,
+): AnyRoute[] {
+  return registry
+    .filter((manifest) => manifest.scope === 'org')
+    .map((manifest) => {
+      const moduleRoute = createRoute({
+        getParentRoute: () => orgLayoutRoute,
+        path: manifest.basePath,
+      }) as AnyRoute;
+      return moduleRoute.addChildren(manifest.webRoutes(moduleRoute)) as AnyRoute;
+    });
+}

@@ -97,10 +97,14 @@ deletion** (SPEC §2 rule 6, §18). Remove it cleanly:
    line(s) and its entry in **both** the `MODULE_API_REGISTRATIONS` (HTTP routes)
    and `MODULE_WORKER_REGISTRATIONS` (background jobs) arrays. The seam then
    registers nothing and `apps/api` still typechecks and boots.
-4. Remove its schema entry from `drizzle.config.ts`'s `schema` array
+4. Remove its wiring from `modules/register-web.ts` — the module's `import` line
+   and its entry in the `WEB_MODULE_MANIFESTS` array. `WEB_MODULE_MANIFESTS` is
+   then empty: the SPA assembles no module routes, shows no module nav, and
+   `apps/web` still typechecks and builds.
+6. Remove its schema entry from `drizzle.config.ts`'s `schema` array
    (`'./modules/reference-workspace/api/schema.ts'`) and add your module's
    `schema.ts` path in its place.
-5. Regenerate the migration set:
+7. Regenerate the migration set:
    ```bash
    pnpm db:generate
    ```
