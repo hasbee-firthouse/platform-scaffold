@@ -9,6 +9,14 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
   APP_URL: z.string().min(1, 'is required').url('must be a valid URL'),
   DATABASE_URL: z.string().min(1, 'is required'),
+  // OPTIONAL two-role RLS wiring (deploy bootstrap). When set, this is the
+  // NON-OWNER `app_runtime` connection string the running app SHOULD use for
+  // request-time tenant queries so the PostgreSQL RLS backstop actually
+  // constrains it; migrations + pg-boss admin keep using `DATABASE_URL` (owner,
+  // BYPASSRLS). When UNSET, the app uses `DATABASE_URL` for everything, so local
+  // dev without the extra role still boots. See docs/DEPLOYMENT.md (two-role
+  // model) for the recommended production wiring.
+  APP_RUNTIME_DATABASE_URL: z.string().min(1).optional(),
   BETTER_AUTH_SECRET: z.string().min(1, 'is required'),
   GOOGLE_CLIENT_ID: z.string().min(1, 'is required'),
   GOOGLE_CLIENT_SECRET: z.string().min(1, 'is required'),

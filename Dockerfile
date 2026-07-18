@@ -33,7 +33,10 @@ COPY --from=build --chown=node:node /app /app
 # Drop privileges: run as the image's built-in unprivileged `node` user.
 USER node
 EXPOSE 3000
-# Run node directly with the tsx loader (NOT the `tsx` CLI wrapper, which forks a
-# child) so this process is PID 1 and receives SIGTERM directly — that drives the
-# app's graceful shutdown (drain, stop pg-boss, close the pool; SPEC §20.2).
-CMD ["node", "--import", "tsx", "apps/api/src/main.ts"]
+# The entrypoint sequences the deploy bootstrap: provision the non-owner
+# `app_runtime` role (scripts/init-db.sql) → run migrations as the owner
+# (DATABASE_URL) → `exec` the API so node becomes PID 1 and receives SIGTERM
+# directly, driving graceful shutdown (drain, stop pg-boss, close the pool;
+# SPEC §20.2). The API is still launched with `node --import tsx` (no `tsx` CLI
+# wrapper that would fork a child).
+ENTRYPOINT ["sh", "scripts/entrypoint.sh"]

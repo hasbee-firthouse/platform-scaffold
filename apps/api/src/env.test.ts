@@ -29,6 +29,20 @@ describe('loadEnv', () => {
     });
   });
 
+  it('accepts the absence of the optional APP_RUNTIME_DATABASE_URL (single-URL dev boot)', () => {
+    const env = loadEnv(validSource());
+
+    expect(env.APP_RUNTIME_DATABASE_URL).toBeUndefined();
+  });
+
+  it('carries APP_RUNTIME_DATABASE_URL through when present (two-role wiring)', () => {
+    const runtimeUrl = 'postgres://app_runtime:app_runtime_dev_pw@localhost:5432/platform';
+
+    const env = loadEnv(validSource({ APP_RUNTIME_DATABASE_URL: runtimeUrl }));
+
+    expect(env.APP_RUNTIME_DATABASE_URL).toBe(runtimeUrl);
+  });
+
   it('throws InvalidEnvError naming SMTP_URL when it is missing', () => {
     const source = validSource({ SMTP_URL: undefined });
 

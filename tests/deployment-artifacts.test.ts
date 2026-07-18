@@ -32,8 +32,8 @@ describe('Dockerfile', () => {
     expect(read('Dockerfile')).toMatch(/^USER\s+node/m);
   });
 
-  it('boots the API entry via the no-build tsx path', () => {
-    expect(read('Dockerfile')).toContain('apps/api/src/main.ts');
+  it('boots via the migrate-then-boot entrypoint', () => {
+    expect(read('Dockerfile')).toMatch(/scripts\/entrypoint\.sh/);
   });
 });
 
@@ -67,6 +67,66 @@ describe('docker-compose.yml', () => {
     ]) {
       expect(compose).toContain(key);
     }
+  });
+
+  it('mounts the role-provisioning init script into the Postgres init dir', () => {
+    expect(compose).toContain('/docker-entrypoint-initdb.d/');
+    expect(compose).toContain('scripts/init-db.sql');
+  });
+
+  it('wires the app to connect as the non-owner app_runtime runtime role', () => {
+    expect(compose).toContain('APP_RUNTIME_DATABASE_URL');
+    expect(compose).toContain('app_runtime');
+  });
+});
+
+describe('scripts/init-db.sql (two-role bootstrap)', () => {
+  const initSql = read('scripts/init-db.sql');
+
+  it('exists', () => {
+    expect(existsSync(join(repoRoot, 'scripts/init-db.sql'))).toBe(true);
+  });
+
+  it('creates the app_runtime login role idempotently', () => {
+    expect(initSql).toMatch(/IF NOT EXISTS/i);
+    expect(initSql).toMatch(/CREATE ROLE\s+app_runtime/i);
+    expect(initSql).toMatch(/LOGIN/i);
+  });
+
+  it('provisions a least-privilege, non-bypass role so RLS actually constrains it', () => {
+    expect(initSql).toMatch(/NOBYPASSRLS/i);
+    expect(initSql).toMatch(/NOSUPERUSER/i);
+    expect(initSql).toMatch(/GRANT USAGE ON SCHEMA/i);
+  });
+
+  it('does NOT duplicate the tenant-table CRUD grants owned by migration 0005', () => {
+    expect(initSql).not.toMatch(/GRANT[\s\S]*ON\s+"?workspace"?/i);
+    expect(initSql).not.toMatch(/GRANT[\s\S]*ON\s+"?task"?/i);
+  });
+
+  it('creates or owns no tables (role provisioning only)', () => {
+    expect(initSql).not.toMatch(/CREATE TABLE/i);
+  });
+});
+
+describe('scripts/entrypoint.sh (migrate-then-boot)', () => {
+  const entrypoint = read('scripts/entrypoint.sh');
+
+  it('exists', () => {
+    expect(existsSync(join(repoRoot, 'scripts/entrypoint.sh'))).toBe(true);
+  });
+
+  it('sequences init → migrate → boot in that order', () => {
+    const initIdx = entrypoint.indexOf('db-bootstrap.ts');
+    const migrateIdx = entrypoint.indexOf('migrate.ts');
+    const bootIdx = entrypoint.indexOf('apps/api/src/main.ts');
+    expect(initIdx).toBeGreaterThanOrEqual(0);
+    expect(migrateIdx).toBeGreaterThan(initIdx);
+    expect(bootIdx).toBeGreaterThan(migrateIdx);
+  });
+
+  it('execs the API so it becomes PID 1 (SIGTERM-driven graceful shutdown)', () => {
+    expect(entrypoint).toMatch(/exec\s+node[\s\S]*apps\/api\/src\/main\.ts/);
   });
 });
 

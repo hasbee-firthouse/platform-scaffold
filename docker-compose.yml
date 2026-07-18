@@ -9,10 +9,23 @@
 #
 #   Bring up the PRODUCTION image (builds the Dockerfile, boots API + SPA):
 #     docker compose --profile app up --build
-#     # then, once (against the same db): DATABASE_URL=... pnpm db:migrate
+#     # The app container's entrypoint provisions the app_runtime role and runs
+#     # migrations before booting — no separate migrate step is needed.
 #
 # `app` lives behind the `app` profile so a plain `docker compose up` starts only
 # the backing services the host-run dev flow needs.
+#
+# Two-role RLS model (see docs/DEPLOYMENT.md):
+#   * `postgres` (superuser) → DATABASE_URL: owner that runs migrations + pg-boss.
+#   * `app_runtime` (NON-OWNER, NOBYPASSRLS) → APP_RUNTIME_DATABASE_URL: the role
+#     the app connects as for request-time tenant queries, so RLS constrains it.
+#     Created on a fresh volume by scripts/init-db.sql (mounted below) and,
+#     idempotently, by the app entrypoint before migrations run.
+#
+# Running the isolation suite (E6-S3) against this compose Postgres:
+#   TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/platform \
+#   TEST_RUNTIME_DATABASE_URL=postgres://app_runtime:app_runtime_dev_pw@localhost:5432/platform \
+#     pnpm test:isolation
 
 services:
   db:
@@ -25,6 +38,10 @@ services:
       - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # On a FRESH volume Postgres runs every .sql here once, creating the
+      # non-owner app_runtime role before any migration runs. Idempotent, so the
+      # app entrypoint re-running it against an existing volume is harmless.
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/10-init-db.sql:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d platform']
       interval: 5s
@@ -40,6 +57,11 @@ services:
       MP_MAX_MESSAGES: 500
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://localhost:8025/livez']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   # The single production image (Fastify serves /api/* + the built SPA). Opt in
   # with `--profile app`. Env below mirrors the Zod-validated boot contract
@@ -52,11 +74,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3000
       APP_URL: http://localhost:3000
+      # OWNER connection (superuser): the entrypoint provisions app_runtime and
+      # runs migrations with this, and pg-boss admin uses it too.
       DATABASE_URL: postgres://postgres:postgres@db:5432/platform
+      # NON-OWNER app_runtime connection (NOBYPASSRLS): the recommended prod
+      # wiring points request-time tenant queries here so RLS constrains them.
+      # DEV-ONLY password — matches scripts/init-db.sql; change both for prod.
+      APP_RUNTIME_DATABASE_URL: postgres://app_runtime:app_runtime_dev_pw@db:5432/platform
       BETTER_AUTH_SECRET: local-dev-secret-change-me
       GOOGLE_CLIENT_ID: dev-google-client-id
       GOOGLE_CLIENT_SECRET: dev-google-client-secret
