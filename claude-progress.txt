@@ -1,16 +1,31 @@
 === Session 1 ===
 date: 2026-07-16T19:55:00+05:30
 mode: full
-pipeline_position: BUILD COMPLETE — all 28 stories across groups A-J implemented
+pipeline_position: BUILD COMPLETE + RUNTIME INTEGRATION COMPLETE — awaiting live /evaluate (Docker)
 groups_completed: [A, B, C, D, E, F, G, H, I, J]
 groups_remaining: []
-current_group: none — build phase done; next pipeline phase is /evaluate (live stack)
+current_group: none — build + integration wiring done; next is a LIVE evaluate (needs Docker)
 current_stories: []
 sprint_contract: none
-last_commit: (about to commit) group J — deployment, deletability & fork story (E8-S5)
-features_passing: 82 / 95 (J adds F094 deletability [verified], F095 fork/seed; F093 deferred.
-  Also reconciled: F027/F028 E3-S1 theming were proven but unmarked; now passing)
-coverage: 765 tests green across 132 files; tsc + eslint clean on all 15 workspaces
+last_commit: 24d7050 fix(deletability): platform tests module-agnostic (post-integration)
+features_passing: 82 / 95 (13 deferred are all live-stack; the integration below makes them
+  genuinely reachable in a live /evaluate — they are NOT yet marked pass, pending live verify)
+coverage: 820 tests green across 140 files; tsc + eslint clean; vite build passes
+integration_complete (commits e21e6b9, 9aff10c, 7024707, 24d7050 — closes the build->evaluate gap):
+  - API boot fully wired: pg-boss workers + email port started at boot; reference module mounted
+    via the deletion-safe modules/register-apis.ts seam; ctx.entitlements/permissions merged from
+    MODULE_MANIFESTS; better-auth verify/reset/magic-link + invite + set-password emails go through
+    ctx.email; POST /api/orgs/:orgId/members added; /api/me uses @platform/authz. SMTP_URL added.
+  - SPA fully assembled: TanStack router wires all screens (auth/settings/org-switcher/workspace)
+    with a /api/me session bootstrap feeding <Can>/useTerm; module web routes via modules/
+    register-web.ts seam. vite build succeeds (navigable end-to-end).
+  - Deploy: scripts/init-db.sql (app_runtime role) + db-bootstrap.ts + entrypoint.sh
+    (init->migrate->boot); compose mounts init + app_runtime; two-role model in DEPLOYMENT.md.
+    Request pool stays on DATABASE_URL (owner) for now — per-repo pool routing to app_runtime is
+    the documented prod follow-up; RLS backstop is still proven by the isolation suite.
+  - Deletability PRESERVED + re-verified after all the churn: deleting the module (dir + lines in
+    modules/index.ts, register-apis.ts, register-web.ts + drizzle.config.ts) leaves tsc clean, a
+    clean drop migration, vite build passing, and 675 tests green (0 failures).
 build_complete_note:
   - E8-S5 (group J): multi-stage Dockerfile (non-root, SPA build, tsx boot serving API+SPA :3000),
     docker-compose (postgres16 + mailpit + opt-in app), dev-only scripts/seed.ts (assertNotProduction
@@ -148,4 +163,20 @@ integration_followups_for_evaluate (tracked; not build blockers):
   - Reconcile /api/me local perms -> @platform/authz; retire the unused requirePermission preHandler
     OR attach request.permissions; add the missing admin-create-member POST /api/orgs/:orgId/members.
   - Wire jobs/email into ctx/boot (start pg-boss workers, ctx.email) for auth + invite + export mail.
-next_action: /evaluate (run the full stack via docker compose + the isolation suite) then /review, /deploy
+EVALUATION RUNBOOK (Docker is NOT available in the agent sandbox — run these on a Docker host):
+  1. Secrets: create a .env with dev values for BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID/SECRET,
+     APP_URL=http://localhost:3000, SMTP_URL=smtp://mailpit:1025, NODE_ENV=development, and the
+     DATABASE_URL/APP_RUNTIME_DATABASE_URL the compose file expects (see docker-compose.yml + DEPLOYMENT.md).
+  2. `docker compose up -d --build` (postgres 16 + mailpit + app). The app entrypoint runs
+     init-db.sql (creates app_runtime) -> db:migrate -> boots Fastify on :3000 serving API + SPA.
+  3. Health: `curl -fsS http://localhost:3000/api/health` (and /api/ready).
+  4. `pnpm seed` (dev users + a team org + sample workspace/tasks; refuses if NODE_ENV=production).
+  5. Isolation suite (RLS + cross-tenant + migration idempotency, F065-F069):
+     TEST_DATABASE_URL=<owner> TEST_RUNTIME_DATABASE_URL=<app_runtime> pnpm test:isolation
+  6. E2E: Playwright against http://localhost:3000 — sign-up -> verify via Mailpit (:8025) -> sign-in;
+     create org -> invite (Mailpit) -> accept -> role change; workspace/task CRUD + assignee +
+     maxTasks upgrade notice; CSV export -> Mailpit; rebrand smoke (swap product.config).
+  7. Then mark the 13 deferred features per real results, and run /review (+ /security-review), /deploy.
+  NB: sprint-contracts/ are empty (never generated) — either author them from features.json +
+  specs/design/api-contracts.md, or evaluate directly against the feature ACs + this runbook.
+next_action: run the EVALUATION RUNBOOK on a Docker host; report results back to mark deferred features.
