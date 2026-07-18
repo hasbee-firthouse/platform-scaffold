@@ -117,7 +117,7 @@ function registerCreate(app: Typed, deps: OrgRouteDeps): void {
       const { user } = authedCaller(request);
       const { orgId } = request.params as z.infer<typeof orgIdParamsSchema>;
       const body = request.body as z.infer<typeof createInvitationBodySchema>;
-      await authorizeOrg({
+      const { org } = await authorizeOrg({
         repo: deps.repo,
         orgId,
         userId: user.id,
@@ -132,7 +132,10 @@ function registerCreate(app: Typed, deps: OrgRouteDeps): void {
         inviterId: user.id,
         expiresAt: invitationExpiry(deps.now()),
       });
-      await sendAndAudit(deps, invitation, user.id, AUDIT_ACTIONS.inviteSent);
+      await sendAndAudit(deps, invitation, user.id, AUDIT_ACTIONS.inviteSent, {
+        organizationName: org.name,
+        inviterName: user.name,
+      });
       return reply.status(201).send({ invitation: invitationView(invitation) });
     }),
   );
@@ -151,7 +154,7 @@ function registerResend(app: Typed, deps: OrgRouteDeps): void {
     withOrgErrors(async (request) => {
       const { user } = authedCaller(request);
       const { orgId, invitationId } = request.params as z.infer<typeof invitationParamsSchema>;
-      await authorizeOrg({
+      const { org } = await authorizeOrg({
         repo: deps.repo,
         orgId,
         userId: user.id,
@@ -165,7 +168,10 @@ function registerResend(app: Typed, deps: OrgRouteDeps): void {
       const refreshed = await deps.repo.updateInvitation(invitation.id, {
         expiresAt: invitationExpiry(deps.now()),
       });
-      await sendAndAudit(deps, refreshed, user.id, AUDIT_ACTIONS.inviteSent);
+      await sendAndAudit(deps, refreshed, user.id, AUDIT_ACTIONS.inviteSent, {
+        organizationName: org.name,
+        inviterName: user.name,
+      });
       return { invitation: invitationView(refreshed) };
     }),
   );

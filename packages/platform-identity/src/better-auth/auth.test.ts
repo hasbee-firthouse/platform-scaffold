@@ -72,6 +72,51 @@ describe('createAuth', () => {
     expect(withIds).toContain('magic-link');
   });
 
+  it('registers no email-verification or reset-password sender when callbacks are omitted', () => {
+    const auth = createAuth(buildConfig());
+
+    expect(auth.options.emailVerification).toBeUndefined();
+    expect(auth.options.emailAndPassword?.sendResetPassword).toBeUndefined();
+    // The default still requires verification even without a sender wired.
+    expect(auth.options.emailAndPassword?.requireEmailVerification).toBe(true);
+  });
+
+  it('wires sendVerificationEmail through the platform sender when provided', async () => {
+    const sendVerificationEmail = vi.fn(async () => undefined);
+    const auth = createAuth(buildConfig({ sendVerificationEmail }));
+
+    const wired = auth.options.emailVerification?.sendVerificationEmail;
+    expect(wired).toBeTypeOf('function');
+
+    await wired!(
+      { user: { email: 'ada@x.io' }, url: 'https://app/verify?t=abc', token: 'abc' } as never,
+      undefined as never,
+    );
+    expect(sendVerificationEmail).toHaveBeenCalledWith({
+      email: 'ada@x.io',
+      url: 'https://app/verify?t=abc',
+      token: 'abc',
+    });
+  });
+
+  it('wires sendResetPassword through the platform sender when provided', async () => {
+    const sendResetPasswordEmail = vi.fn(async () => undefined);
+    const auth = createAuth(buildConfig({ sendResetPasswordEmail }));
+
+    const wired = auth.options.emailAndPassword?.sendResetPassword;
+    expect(wired).toBeTypeOf('function');
+
+    await wired!(
+      { user: { email: 'grace@x.io' }, url: 'https://app/reset?t=xyz', token: 'xyz' } as never,
+      undefined as never,
+    );
+    expect(sendResetPasswordEmail).toHaveBeenCalledWith({
+      email: 'grace@x.io',
+      url: 'https://app/reset?t=xyz',
+      token: 'xyz',
+    });
+  });
+
   it('throws MissingMagicLinkSenderError when magicLink is enabled without a sender', () => {
     expect(() =>
       createAuth(

@@ -16,7 +16,7 @@ import type { Capabilities } from '@platform/config';
 import type { IdentityPort, IdentitySessionResult } from '@platform/identity';
 import { registerErrorHandler } from '../../plugins/error-handler.js';
 import { registerAuthSession } from '../../lib/session.js';
-import { noopInviteSender } from './types.js';
+import { noopInviteSender, noopSetPasswordSender } from './types.js';
 import type { OrgRouteDeps } from './deps.js';
 import type { OrgRepository } from './repository.js';
 
@@ -102,7 +102,9 @@ export function buildOrgTestApp(input: OrgTestAppInput): FastifyInstance {
     repo: input.repo,
     audit: input.audit ?? createRecordingAudit(),
     capabilities: { ...ALL_CAPABILITIES, ...input.capabilities },
+    appUrl: input.deps?.appUrl ?? 'http://localhost:3000',
     sendInvite: input.deps?.sendInvite ?? noopInviteSender,
+    sendSetPassword: input.deps?.sendSetPassword ?? noopSetPasswordSender,
     now: input.now ?? (() => new Date('2026-07-16T00:00:00Z')),
     ...input.deps,
   };

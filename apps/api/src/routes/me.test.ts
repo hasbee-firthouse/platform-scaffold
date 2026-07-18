@@ -4,16 +4,27 @@ import { serializerCompiler, validatorCompiler, type ZodTypeProvider } from 'fas
 import pino from 'pino';
 import { defineProduct } from '@platform/config';
 import { createDbConnection } from '@platform/db';
+import { createPermissionRegistry, resolveRole } from '@platform/authz';
 import type { IdentityPort, IdentitySessionResult } from '@platform/identity';
+import { MODULE_MANIFESTS } from '../../../../modules/index.js';
 import { buildContext } from '../context.js';
+import { fakeEmailPort, fakeJobs } from '../test-support.js';
 import { registerErrorHandler } from '../plugins/error-handler.js';
 import { registerAuthSession } from '../lib/session.js';
 import {
-  permissionsForRole,
+  resolvePermissionsForRole,
   registerMeRoute,
   type MeRouteDeps,
   type MembershipData,
 } from './me.js';
+
+/** The same shared registry the running context builds (`ctx.permissions`). */
+const REGISTRY = createPermissionRegistry(MODULE_MANIFESTS);
+
+/** The authoritative permission set a built-in role resolves to, sorted. */
+function resolvedPermissions(role: 'owner' | 'admin' | 'member'): string[] {
+  return [...resolveRole(REGISTRY, role)].sort();
+}
 
 function testConfig(): ReturnType<typeof defineProduct> {
   return defineProduct({
@@ -78,6 +89,8 @@ function buildMeApp(setup: AppSetup): FastifyInstance {
     connection,
     logger: pino({ level: 'silent' }),
     identity,
+    email: fakeEmailPort(),
+    jobs: fakeJobs(),
   });
   const app = Fastify().withTypeProvider<ZodTypeProvider>();
   app.setValidatorCompiler(validatorCompiler);
@@ -90,24 +103,31 @@ function buildMeApp(setup: AppSetup): FastifyInstance {
     updateProfile:
       setup.deps?.updateProfile ??
       (async (user, input) => ({ ...user, name: input.name ?? user.name, image: input.image ?? user.image })),
+    permissions: setup.deps?.permissions ?? context.permissions,
   };
   registerMeRoute(app, deps);
   return app;
 }
 
-describe('permissionsForRole', () => {
-  it('grants an owner the full org permission set', () => {
-    expect(permissionsForRole('owner')).toContain('org:delete');
-    expect(permissionsForRole('owner')).toContain('member:invite');
+describe('resolvePermissionsForRole', () => {
+  it('grants an owner the full permission set, including module permissions', () => {
+    const owner = resolvePermissionsForRole(REGISTRY, 'owner');
+    // Platform ownership-guarded permission…
+    expect(owner).toContain('org.delete');
+    // …and module-declared permissions from the reference-workspace manifest.
+    expect(owner).toContain('workspace.workspaces.manage');
+    expect(owner).toContain('workspace.tasks.write');
   });
 
-  it('grants a plain member only read permissions', () => {
-    expect(permissionsForRole('member')).toEqual(['org:read', 'member:read']);
+  it('grants a plain member only the read defaults, including module read perms', () => {
+    expect(resolvePermissionsForRole(REGISTRY, 'member')).toEqual(
+      ['org.members.read', 'org.settings.read', 'workspace.tasks.read'].sort(),
+    );
   });
 
-  it('returns no permissions for an unknown or absent role', () => {
-    expect(permissionsForRole(null)).toEqual([]);
-    expect(permissionsForRole('galactic-overlord')).toEqual([]);
+  it('returns no permissions for an unknown/module or absent role', () => {
+    expect(resolvePermissionsForRole(REGISTRY, null)).toEqual([]);
+    expect(resolvePermissionsForRole(REGISTRY, 'Workspace Manager')).toEqual([]);
   });
 });
 
@@ -146,8 +166,31 @@ describe('GET /api/me', () => {
       ],
       activeOrganizationId: 'org_1',
       activeRole: 'owner',
-      permissions: permissionsForRole('owner'),
+      permissions: resolvedPermissions('owner'),
     });
+    await app.close();
+  });
+
+  it('resolves a member active role to the read-only permission defaults', async () => {
+    const app = buildMeApp({
+      session: cannedSession(),
+      deps: {
+        loadMemberships: async () => ({
+          organizations: [{ id: 'org_2', name: 'Globex', slug: 'globex', role: 'member' }],
+          activeOrganizationId: 'org_2',
+          activeRole: 'member',
+        }),
+      },
+    });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/me',
+      headers: { cookie: 'better-auth.session_token=tok_1' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().permissions).toEqual(resolvedPermissions('member'));
     await app.close();
   });
 

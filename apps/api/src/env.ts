@@ -12,6 +12,11 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(1, 'is required'),
   GOOGLE_CLIENT_ID: z.string().min(1, 'is required'),
   GOOGLE_CLIENT_SECRET: z.string().min(1, 'is required'),
+  // SMTP connection string for the production email transport (SPEC §13). Supplied
+  // by docker-compose / the deploy environment; the dev (Mailpit) adapter ignores
+  // it and connects to localhost:1025, but the variable is still required so a
+  // production boot never starts without a configured mail transport.
+  SMTP_URL: z.string().min(1, 'is required'),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -32,6 +32,7 @@ import type { FastifyInstance } from 'fastify';
 import type { IdentityPort, IdentitySessionResult } from '@platform/identity';
 import { buildApp } from '../src/app.js';
 import { buildContext } from '../src/context.js';
+import { fakeEmailPort, fakeJobs } from '../src/test-support.js';
 import { createDrizzleOrgRepository, type OrgRepository } from '../src/routes/orgs/index.js';
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL ?? '';
@@ -288,6 +289,8 @@ describe.skipIf(!LIVE)('E6-S3 · AC1 cross-tenant isolation (F067, live DB)', ()
       connection,
       logger: pino({ level: 'silent' }),
       identity: fixedIdentity(cannedSession(userA)),
+      email: fakeEmailPort(),
+      jobs: fakeJobs(),
     });
     app = await buildApp({ context, spaDir, isProduction: false });
     await app.ready();

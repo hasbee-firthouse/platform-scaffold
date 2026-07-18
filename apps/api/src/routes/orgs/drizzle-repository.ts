@@ -199,6 +199,26 @@ export function createDrizzleOrgRepository(db: NodePgDatabase): OrgRepository {
       return toOrgRow(row!);
     },
 
+    async findUserByEmail(email) {
+      const [row] = await db
+        .select({ id: schema.user.id, email: schema.user.email, name: schema.user.name })
+        .from(schema.user)
+        .where(eq(schema.user.email, email));
+      return row ?? null;
+    },
+
+    async createUser(input) {
+      // Admin-create member, new-user path: an unverified, password-less user.
+      // better-auth mints its own ids on its own signup path; here (a direct
+      // admin insert) we generate one. The set-password flow verifies the email
+      // and sets the first credential. Exercised against Postgres at evaluate.
+      const [row] = await db
+        .insert(schema.user)
+        .values({ id: uuidv7(), email: input.email, name: input.name, emailVerified: false })
+        .returning({ id: schema.user.id, email: schema.user.email, name: schema.user.name });
+      return row!;
+    },
+
     async addMember(orgId, userId, role) {
       const [row] = await db
         .insert(schema.member)

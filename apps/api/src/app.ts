@@ -20,7 +20,10 @@ import { registerOrgRoutes } from './routes/orgs/index.js';
 import { registerEntitlementRoutes } from './routes/orgs/entitlements.js';
 import { registerAuditLogRoutes } from './routes/orgs/audit-logs.js';
 import { registerRolesRoute } from './routes/orgs/roles.js';
-import { registerModules } from './register-modules.js';
+// The product-owned module seam. `apps/api` may import ONLY this file (and
+// `modules/index.js`) from `modules/**` — never `modules/reference-workspace/**`
+// directly — so product modules stay deletable.
+import { registerModuleApis } from '../../../modules/register-apis.js';
 
 export interface BuildAppOptions {
   context: PlatformContext;
@@ -58,7 +61,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   // Authentication (E4-S2): mount `/api/auth/*`, enable `requireUser`, expose `/api/me`.
   await registerAuthPlugin(app);
   registerAuthSession(app);
-  registerMeRoute(app, buildMeRouteDeps(options.context.db));
+  registerMeRoute(app, buildMeRouteDeps(options.context.db, options.context.permissions));
 
   // Organizations & membership (E5-S2): lifecycle, members, invitations under /api/orgs.
   registerOrgRoutes(app, options.context);
@@ -72,7 +75,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   // Roles matrix (E5-S3): read-only code-defined roles under /api/orgs/:orgId/roles.
   registerRolesRoute(app, options.context);
 
-  await registerModules(app, options.context);
+  // Product-module HTTP routes (e.g. reference-workspace's `/api/orgs/:orgId/workspace/*`),
+  // mounted after the platform routes and before the SPA static fallback.
+  registerModuleApis(app, options.context);
+
   await registerStaticSpa(app, { spaDir: options.spaDir });
 
   return app;

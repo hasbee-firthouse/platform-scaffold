@@ -10,17 +10,27 @@ import { z } from 'zod';
 import { AUDIT_ACTIONS } from '@platform/audit';
 import { paginationRequestSchema } from '@platform/contracts';
 import { requireUser } from '../../lib/session.js';
-import type { OrgRouteDeps } from './deps.js';
+import { setPasswordUrl, type OrgRouteDeps } from './deps.js';
 import { authedCaller, authorizeOrg } from './authorization.js';
 import { conflict, notFound, withOrgErrors } from './errors.js';
 import { countOwners, wouldRemoveLastOwner } from './invariants.js';
 import { memberViewSchema } from './schemas.js';
 import { memberViewOf } from './member-view.js';
+import type { MemberRow } from './types.js';
 
 const orgIdParamsSchema = z.object({ orgId: z.string().min(1) });
 const memberParamsSchema = z.object({ orgId: z.string().min(1), memberId: z.string().min(1) });
 const updateRoleBodySchema = z
   .object({ role: z.enum(['owner', 'admin', 'member']) })
+  .strict();
+// Admin-create member: an invitee is never made an owner (ownership is
+// transfer-only, mirroring the invitation contract), so only admin/member.
+const createMemberBodySchema = z
+  .object({
+    email: z.string().email(),
+    role: z.enum(['admin', 'member']),
+    name: z.string().min(1).optional(),
+  })
   .strict();
 
 const membersResponseSchema = z.object({
@@ -28,9 +38,36 @@ const membersResponseSchema = z.object({
   total: z.number().int().min(0),
 });
 
-/** Register the `/api/orgs/:orgId/members` endpoints (AC#2). */
+/** Register the `/api/orgs/:orgId/members` endpoints (AC#2, E5-S3 create). */
 export function registerMembersRoutes(app: FastifyInstance, deps: OrgRouteDeps): void {
   const typed = app.withTypeProvider<ZodTypeProvider>();
+
+  typed.post(
+    '/api/orgs/:orgId/members',
+    {
+      preHandler: requireUser,
+      schema: {
+        params: orgIdParamsSchema,
+        body: createMemberBodySchema,
+        response: { 200: z.object({ member: memberViewSchema }), 201: z.object({ member: memberViewSchema }) },
+      },
+    },
+    withOrgErrors(async (request, reply) => {
+      const { user } = authedCaller(request);
+      const { orgId } = request.params as z.infer<typeof orgIdParamsSchema>;
+      const body = request.body as z.infer<typeof createMemberBodySchema>;
+      await authorizeOrg({
+        repo: deps.repo,
+        orgId,
+        userId: user.id,
+        permission: 'org.members.invite',
+        rejectPersonal: true,
+      });
+      const { member, created } = await addOrCreateMember(deps, orgId, user.id, body);
+      const view = await memberViewOf(deps, orgId, member.id);
+      return reply.status(created ? 201 : 200).send({ member: view });
+    }),
+  );
 
   typed.get(
     '/api/orgs/:orgId/members',
@@ -136,4 +173,56 @@ async function requireMember(deps: OrgRouteDeps, orgId: string, memberId: string
     throw notFound('Member not found');
   }
   return member;
+}
+
+/**
+ * Admin-create a member (E5-S3): if a user with `email` already exists, add a
+ * membership in the org (409 if they are already a member); otherwise create an
+ * unverified, password-less user, add the membership, and email them a
+ * set-password link. Returns the new membership and whether a user was created
+ * (so the caller can answer 201 vs 200). Writes a `member.added` audit row.
+ */
+async function addOrCreateMember(
+  deps: OrgRouteDeps,
+  orgId: string,
+  actorUserId: string,
+  body: { email: string; role: 'admin' | 'member'; name?: string },
+): Promise<{ member: MemberRow; created: boolean }> {
+  const existing = await deps.repo.findUserByEmail(body.email);
+  if (existing) {
+    if (await deps.repo.findMemberByUser(orgId, existing.id)) {
+      throw conflict('This user is already a member of the organization');
+    }
+    const membership = await deps.repo.addMember(orgId, existing.id, body.role);
+    await auditMemberAdded(deps, orgId, membership.id, actorUserId, body.role);
+    return { member: membership, created: false };
+  }
+
+  const created = await deps.repo.createUser({ email: body.email, name: body.name ?? body.email });
+  const membership = await deps.repo.addMember(orgId, created.id, body.role);
+  await deps.sendSetPassword({
+    email: created.email,
+    name: created.name,
+    url: setPasswordUrl(deps.appUrl, created.email),
+  });
+  await auditMemberAdded(deps, orgId, membership.id, actorUserId, body.role);
+  return { member: membership, created: true };
+}
+
+/** Write the `member.added` audit row for an admin-created member. */
+async function auditMemberAdded(
+  deps: OrgRouteDeps,
+  orgId: string,
+  memberId: string,
+  actorUserId: string,
+  role: string,
+): Promise<void> {
+  await deps.audit.log({
+    action: AUDIT_ACTIONS.memberAdded,
+    targetType: 'member',
+    targetId: memberId,
+    orgId,
+    actorUserId,
+    metadata: { role },
+  });
 }

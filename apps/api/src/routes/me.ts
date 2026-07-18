@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { schema } from '@platform/db';
+import { resolveRole, type PermissionRegistry, type RoleName } from '@platform/authz';
 import type { IdentitySession, IdentityUser } from '@platform/identity';
 import { requireUser } from '../lib/session.js';
 
@@ -37,6 +38,12 @@ export type ProfileUpdater = (user: IdentityUser, input: ProfileInput) => Promis
 export interface MeRouteDeps {
   loadMemberships: MembershipLoader;
   updateProfile: ProfileUpdater;
+  /**
+   * The shared authorization registry (`ctx.permissions`) — the single source of
+   * truth the client `<Can>` gate reads. `/api/me` resolves the active-org role
+   * against it so module permissions (e.g. `workspace.*`) are included.
+   */
+  permissions: PermissionRegistry;
 }
 
 export interface MeResponse {
@@ -47,24 +54,28 @@ export interface MeResponse {
   permissions: string[];
 }
 
-/**
- * Best-effort role → permission map (E4-S2). The full RBAC framework arrives in
- * a later epic; until then the active-org role resolves to a coarse, typed set
- * so the UI can gate on concrete permission strings rather than raw role names.
- * TODO(E?-Sx): replace with the real entitlement/permission engine.
- */
-const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
-  owner: ['org:read', 'org:update', 'org:delete', 'member:invite', 'member:remove', 'member:read'],
-  admin: ['org:read', 'org:update', 'member:invite', 'member:remove', 'member:read'],
-  member: ['org:read', 'member:read'],
-};
+const BUILT_IN_ROLE_NAMES: readonly RoleName[] = ['owner', 'admin', 'member'];
 
-/** Resolve the permission set granted by an active-org role, or `[]` when unknown. */
-export function permissionsForRole(role: string | null): string[] {
-  if (role === null) {
+/** Narrow an arbitrary membership role string to a built-in {@link RoleName}. */
+function isBuiltInRole(role: string): role is RoleName {
+  return (BUILT_IN_ROLE_NAMES as readonly string[]).includes(role);
+}
+
+/**
+ * Resolve the active-org role to its concrete permission set over the SHARED
+ * authorization registry (E5-S1). This is the authoritative set — it includes
+ * module-declared permissions (e.g. `workspace.tasks.read`) — so `/api/me` stays
+ * the single source of truth the client `<Can>` gate reads. Unknown / module
+ * role names (never a built-in) and a `null` active role resolve to `[]`.
+ */
+export function resolvePermissionsForRole(
+  registry: PermissionRegistry,
+  role: string | null,
+): string[] {
+  if (role === null || !isBuiltInRole(role)) {
     return [];
   }
-  return [...(ROLE_PERMISSIONS[role] ?? [])];
+  return [...resolveRole(registry, role)].sort();
 }
 
 const userSchema = z.object({
@@ -107,13 +118,17 @@ function authed(request: FastifyRequest): { user: IdentityUser; session: Identit
   return { user, session };
 }
 
-function buildMeResponse(user: IdentityUser, data: MembershipData): MeResponse {
+function buildMeResponse(
+  user: IdentityUser,
+  data: MembershipData,
+  registry: PermissionRegistry,
+): MeResponse {
   return {
     user,
     organizations: data.organizations,
     activeOrganizationId: data.activeOrganizationId,
     activeRole: data.activeRole,
-    permissions: permissionsForRole(data.activeRole),
+    permissions: resolvePermissionsForRole(registry, data.activeRole),
   };
 }
 
@@ -132,7 +147,7 @@ export function registerMeRoute(app: FastifyInstance, deps: MeRouteDeps): void {
     async (request) => {
       const { user, session } = authed(request);
       const data = await deps.loadMemberships(user, session);
-      return buildMeResponse(user, data);
+      return buildMeResponse(user, data, deps.permissions);
     },
   );
 
@@ -143,7 +158,7 @@ export function registerMeRoute(app: FastifyInstance, deps: MeRouteDeps): void {
       const { user, session } = authed(request);
       const updated = await deps.updateProfile(user, request.body);
       const data = await deps.loadMemberships(updated, session);
-      return buildMeResponse(updated, data);
+      return buildMeResponse(updated, data, deps.permissions);
     },
   );
 }
@@ -215,10 +230,17 @@ function pickProfileChanges(input: ProfileInput): { name?: string; image?: strin
   return changes;
 }
 
-/** Assemble the production {@link MeRouteDeps} from the platform database handle. */
-export function buildMeRouteDeps(db: NodePgDatabase): MeRouteDeps {
+/**
+ * Assemble the production {@link MeRouteDeps} from the platform database handle
+ * and the shared authorization registry (`ctx.permissions`).
+ */
+export function buildMeRouteDeps(
+  db: NodePgDatabase,
+  permissions: PermissionRegistry,
+): MeRouteDeps {
   return {
     loadMemberships: buildMembershipLoader(db),
     updateProfile: buildProfileUpdater(db),
+    permissions,
   };
 }

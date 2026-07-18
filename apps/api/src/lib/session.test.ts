@@ -5,6 +5,7 @@ import { defineProduct } from '@platform/config';
 import { createDbConnection } from '@platform/db';
 import type { IdentityPort, IdentitySessionResult } from '@platform/identity';
 import { buildContext } from '../context.js';
+import { fakeEmailPort, fakeJobs } from '../test-support.js';
 import { registerAuthSession, requireUser } from './session.js';
 
 function testConfig(): ReturnType<typeof defineProduct> {
@@ -50,6 +51,8 @@ function buildProtectedApp(identity: IdentityPort): FastifyInstance {
     connection,
     logger: pino({ level: 'silent' }),
     identity,
+    email: fakeEmailPort(),
+    jobs: fakeJobs(),
   });
   const app = Fastify();
   app.decorate('platform', context);

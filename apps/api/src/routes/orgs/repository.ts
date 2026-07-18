@@ -14,6 +14,7 @@ import type {
   MemberView,
   OrgRow,
   OrgSummaryView,
+  UserRow,
 } from './types.js';
 import type { InvitationStatus } from './invariants.js';
 
@@ -52,6 +53,10 @@ export interface OrgRepository {
   createOrgWithOwner(input: CreateOrgInput): Promise<{ org: OrgRow; membership: MemberRow }>;
   updateOrg(orgId: string, changes: OrgUpdate): Promise<OrgRow>;
   softDeleteOrg(orgId: string, at: Date): Promise<OrgRow>;
+  /** Find a platform user by email, or `null` when none exists (admin-create member). */
+  findUserByEmail(email: string): Promise<UserRow | null>;
+  /** Create an unverified, password-less platform user (admin-create member, new-user path). */
+  createUser(input: { email: string; name: string }): Promise<UserRow>;
   /** Insert a membership for an existing user (invite acceptance — AC#4). */
   addMember(orgId: string, userId: string, role: string): Promise<MemberRow>;
   updateMemberRole(memberId: string, role: string): Promise<MemberRow>;

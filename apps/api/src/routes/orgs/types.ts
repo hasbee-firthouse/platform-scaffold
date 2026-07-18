@@ -52,6 +52,13 @@ export interface OrgSummaryView extends OrgView {
   role: string;
 }
 
+/** A minimal platform user row — the fields the org routes need to add or create a member. */
+export interface UserRow {
+  id: string;
+  email: string;
+  name: string;
+}
+
 /** The member projection returned to clients (`MemberView`). */
 export interface MemberView {
   id: string;
@@ -91,16 +98,32 @@ export interface CreateInvitationInput {
 }
 
 /**
- * The email delivery seam for invitations (AC#4). Email is not yet wired into
- * the platform context, so the routes accept an injectable sender that defaults
- * to a no-op; real delivery is verified in the evaluate phase.
+ * The email delivery seam for invitations (AC#4). Production wires this over
+ * `ctx.email` (template `invite`); unit tests inject a fake. The org name and
+ * inviter name are carried so the rendered email reads naturally.
  */
 export type InviteSender = (input: {
   email: string;
   organizationId: string;
+  organizationName: string;
   invitationId: string;
   role: string;
+  inviterName: string;
 }) => Promise<void>;
 
-/** The no-op invite sender used until email is wired into the context (AC#4). */
+/** The no-op invite sender used as the injectable default (AC#4). */
 export const noopInviteSender: InviteSender = async () => {};
+
+/**
+ * The email delivery seam for admin-created members (E5-S3): sends the
+ * set-password link to a freshly-created user. Production wires this over
+ * `ctx.email` (template `reset`); unit tests inject a fake.
+ */
+export type SetPasswordSender = (input: {
+  email: string;
+  name: string;
+  url: string;
+}) => Promise<void>;
+
+/** The no-op set-password sender used as the injectable default. */
+export const noopSetPasswordSender: SetPasswordSender = async () => {};

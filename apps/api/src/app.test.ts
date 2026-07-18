@@ -10,6 +10,7 @@ import { createDbConnection, type HealthQueryable } from '@platform/db';
 import type { IdentityPort } from '@platform/identity';
 import { buildApp } from './app.js';
 import { buildContext, type PlatformContext } from './context.js';
+import { fakeEmailPort, fakeJobs } from './test-support.js';
 
 function testIdentity(): IdentityPort {
   return {
@@ -41,6 +42,8 @@ function testContext(pool?: HealthQueryable): PlatformContext {
     connection,
     logger: pino({ level: 'silent' }),
     identity: testIdentity(),
+    email: fakeEmailPort(),
+    jobs: fakeJobs(),
   });
   return pool ? { ...context, pool: pool as PlatformContext['pool'] } : context;
 }

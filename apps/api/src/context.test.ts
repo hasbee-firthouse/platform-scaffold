@@ -3,7 +3,8 @@ import pino from 'pino';
 import { defineProduct } from '@platform/config';
 import { createDbConnection } from '@platform/db';
 import type { IdentityPort } from '@platform/identity';
-import { buildContext } from './context.js';
+import { buildContext, buildEntitlementRegistry, type BuildContextOptions } from './context.js';
+import { fakeEmailPort, fakeJobs } from './test-support.js';
 
 function testIdentity(): IdentityPort {
   return {
@@ -28,61 +29,110 @@ function testConfig(): ReturnType<typeof defineProduct> {
   });
 }
 
+function testOptions(overrides: Partial<BuildContextOptions> = {}): BuildContextOptions {
+  return {
+    config: testConfig(),
+    connection: createDbConnection('postgres://postgres:postgres@localhost:5432/platform'),
+    logger: pino({ level: 'silent' }),
+    identity: testIdentity(),
+    email: fakeEmailPort(),
+    jobs: fakeJobs(),
+    ...overrides,
+  };
+}
+
 describe('buildContext', () => {
   it('carries the resolved product config through unchanged', () => {
     const config = testConfig();
-    const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
-    const logger = pino({ level: 'silent' });
+    const options = testOptions({ config });
 
-    const context = buildContext({ config, connection, logger, identity: testIdentity() });
+    const context = buildContext(options);
 
     expect(context.config).toBe(config);
-    void connection.pool.end();
+    void options.connection.pool.end();
   });
 
   it('exposes the same db and pool instances produced by createDbConnection', () => {
-    const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
-    const logger = pino({ level: 'silent' });
+    const options = testOptions();
 
-    const context = buildContext({ config: testConfig(), connection, logger, identity: testIdentity() });
+    const context = buildContext(options);
 
-    expect(context.db).toBe(connection.db);
-    expect(context.pool).toBe(connection.pool);
-    void connection.pool.end();
+    expect(context.db).toBe(options.connection.db);
+    expect(context.pool).toBe(options.connection.pool);
+    void options.connection.pool.end();
   });
 
   it('exposes the injected logger instance unchanged', () => {
-    const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
     const logger = pino({ level: 'silent' });
+    const options = testOptions({ logger });
 
-    const context = buildContext({ config: testConfig(), connection, logger, identity: testIdentity() });
+    const context = buildContext(options);
 
     expect(context.logger).toBe(logger);
-    void connection.pool.end();
+    void options.connection.pool.end();
   });
 
   it('exposes the injected identity port unchanged (E4-S2)', () => {
-    const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
-    const logger = pino({ level: 'silent' });
     const identity = testIdentity();
+    const options = testOptions({ identity });
 
-    const context = buildContext({ config: testConfig(), connection, logger, identity });
+    const context = buildContext(options);
 
     expect(context.identity).toBe(identity);
-    void connection.pool.end();
+    void options.connection.pool.end();
+  });
+
+  it('carries the injected email port and jobs facade unchanged', () => {
+    const email = fakeEmailPort();
+    const jobs = fakeJobs();
+    const options = testOptions({ email, jobs });
+
+    const context = buildContext(options);
+
+    expect(context.email).toBe(email);
+    expect(context.jobs).toBe(jobs);
+    void options.connection.pool.end();
   });
 
   it('resolves platform nouns via term(), matching the resolved config (E3-S3 AC #3)', () => {
-    const config = testConfig();
-    const connection = createDbConnection('postgres://postgres:postgres@localhost:5432/platform');
-    const logger = pino({ level: 'silent' });
+    const options = testOptions();
 
-    const context = buildContext({ config, connection, logger, identity: testIdentity() });
+    const context = buildContext(options);
 
     // testConfig sets no terminology override, so it resolves to DEFAULT_TERMINOLOGY.
     expect(context.term('organization')).toBe('Organization');
     expect(context.term('organization', { plural: true })).toBe('Organizations');
     expect(context.term('widget')).toBe('widget');
-    void connection.pool.end();
+    void options.connection.pool.end();
+  });
+
+  it('resolves the module-declared workspace.maxTasks default to 100', () => {
+    // The reference-workspace manifest declares workspace.maxTasks=100; the merged
+    // registry surfaces it as a declared default (DB-free; the per-org override
+    // lookup that `entitlements.get` performs first needs live Postgres).
+    const registry = buildEntitlementRegistry();
+
+    expect(registry.getDefault('workspace.maxTasks')).toBe(100);
+    // Built-in placeholder defaults are preserved alongside the module defaults.
+    expect(registry.getDefault('seats.max')).toBe(5);
+  });
+
+  it('exposes the merged module entitlement key via ctx.entitlements.keys()', () => {
+    const options = testOptions();
+
+    const context = buildContext(options);
+
+    expect(context.entitlements.keys()).toContain('workspace.maxTasks');
+    void options.connection.pool.end();
+  });
+
+  it('includes module-declared permissions in the shared authz registry', () => {
+    const options = testOptions();
+
+    const context = buildContext(options);
+
+    expect(context.permissions.permissions.has('workspace.tasks.read')).toBe(true);
+    expect(context.permissions.permissions.has('workspace.workspaces.manage')).toBe(true);
+    void options.connection.pool.end();
   });
 });

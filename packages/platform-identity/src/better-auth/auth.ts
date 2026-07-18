@@ -120,6 +120,49 @@ function buildAuthHooks(input: IdentityConfig): BetterAuthOptions['hooks'] {
 }
 
 /**
+ * Build the `emailVerification` option carrying the verify-email sender, present
+ * only when a sender was supplied. better-auth calls `sendVerificationEmail`
+ * with `{ user, url, token }`; we forward the recipient's email + the action
+ * link/token to the platform sender. When no sender is configured the option is
+ * omitted entirely, leaving better-auth's default (no send) in place.
+ */
+export function buildEmailVerification(
+  input: IdentityConfig,
+): BetterAuthOptions['emailVerification'] {
+  const send = input.sendVerificationEmail;
+  if (!send) {
+    return undefined;
+  }
+  return {
+    sendVerificationEmail: async ({ user, url, token }) => {
+      await send({ email: user.email, url, token });
+    },
+  };
+}
+
+/**
+ * Build the `emailAndPassword` option: always enabled with required
+ * verification, plus `sendResetPassword` only when a reset sender was supplied.
+ * better-auth calls `sendResetPassword` with `{ user, url, token }`.
+ */
+export function buildEmailAndPassword(
+  input: IdentityConfig,
+): NonNullable<BetterAuthOptions['emailAndPassword']> {
+  const send = input.sendResetPasswordEmail;
+  return {
+    enabled: true,
+    requireEmailVerification: true,
+    ...(send
+      ? {
+          sendResetPassword: async ({ user, url, token }) => {
+            await send({ email: user.email, url, token });
+          },
+        }
+      : {}),
+  };
+}
+
+/**
  * Whether the personal-org auto-create hook should run (E5-S2 · AC#1): only
  * when the product enables `capabilities.personalAccounts` AND a creator was
  * supplied. Exported so the gating is unit-testable without booting better-auth.
@@ -163,10 +206,8 @@ export function createAuth(input: IdentityConfig) {
     secret: input.secret,
     baseURL: input.baseURL,
     database: drizzleAdapter(input.db, { provider: 'pg', schema }),
-    emailAndPassword: {
-      enabled: true,
-      requireEmailVerification: true,
-    },
+    emailAndPassword: buildEmailAndPassword(input),
+    emailVerification: buildEmailVerification(input),
     socialProviders: {
       google: {
         clientId: input.google.clientId,

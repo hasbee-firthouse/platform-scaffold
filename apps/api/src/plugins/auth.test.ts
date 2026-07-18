@@ -5,6 +5,7 @@ import { defineProduct } from '@platform/config';
 import { createDbConnection } from '@platform/db';
 import type { IdentityPort } from '@platform/identity';
 import { buildContext, type PlatformContext } from '../context.js';
+import { fakeEmailPort, fakeJobs } from '../test-support.js';
 import { registerAuthPlugin } from './auth.js';
 import { AUTH_RATE_LIMIT_MAX, registerRateLimit } from './rate-limit.js';
 
@@ -31,6 +32,8 @@ function buildAppWith(identity: IdentityPort): FastifyInstance {
     connection,
     logger: pino({ level: 'silent' }),
     identity,
+    email: fakeEmailPort(),
+    jobs: fakeJobs(),
   });
   const app = Fastify();
   app.decorate('platform', context);

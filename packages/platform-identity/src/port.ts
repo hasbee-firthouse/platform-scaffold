@@ -77,6 +77,26 @@ export interface MagicLinkSenderInput {
 /** Delivers a magic-link sign-in email. Required only when `capabilities.magicLink` is enabled. */
 export type MagicLinkSender = (input: MagicLinkSenderInput) => Promise<void>;
 
+/** The recipient + action link better-auth hands the verify-email callback. */
+export interface VerificationEmailInput {
+  email: string;
+  url: string;
+  token: string;
+}
+
+/** Delivers the "verify your email" transactional email. Optional; when omitted better-auth's no-op default stands. */
+export type VerificationEmailSender = (input: VerificationEmailInput) => Promise<void>;
+
+/** The recipient + action link better-auth hands the reset-password callback. */
+export interface ResetPasswordEmailInput {
+  email: string;
+  url: string;
+  token: string;
+}
+
+/** Delivers the "reset your password" transactional email. Optional; when omitted better-auth's no-op default stands. */
+export type ResetPasswordEmailSender = (input: ResetPasswordEmailInput) => Promise<void>;
+
 /** The freshly-created user handed to the personal-org auto-create hook (E5-S2 · AC#1). */
 export interface NewUserForPersonalOrg {
   id: string;
@@ -105,6 +125,19 @@ export interface IdentityConfig {
   db: NodePgDatabase;
   google: GoogleProviderConfig;
   sendMagicLink?: MagicLinkSender;
+  /**
+   * Optional verify-email sender wired into better-auth's
+   * `emailVerification.sendVerificationEmail` (SPEC §13). When omitted, no
+   * `emailVerification` option is registered and better-auth's default (no send)
+   * stands, so tests without email keep passing.
+   */
+  sendVerificationEmail?: VerificationEmailSender;
+  /**
+   * Optional reset-password sender wired into better-auth's
+   * `emailAndPassword.sendResetPassword` (SPEC §13). When omitted, no
+   * `sendResetPassword` option is registered and better-auth's default stands.
+   */
+  sendResetPasswordEmail?: ResetPasswordEmailSender;
   /**
    * Optional sink for authentication events (E2-S3 · AC3). When provided, the
    * adapter invokes it for sign-in success/failure and sign-out; when omitted,

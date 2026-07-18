@@ -56,12 +56,15 @@ export async function sendAndAudit(
   invitation: InvitationRow,
   actorUserId: string,
   action: string,
+  context: { organizationName: string; inviterName: string },
 ): Promise<void> {
   await deps.sendInvite({
     email: invitation.email,
     organizationId: invitation.organizationId,
+    organizationName: context.organizationName,
     invitationId: invitation.id,
     role: invitation.role,
+    inviterName: context.inviterName,
   });
   await deps.audit.log({
     action,

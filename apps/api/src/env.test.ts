@@ -9,6 +9,7 @@ function validSource(overrides: Record<string, string | undefined> = {}): Record
     BETTER_AUTH_SECRET: 'a-very-long-random-secret-value',
     GOOGLE_CLIENT_ID: 'google-client-id',
     GOOGLE_CLIENT_SECRET: 'google-client-secret',
+    SMTP_URL: 'smtp://mailpit:1025',
     ...overrides,
   };
 }
@@ -24,7 +25,20 @@ describe('loadEnv', () => {
       BETTER_AUTH_SECRET: 'a-very-long-random-secret-value',
       GOOGLE_CLIENT_ID: 'google-client-id',
       GOOGLE_CLIENT_SECRET: 'google-client-secret',
+      SMTP_URL: 'smtp://mailpit:1025',
     });
+  });
+
+  it('throws InvalidEnvError naming SMTP_URL when it is missing', () => {
+    const source = validSource({ SMTP_URL: undefined });
+
+    try {
+      loadEnv(source);
+      throw new Error('expected loadEnv to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvalidEnvError);
+      expect((error as Error).message).toContain('SMTP_URL');
+    }
   });
 
   it('throws InvalidEnvError naming DATABASE_URL when it is missing', () => {

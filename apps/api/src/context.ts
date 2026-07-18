@@ -4,9 +4,19 @@ import { resolveTerm } from '@platform/config';
 import type { DbConnection } from '@platform/db';
 import type { AuditWriter } from '@platform/audit';
 import { createAuditWriter } from '@platform/audit';
-import type { EntitlementsApi } from '@platform/entitlements';
-import { createDrizzleOverrideStore, createEntitlementRegistry, createEntitlements } from '@platform/entitlements';
+import type { EntitlementRegistry, EntitlementsApi, EntitlementValue } from '@platform/entitlements';
+import {
+  BUILT_IN_ENTITLEMENTS,
+  createDrizzleOverrideStore,
+  createEntitlementRegistry,
+  createEntitlements,
+} from '@platform/entitlements';
+import type { PermissionRegistry } from '@platform/authz';
+import { createPermissionRegistry } from '@platform/authz';
 import type { IdentityPort } from '@platform/identity';
+import type { EmailPort } from '@platform/email';
+import type { PlatformJobs } from '@platform/jobs';
+import { MODULE_MANIFESTS } from '../../../modules/index.js';
 
 /**
  * Everything a request handler needs to reach the product definition and its
@@ -18,6 +28,12 @@ export interface PlatformContext {
   config: ProductConfig;
   db: DbConnection['db'];
   pool: DbConnection['pool'];
+  /**
+   * The externally-reachable base URL of the running app (from `APP_URL`). Used
+   * to build absolute action links in transactional emails — the invitation
+   * accept link and the admin-created member's set-password link.
+   */
+  appUrl: string;
   logger: Logger;
   /**
    * Resolve a platform noun from the product's terminology for use in emails
@@ -43,12 +59,30 @@ export interface PlatformContext {
    * The entitlements resolver (E7-S1). `entitlements.get(orgId, key)` resolves
    * the per-org override or the module-declared default; `entitlements.require`
    * throws a typed 403 `ENTITLEMENT_REQUIRED` when unmet; `setOverride` persists
-   * and audits a change. Constructed internally from the same database
-   * connection and audit writer, so existing `buildContext` call sites are
-   * unaffected. Declared defaults come from the injectable registry — seeded
-   * with the built-in placeholder set until product modules register their own.
+   * and audits a change. The declared-default registry is seeded from the
+   * built-in placeholder set MERGED with every module manifest's entitlement
+   * defaults (e.g. `workspace.maxTasks=100`), so a module default resolves out
+   * of the box.
    */
   entitlements: EntitlementsApi;
+  /**
+   * The shared authorization permission universe (E5-S1), built from
+   * {@link MODULE_MANIFESTS}. Making module permissions part of the known
+   * registry keeps route-level authz consistent with what modules declare.
+   */
+  permissions: PermissionRegistry;
+  /**
+   * The email port (SPEC §13). `send` ENQUEUES the email-delivery job — the
+   * module plugin reads `ctx.email` to deliver its export CSV. Constructed in
+   * the composition root over the platform jobs facade.
+   */
+  email: EmailPort;
+  /**
+   * The pg-boss jobs facade (SPEC §14). `jobs.enqueue` is what the module plugin
+   * uses to queue background work; workers run in-process. The composition root
+   * owns `start()`/`stop()`.
+   */
+  jobs: PlatformJobs;
 }
 
 export interface BuildContextOptions {
@@ -56,6 +90,37 @@ export interface BuildContextOptions {
   connection: DbConnection;
   logger: Logger;
   identity: IdentityPort;
+  email: EmailPort;
+  jobs: PlatformJobs;
+  /** The app's public base URL (`APP_URL`); defaults to localhost for tests. */
+  appUrl?: string;
+}
+
+/** Fallback base URL when a caller (e.g. a unit test) does not supply `APP_URL`. */
+const DEFAULT_APP_URL = 'http://localhost:3000';
+
+/** Flatten every module manifest's declared entitlement defaults into one record. */
+function moduleEntitlementDefaults(): Record<string, EntitlementValue> {
+  const defaults: Record<string, EntitlementValue> = {};
+  for (const manifest of MODULE_MANIFESTS) {
+    for (const [key, value] of Object.entries(manifest.entitlements)) {
+      defaults[key] = value;
+    }
+  }
+  return defaults;
+}
+
+/**
+ * Build the declared-default entitlement registry: the built-in placeholder set
+ * MERGED with every module manifest's entitlement defaults (e.g.
+ * `workspace.maxTasks=100`), so a module default resolves with no per-org
+ * override configured. Exported so the merge is unit-testable without a DB.
+ */
+export function buildEntitlementRegistry(): EntitlementRegistry {
+  return createEntitlementRegistry({
+    ...BUILT_IN_ENTITLEMENTS,
+    ...moduleEntitlementDefaults(),
+  });
 }
 
 /** Assemble the per-process {@link PlatformContext} from its already-built parts. */
@@ -65,15 +130,19 @@ export function buildContext(options: BuildContextOptions): PlatformContext {
     config: options.config,
     db: options.connection.db,
     pool: options.connection.pool,
+    appUrl: options.appUrl ?? DEFAULT_APP_URL,
     logger: options.logger,
     term: (key, opts) => resolveTerm(options.config.terminology, key, opts),
     identity: options.identity,
     audit,
     entitlements: createEntitlements({
       store: createDrizzleOverrideStore(options.connection.db),
-      registry: createEntitlementRegistry(),
+      registry: buildEntitlementRegistry(),
       audit,
     }),
+    permissions: createPermissionRegistry(MODULE_MANIFESTS),
+    email: options.email,
+    jobs: options.jobs,
   };
 }
 

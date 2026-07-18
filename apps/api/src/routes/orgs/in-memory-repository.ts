@@ -152,6 +152,16 @@ export class InMemoryOrgRepository implements OrgRepository {
     return org;
   }
 
+  async findUserByEmail(email: string): Promise<SeedUser | null> {
+    return this.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
+  }
+
+  async createUser(input: { email: string; name: string }): Promise<SeedUser> {
+    const user: SeedUser = { id: uuidv7(), email: input.email, name: input.name };
+    this.users.push(user);
+    return user;
+  }
+
   async addMember(orgId: string, userId: string, role: string): Promise<MemberRow> {
     return this.seedMember({ organizationId: orgId, userId, role });
   }

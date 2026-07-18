@@ -42,7 +42,11 @@ describe('POST /api/orgs/:orgId/invitations (AC#4)', () => {
   it('creates a 7-day pending invite, sends the email and audits it', async () => {
     const repo = base();
     const sendInvite = vi.fn(async () => {});
-    const { app, audit } = appFor(repo, undefined, { sendInvite });
+    const { app, audit } = appFor(
+      repo,
+      cannedSession({ id: 'user_1', email: 'ada@x.io', name: 'Ada' }),
+      { sendInvite },
+    );
     const res = await app.inject({
       method: 'POST',
       url: '/api/orgs/org_1/invitations',
@@ -54,6 +58,17 @@ describe('POST /api/orgs/:orgId/invitations (AC#4)', () => {
     expect(invitation).toMatchObject({ email: 'grace@x.io', role: 'member', status: 'pending' });
     expect(invitation.expiresAt).toBe('2026-07-23T00:00:00.000Z');
     expect(sendInvite).toHaveBeenCalledTimes(1);
+    // The sender is handed the org + inviter names so the email reads naturally.
+    expect(sendInvite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'grace@x.io',
+        organizationId: 'org_1',
+        organizationName: 'Acme',
+        invitationId: invitation.id,
+        role: 'member',
+        inviterName: 'Ada',
+      }),
+    );
     expect(audit.entries[0]).toMatchObject({ action: AUDIT_ACTIONS.inviteSent });
     await app.close();
   });
