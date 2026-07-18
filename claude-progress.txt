@@ -180,3 +180,58 @@ EVALUATION RUNBOOK (Docker is NOT available in the agent sandbox — run these o
   NB: sprint-contracts/ are empty (never generated) — either author them from features.json +
   specs/design/api-contracts.md, or evaluate directly against the feature ACs + this runbook.
 next_action: run the EVALUATION RUNBOOK on a Docker host; report results back to mark deferred features.
+
+================================================================================
+LIVE EVALUATION RESULTS  (2026-07-19, Docker host: user's Windows machine)
+================================================================================
+Stack brought up live: Postgres 16 + Mailpit + production app image (built &
+booted). Entrypoint chain verified: init-db.sql -> db:migrate -> Fastify on :3000
+serving API + SPA. /api/health + /api/ready = 200.
+
+RLS/isolation (F065-F069): 21/21 green against owner + app_runtime connections.
+  - Fixed a test-probe defect: DELETE-org cross-tenant probe sent no body, so
+    schema validation (400) fired before the authz guard; gave it a valid
+    confirmationName body. (commit f954fc9)
+  - Verified live: FORCE RLS on the 4 tenant tables; app_runtime NOBYPASSRLS +
+    non-super + CRUD-only grants; owner BYPASSRLS.
+
+Job queue (F022, F091): pg-boss processed email-delivery (6) + workspace.export
+(2). Verification/invite/reset/export emails delivered to Mailpit, brand
+"Scaffold Reference". Export email carried a valid inline CSV (header + rows).
+
+Browser E2E (evaluator agent, real Chromium): sign-in PASS; sign-up + Mailpit
+verification + verification-gate PASS; add-member + role-change PASS; task
+create/complete/delete PASS; CSV export delivered PASS.
+
+DEFERRED FEATURES RE-MARKED against real evidence -> now 93/95 passing:
+  PASS(11): F012 F013 F014 F022 F065 F066 F067 F068 F069 F091 F093
+  STILL FAILING - genuine gaps (2):
+    F021  no cron scheduled at boot (pgboss.schedule empty; no registration).
+    F082  no OpenAPI endpoint (/openapi.json + /docs are SPA fallback).
+
+CONFIRMED DEFECTS found by live E2E:
+  [FIXED] Invite-accept email pointed at /orgs/:id/invitations/:id/accept, not a
+          registered SPA route -> client rendered "Page not found". Now emits
+          /accept-invite?invitationId=<id>. Verified live via Mailpit. (796c106)
+  [OPEN]  Admin-created-member set-password email points at /auth/set-password
+          ?email= (no SPA route) AND mints no token; the /reset-password screen
+          needs a token. Deeper fix: identity port must mint a reset token.
+  [OPEN]  Workspace list has no affordance to open a workspace's tasks; the task
+          view is reachable only by direct URL. UX gap.
+  [OPEN-minor] No task-edit UI; no primary sign-out (only "sign out other
+          sessions"); no in-UI CSV-export button (backend endpoint works).
+
+EVALUATOR FALSE ALARMS (verified against code+live, NOT defects):
+  - "maxTasks not enforced": default limit is 100; only ~76 tasks created.
+    Enforcement (task.service.ts AC3 + upgrade-notice.tsx) exists.
+  - "assignee dropdown empty": members endpoint returns members and the client
+    unwraps .items correctly; evaluator's session was 429 rate-limited.
+
+LESSON (LR candidate): server-side URL builders and SPA routes were each unit-
+tested in isolation (server asserted the URL string; router asserted the route
+existed) but nothing asserted they MATCH -> two broken onboarding links shipped.
+Add a cross-check test (or a shared route constant) binding emailed URLs to
+registered SPA routes.
+
+NEXT: decide fix-now vs backlog for the OPEN items (esp. set-password token flow
++ workspace->tasks nav), then /review (+ /security-review) and /deploy.

@@ -185,10 +185,10 @@
       "Run `pnpm db:migrate` a second time",
       "Assert the second run reports no pending migrations and exits 0"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-15T14:03:02.616Z",
-    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
-    "failure_layer": null
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F013",
@@ -201,10 +201,10 @@
       "Execute `select 1`",
       "Assert it returns a single row"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-15T14:03:02.616Z",
-    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
-    "failure_layer": null
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F014",
@@ -217,10 +217,10 @@
       "Assert primary keys are uuid v7",
       "Assert `created_at` and `updated_at` columns exist on core tables"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-15T14:03:02.616Z",
-    "failure_reason": "deferred: requires live DB or apps/* (verified in Group C / evaluate phase)",
-    "failure_layer": null
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F015",
@@ -329,9 +329,9 @@
       "Assert the handler executed at least once"
     ],
     "passes": false,
-    "last_evaluated": "2026-07-16T11:00:00+05:30",
-    "failure_reason": "deferred: runtime delivery (live pg-boss cron / Mailpit) \u2014 verified in evaluate phase",
-    "failure_layer": "service"
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "FAIL (live gap): no cron is scheduled at boot — pgboss.schedule is empty and no schedule/cron registration exists in code. The recurring purge job is not wired up. NOT a live-infra blocker; a real implementation gap.",
+    "failure_layer": "runtime"
   },
   {
     "id": "F022",
@@ -344,10 +344,10 @@
       "Query the Mailpit API",
       "Assert a message exists whose subject/body contain `branding.productName` and resolved terminology"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-16T11:00:00+05:30",
-    "failure_reason": "deferred: runtime delivery (live pg-boss cron / Mailpit) \u2014 verified in evaluate phase",
-    "failure_layer": "service"
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F023",
@@ -756,7 +756,7 @@
     "steps": [
       "Sign in from two sessions",
       "Use \"sign out other sessions\" in Security settings",
-      "Assert the other session\u00e2\u20ac\u2122s subsequent request returns 401"
+      "Assert the other sessionâ€™s subsequent request returns 401"
     ],
     "passes": true,
     "last_evaluated": "2026-07-16T20:10:00+05:30",
@@ -930,7 +930,7 @@
     "group": "G",
     "description": "Members screen supports role change, remove, and admin-create",
     "steps": [
-      "Open the Members screen and change a member\u00e2\u20ac\u2122s role",
+      "Open the Members screen and change a memberâ€™s role",
       "Remove a member",
       "Admin-create a member and assert a set-password email is sent"
     ],
@@ -1030,10 +1030,10 @@
       "Attempt to disable RLS or alter policy",
       "Assert it is denied because the role is not the table owner"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-17T02:00:00+05:30",
-    "failure_reason": "deferred: needs live Postgres with the two roles (app_runtime non-owner/NOBYPASSRLS) \u2014 verified in the isolation suite / evaluate phase",
-    "failure_layer": "repository"
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F066",
@@ -1046,10 +1046,10 @@
       "Query a tenant table that also holds org B rows",
       "Assert zero org B rows are returned"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-17T02:00:00+05:30",
-    "failure_reason": "deferred: cross-tenant zero-rows is a live-DB assertion \u2014 verified in the isolation suite / evaluate phase",
-    "failure_layer": "repository"
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F067",
@@ -1059,13 +1059,13 @@
     "description": "App-layer cross-tenant probe returns 404/403 for every endpoint",
     "steps": [
       "Seed org A and org B",
-      "Call each org-scoped endpoint with A\u00e2\u20ac\u2122s session against B\u00e2\u20ac\u2122s ids",
+      "Call each org-scoped endpoint with Aâ€™s session against Bâ€™s ids",
       "Assert every response is 404/403 and no B data is returned"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-17T20:15:00+05:30",
-    "failure_reason": "deferred: live-DB cross-tenant isolation probe \u2014 harness apps/api/test/isolation.spec.ts, run in evaluate via test:isolation with TEST_DATABASE_URL",
-    "failure_layer": "repository"
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F068",
@@ -1078,10 +1078,10 @@
       "Assert RLS still blocks cross-tenant reads",
       "Assert the test is part of the CI suite"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-17T20:15:00+05:30",
-    "failure_reason": "deferred: live-DB direct-SQL RLS proof \u2014 harness rls-direct-sql.spec.ts, needs TEST_RUNTIME_DATABASE_URL (app_runtime role)",
-    "failure_layer": "repository"
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F069",
@@ -1093,10 +1093,10 @@
       "Run `db:migrate` twice against a fresh DB in the test",
       "Assert the second run produces no schema diff and exits 0"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-17T20:15:00+05:30",
-    "failure_reason": "deferred: live-DB migration idempotency \u2014 harness migration-idempotency.spec.ts, run in evaluate",
-    "failure_layer": "repository"
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F070",
@@ -1300,9 +1300,9 @@
       "Assert the workspace/task request and response schemas are present"
     ],
     "passes": false,
-    "last_evaluated": "2026-07-17T01:15:00+05:30",
-    "failure_reason": "deferred: contracts are OpenAPI-convertible but need module routes (E8-S2/S3) to appear in the live /api/docs",
-    "failure_layer": "api"
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "FAIL (live gap): no OpenAPI endpoint exists — /openapi.json and /docs return the SPA index (history fallback), not a spec. Module contracts are not exposed as OpenAPI. Real implementation gap (E8-S2/S3 not completed).",
+    "failure_layer": "runtime"
   },
   {
     "id": "F083",
@@ -1425,7 +1425,7 @@
     "steps": [
       "Trigger \"Export workspace\"",
       "Assert a job is enqueued",
-      "Assert the handler produces a CSV containing the workspace\u00e2\u20ac\u2122s tasks"
+      "Assert the handler produces a CSV containing the workspaceâ€™s tasks"
     ],
     "passes": true,
     "last_evaluated": "2026-07-17T20:15:00+05:30",
@@ -1443,10 +1443,10 @@
       "Query the Mailpit API",
       "Assert an email with the CSV attachment/body is present"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-17T20:15:00+05:30",
-    "failure_reason": "deferred: CSV email delivery to Mailpit needs live pg-boss + Mailpit \u2014 email-via-queue mechanism is unit-proven, live delivery verified in evaluate",
-    "failure_layer": "service"
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F092",
@@ -1475,10 +1475,10 @@
       "Assert the app is reachable locally",
       "Build the production image and assert it boots serving /api and the SPA"
     ],
-    "passes": false,
-    "last_evaluated": "2026-07-17T21:30:00+05:30",
-    "failure_reason": "deferred: docker compose up + production image build/boot need Docker \u2014 artifacts (Dockerfile/compose) present and shape-tested, verified in the evaluate/deploy phase",
-    "failure_layer": "config"
+    "passes": true,
+    "last_evaluated": "2026-07-19T00:00:00+05:30",
+    "failure_reason": "",
+    "failure_layer": ""
   },
   {
     "id": "F094",
