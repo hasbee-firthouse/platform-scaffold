@@ -16,7 +16,7 @@ import { createPermissionRegistry } from '@platform/authz';
 import type { IdentityPort } from '@platform/identity';
 import type { EmailPort } from '@platform/email';
 import type { PlatformJobs } from '@platform/jobs';
-import { MODULE_MANIFESTS } from '../../../modules/index.js';
+import { MODULE_MANIFESTS, type ModuleManifest } from '../../../modules/index.js';
 
 /**
  * Everything a request handler needs to reach the product definition and its
@@ -94,15 +94,24 @@ export interface BuildContextOptions {
   jobs: PlatformJobs;
   /** The app's public base URL (`APP_URL`); defaults to localhost for tests. */
   appUrl?: string;
+  /**
+   * Product-module manifests that seed the entitlement-default registry and the
+   * authz permission universe. Defaults to the running {@link MODULE_MANIFESTS};
+   * exposed only so the merge is unit-testable with a synthetic manifest fixture
+   * — the production default is unchanged, so real call sites are unaffected.
+   */
+  manifests?: readonly ModuleManifest[];
 }
 
 /** Fallback base URL when a caller (e.g. a unit test) does not supply `APP_URL`. */
 const DEFAULT_APP_URL = 'http://localhost:3000';
 
 /** Flatten every module manifest's declared entitlement defaults into one record. */
-function moduleEntitlementDefaults(): Record<string, EntitlementValue> {
+function moduleEntitlementDefaults(
+  manifests: readonly ModuleManifest[],
+): Record<string, EntitlementValue> {
   const defaults: Record<string, EntitlementValue> = {};
-  for (const manifest of MODULE_MANIFESTS) {
+  for (const manifest of manifests) {
     for (const [key, value] of Object.entries(manifest.entitlements)) {
       defaults[key] = value;
     }
@@ -112,20 +121,25 @@ function moduleEntitlementDefaults(): Record<string, EntitlementValue> {
 
 /**
  * Build the declared-default entitlement registry: the built-in placeholder set
- * MERGED with every module manifest's entitlement defaults (e.g.
- * `workspace.maxTasks=100`), so a module default resolves with no per-org
- * override configured. Exported so the merge is unit-testable without a DB.
+ * MERGED with every module manifest's entitlement defaults (e.g. a module's
+ * numeric cap), so a module default resolves with no per-org override
+ * configured. Exported so the merge is unit-testable without a DB; `manifests`
+ * defaults to the running {@link MODULE_MANIFESTS} and is injectable only so a
+ * test can drive the merge with a synthetic fixture.
  */
-export function buildEntitlementRegistry(): EntitlementRegistry {
+export function buildEntitlementRegistry(
+  manifests: readonly ModuleManifest[] = MODULE_MANIFESTS,
+): EntitlementRegistry {
   return createEntitlementRegistry({
     ...BUILT_IN_ENTITLEMENTS,
-    ...moduleEntitlementDefaults(),
+    ...moduleEntitlementDefaults(manifests),
   });
 }
 
 /** Assemble the per-process {@link PlatformContext} from its already-built parts. */
 export function buildContext(options: BuildContextOptions): PlatformContext {
   const audit = createAuditWriter(options.connection.db);
+  const manifests = options.manifests ?? MODULE_MANIFESTS;
   return {
     config: options.config,
     db: options.connection.db,
@@ -137,10 +151,10 @@ export function buildContext(options: BuildContextOptions): PlatformContext {
     audit,
     entitlements: createEntitlements({
       store: createDrizzleOverrideStore(options.connection.db),
-      registry: buildEntitlementRegistry(),
+      registry: buildEntitlementRegistry(manifests),
       audit,
     }),
-    permissions: createPermissionRegistry(MODULE_MANIFESTS),
+    permissions: createPermissionRegistry(manifests),
     email: options.email,
     jobs: options.jobs,
   };

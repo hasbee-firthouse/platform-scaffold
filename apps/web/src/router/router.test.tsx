@@ -15,7 +15,6 @@ import type { WebModuleManifest } from './assemble-routes.js';
 import type { SessionState } from '../session/session.js';
 import type { MeResponse } from '../lib/org-client.js';
 import { EntitlementRequiredError } from '../shell/surfaces/upgrade-notice.js';
-import { WEB_MODULE_MANIFESTS } from '../../../../modules/register-web.js';
 
 afterEach(cleanup);
 
@@ -126,11 +125,11 @@ describe('authentication guard', () => {
 });
 
 describe('module route assembly through the web seam', () => {
-  it('mounts the reference module workspaces screen at /o/:orgSlug/workspace', async () => {
-    renderAt('/o/acme/workspace', { session: AUTHED, registry: WEB_MODULE_MANIFESTS });
-    expect(await screen.findByRole('heading', { name: /workspaces/i })).toBeInTheDocument();
-  });
-
+  // The seam is proven with SYNTHETIC manifest fixtures (a fake module mounting a
+  // trivial screen at its basePath) fed through the same registry seam `apps/web`
+  // uses — no real product module is imported, so these stay green after the
+  // reference module is deleted. The reference module's own `/workspace` screen
+  // is covered by `modules/reference-workspace/**` tests + the evaluate phase.
   it('mounts an injected org module under /o/:orgSlug/<basePath>', async () => {
     renderAt('/o/acme/reports', { session: AUTHED, registry: [orgModuleManifest()] });
     expect(await screen.findByRole('heading', { name: 'Reports Home' })).toBeInTheDocument();
@@ -142,7 +141,7 @@ describe('module route assembly through the web seam', () => {
   });
 
   it('404s a module route when the registry is empty (deletion-safety)', async () => {
-    renderAt('/o/acme/workspace', { session: AUTHED, registry: [] });
+    renderAt('/o/acme/reports', { session: AUTHED, registry: [] });
     expect(await screen.findByRole('heading', { name: /not found/i })).toBeInTheDocument();
   });
 });

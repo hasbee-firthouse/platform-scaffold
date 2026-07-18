@@ -4,7 +4,23 @@ import { defineProduct } from '@platform/config';
 import { createDbConnection } from '@platform/db';
 import type { IdentityPort } from '@platform/identity';
 import { buildContext, buildEntitlementRegistry, type BuildContextOptions } from './context.js';
+import type { ModuleManifest } from '../../../modules/index.js';
 import { fakeEmailPort, fakeJobs } from './test-support.js';
+
+/**
+ * A SYNTHETIC module manifest injected through `buildContext`'s / the entitlement
+ * builder's manifests seam. It proves the entitlement-default merge and the authz
+ * permission merge MECHANISMS without depending on any real product module, so
+ * these platform tests stay green after the reference module is deleted. The real
+ * reference module's own facts live in `modules/reference-workspace/**` tests.
+ */
+const FIXTURE_MANIFEST: ModuleManifest = {
+  id: 'fixture',
+  permissions: ['fixture.things.read', 'fixture.things.manage'],
+  roles: { 'Fixture Manager': ['fixture.things.read', 'fixture.things.manage'] },
+  entitlements: { 'fixture.max': 7 },
+  jobs: [],
+};
 
 function testIdentity(): IdentityPort {
   return {
@@ -106,33 +122,33 @@ describe('buildContext', () => {
     void options.connection.pool.end();
   });
 
-  it('resolves the module-declared workspace.maxTasks default to 100', () => {
-    // The reference-workspace manifest declares workspace.maxTasks=100; the merged
-    // registry surfaces it as a declared default (DB-free; the per-org override
-    // lookup that `entitlements.get` performs first needs live Postgres).
-    const registry = buildEntitlementRegistry();
+  it('merges a module-declared entitlement default into the registry (over the built-ins)', () => {
+    // A synthetic manifest declares fixture.max=7; the merged registry surfaces it
+    // as a declared default (DB-free; the per-org override lookup that
+    // `entitlements.get` performs first needs live Postgres).
+    const registry = buildEntitlementRegistry([FIXTURE_MANIFEST]);
 
-    expect(registry.getDefault('workspace.maxTasks')).toBe(100);
+    expect(registry.getDefault('fixture.max')).toBe(7);
     // Built-in placeholder defaults are preserved alongside the module defaults.
     expect(registry.getDefault('seats.max')).toBe(5);
   });
 
   it('exposes the merged module entitlement key via ctx.entitlements.keys()', () => {
-    const options = testOptions();
+    const options = testOptions({ manifests: [FIXTURE_MANIFEST] });
 
     const context = buildContext(options);
 
-    expect(context.entitlements.keys()).toContain('workspace.maxTasks');
+    expect(context.entitlements.keys()).toContain('fixture.max');
     void options.connection.pool.end();
   });
 
   it('includes module-declared permissions in the shared authz registry', () => {
-    const options = testOptions();
+    const options = testOptions({ manifests: [FIXTURE_MANIFEST] });
 
     const context = buildContext(options);
 
-    expect(context.permissions.permissions.has('workspace.tasks.read')).toBe(true);
-    expect(context.permissions.permissions.has('workspace.workspaces.manage')).toBe(true);
+    expect(context.permissions.permissions.has('fixture.things.read')).toBe(true);
+    expect(context.permissions.permissions.has('fixture.things.manage')).toBe(true);
     void options.connection.pool.end();
   });
 });

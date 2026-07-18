@@ -18,13 +18,29 @@ import {
   type MembershipData,
 } from './me.js';
 
-/** The same shared registry the running context builds (`ctx.permissions`). */
+/**
+ * The same shared registry the running context builds (`ctx.permissions`), from
+ * whatever modules are present. The `/api/me` integration tests compare against
+ * this SAME registry, so they stay module-agnostic (they pass with the reference
+ * module present AND after it is deleted — `MODULE_MANIFESTS` simply shrinks).
+ */
 const REGISTRY = createPermissionRegistry(MODULE_MANIFESTS);
 
 /** The authoritative permission set a built-in role resolves to, sorted. */
 function resolvedPermissions(role: 'owner' | 'admin' | 'member'): string[] {
   return [...resolveRole(REGISTRY, role)].sort();
 }
+
+/**
+ * A SYNTHETIC module registry used by the `resolvePermissionsForRole` MECHANISM
+ * tests. It proves role resolution folds in a module's declared permissions
+ * without naming any real product feature, so these platform tests survive the
+ * reference module's deletion. `fixture.things.read` is a read permission, so the
+ * `member` role picks it up via the built-in read-defaults.
+ */
+const FIXTURE_REGISTRY = createPermissionRegistry([
+  { id: 'fixture', permissions: ['fixture.things.read', 'fixture.things.manage'] },
+]);
 
 function testConfig(): ReturnType<typeof defineProduct> {
   return defineProduct({
@@ -111,23 +127,23 @@ function buildMeApp(setup: AppSetup): FastifyInstance {
 
 describe('resolvePermissionsForRole', () => {
   it('grants an owner the full permission set, including module permissions', () => {
-    const owner = resolvePermissionsForRole(REGISTRY, 'owner');
+    const owner = resolvePermissionsForRole(FIXTURE_REGISTRY, 'owner');
     // Platform ownership-guarded permission…
     expect(owner).toContain('org.delete');
-    // …and module-declared permissions from the reference-workspace manifest.
-    expect(owner).toContain('workspace.workspaces.manage');
-    expect(owner).toContain('workspace.tasks.write');
+    // …and the synthetic module's declared permissions.
+    expect(owner).toContain('fixture.things.manage');
+    expect(owner).toContain('fixture.things.read');
   });
 
   it('grants a plain member only the read defaults, including module read perms', () => {
-    expect(resolvePermissionsForRole(REGISTRY, 'member')).toEqual(
-      ['org.members.read', 'org.settings.read', 'workspace.tasks.read'].sort(),
+    expect(resolvePermissionsForRole(FIXTURE_REGISTRY, 'member')).toEqual(
+      ['org.members.read', 'org.settings.read', 'fixture.things.read'].sort(),
     );
   });
 
   it('returns no permissions for an unknown/module or absent role', () => {
-    expect(resolvePermissionsForRole(REGISTRY, null)).toEqual([]);
-    expect(resolvePermissionsForRole(REGISTRY, 'Workspace Manager')).toEqual([]);
+    expect(resolvePermissionsForRole(FIXTURE_REGISTRY, null)).toEqual([]);
+    expect(resolvePermissionsForRole(FIXTURE_REGISTRY, 'Fixture Manager')).toEqual([]);
   });
 });
 

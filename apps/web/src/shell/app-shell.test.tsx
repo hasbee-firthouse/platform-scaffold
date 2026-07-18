@@ -3,14 +3,19 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { RouterProvider, createMemoryHistory } from '@tanstack/react-router';
+import {
+  RouterProvider,
+  createMemoryHistory,
+  createRoute,
+  type AnyRoute,
+} from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { PermissionId } from '@platform/authz';
 import { PermissionsProvider } from '../lib/can.js';
 import { createAppRouter } from '../router/router.js';
+import type { WebModuleManifest } from '../router/assemble-routes.js';
 import type { SessionState } from '../session/session.js';
 import type { MeResponse } from '../lib/org-client.js';
-import { WEB_MODULE_MANIFESTS } from '../../../../modules/register-web.js';
 
 afterEach(cleanup);
 
@@ -26,9 +31,35 @@ function me(): MeResponse {
 
 const AUTHED: SessionState = { status: 'authenticated', me: me() };
 
-function renderShell(permissions: PermissionId[]): void {
+/**
+ * A SYNTHETIC org-scoped module that contributes ONE sidebar nav entry. It proves
+ * the shell links each module nav entry to `/o/:orgSlug/<basePath>` generically —
+ * naming no product feature — so this platform test stays green after the
+ * reference module is deleted. The real module's own nav is covered by its
+ * `modules/reference-workspace/**` tests + the evaluate phase.
+ */
+function navModuleManifest(): WebModuleManifest {
+  return {
+    id: 'reports',
+    basePath: 'reports',
+    scope: 'org',
+    webRoutes: (moduleRoute) => [
+      createRoute({
+        getParentRoute: () => moduleRoute,
+        path: '/',
+        component: () => <h1>Reports Home</h1>,
+      }) as AnyRoute,
+    ],
+    nav: [{ id: 'reports-home', label: 'Reports', path: '/reports' }],
+  };
+}
+
+function renderShell(
+  permissions: PermissionId[],
+  registry: WebModuleManifest[] = [navModuleManifest()],
+): void {
   const router = createAppRouter({
-    registry: WEB_MODULE_MANIFESTS,
+    registry,
     session: AUTHED,
     history: createMemoryHistory({ initialEntries: ['/o/acme'] }),
   });
@@ -46,8 +77,8 @@ function renderShell(permissions: PermissionId[]): void {
 describe('org shell navigation', () => {
   it('links each module nav entry to /o/:orgSlug/<basePath>', async () => {
     renderShell([]);
-    const link = await screen.findByRole('link', { name: 'Workspaces' });
-    expect(link).toHaveAttribute('href', '/o/acme/workspace');
+    const link = await screen.findByRole('link', { name: 'Reports' });
+    expect(link).toHaveAttribute('href', '/o/acme/reports');
   });
 
   it('always shows the non-privileged links (Home, Security)', async () => {
