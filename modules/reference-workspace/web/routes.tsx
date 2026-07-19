@@ -13,7 +13,7 @@
  * directory plus its line in `modules/register-web.ts` removes it entirely.
  */
 import type { ReactElement } from 'react';
-import { createRoute, useParams, useRouteContext, type AnyRoute } from '@tanstack/react-router';
+import { createRoute, useNavigate, useParams, useRouteContext, type AnyRoute } from '@tanstack/react-router';
 import { WorkspacesScreen } from './workspaces.screen.js';
 import { TasksScreen } from './tasks.screen.js';
 import { WorkspaceTerminologyProvider } from './terminology.js';
@@ -45,9 +45,16 @@ function useOrgId(): string {
 /** The workspaces list, wrapped in the module terminology provider. */
 function WorkspacesRoute(): ReactElement {
   const orgId = useOrgId();
+  const navigate = useNavigate();
+  const { orgSlug } = useParams({ strict: false }) as { orgSlug?: string };
   return (
     <WorkspaceTerminologyProvider>
-      <WorkspacesScreen orgId={orgId} />
+      <WorkspacesScreen
+        orgId={orgId}
+        onOpenWorkspace={(workspaceId) =>
+          void navigate({ to: `/o/${orgSlug ?? ''}/workspace/${workspaceId}` })
+        }
+      />
     </WorkspaceTerminologyProvider>
   );
 }

@@ -15,11 +15,11 @@ export interface OrgRouteDeps {
   repo: OrgRepository;
   audit: AuditWriter;
   capabilities: Capabilities;
-  /** App base URL used to build absolute invite / set-password links (from `ctx.appUrl`). */
+  /** App base URL used to build the absolute invite accept link (from `ctx.appUrl`). */
   appUrl: string;
   /** Delivers invitation emails; production wires it over `ctx.email` (template `invite`). */
   sendInvite: InviteSender;
-  /** Delivers set-password emails for admin-created members (template `reset`). */
+  /** Onboards an admin-created member by triggering a better-auth password reset. */
   sendSetPassword: SetPasswordSender;
   /** Injectable clock so expiry/soft-delete timestamps are deterministic in tests. */
   now: () => Date;
@@ -33,11 +33,6 @@ export interface OrgRouteDeps {
  */
 export function inviteAcceptUrl(appUrl: string, invitationId: string): string {
   return `${appUrl}/accept-invite?invitationId=${encodeURIComponent(invitationId)}`;
-}
-
-/** Absolute URL an admin-created member follows to set their first password. */
-export function setPasswordUrl(appUrl: string, email: string): string {
-  return `${appUrl}/auth/set-password?email=${encodeURIComponent(email)}`;
 }
 
 /** Assemble the production {@link OrgRouteDeps} from the platform context. */
@@ -59,11 +54,21 @@ export function buildOrgRouteDeps(ctx: PlatformContext): OrgRouteDeps {
       });
     },
     sendSetPassword: async (input) => {
-      await ctx.email.send({
-        to: input.email,
-        template: 'reset',
-        data: { resetUrl: input.url },
-      });
+      // Trigger better-auth's password reset for the freshly-created member: it
+      // mints a single-use token and sends the reset email via the wired
+      // sendResetPasswordEmail, landing them on /reset-password?token=… . The
+      // reset endpoint is intentionally enumeration-safe (always 200), so we
+      // only guard the transport, not the "email exists" outcome.
+      const response = await ctx.identity.handler(
+        new Request(`${ctx.appUrl}/api/auth/request-password-reset`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: input.email, redirectTo: '/reset-password' }),
+        }),
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to trigger set-password email (status ${response.status})`);
+      }
     },
     now: () => new Date(),
   };

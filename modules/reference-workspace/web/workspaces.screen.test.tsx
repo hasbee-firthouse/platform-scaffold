@@ -41,11 +41,11 @@ function stubClient(overrides: Partial<WorkspaceClient> = {}): WorkspaceClient {
   } as unknown as WorkspaceClient;
 }
 
-function renderScreen(client: WorkspaceClient): void {
+function renderScreen(client: WorkspaceClient, onOpenWorkspace?: (id: string) => void): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree: ReactElement = (
     <QueryClientProvider client={queryClient}>
-      <WorkspacesScreen orgId="o1" client={client} />
+      <WorkspacesScreen orgId="o1" client={client} onOpenWorkspace={onOpenWorkspace} />
     </QueryClientProvider>
   );
   render(tree);
@@ -96,6 +96,25 @@ describe('WorkspacesScreen (E8-S3 · AC1)', () => {
     await waitFor(() =>
       expect(client.renameWorkspace).toHaveBeenCalledWith('o1', 'w1', { name: 'Launch v2' }),
     );
+  });
+
+  it('opens a workspace via its Open action when navigation is provided', async () => {
+    const client = stubClient();
+    const onOpenWorkspace = vi.fn();
+    renderScreen(client, onOpenWorkspace);
+
+    await screen.findByText('Launch');
+    await userEvent.click(screen.getByRole('button', { name: 'Open Launch' }));
+
+    expect(onOpenWorkspace).toHaveBeenCalledWith('w1');
+  });
+
+  it('hides the Open action when no navigation is injected (deletion-safe standalone)', async () => {
+    const client = stubClient();
+    renderScreen(client);
+
+    await screen.findByText('Launch');
+    expect(screen.queryByRole('button', { name: 'Open Launch' })).not.toBeInTheDocument();
   });
 
   it('deletes a workspace only after confirmation (AC1)', async () => {

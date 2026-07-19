@@ -74,7 +74,7 @@ describe('POST /api/orgs/:orgId/members (E5-S3 admin create)', () => {
     await app.close();
   });
 
-  it('creates a new user (201) and emails a set-password link', async () => {
+  it('creates a new user (201) and triggers its set-password onboarding', async () => {
     const sendSetPassword = vi.fn(async () => {});
     const { repo, audit, app } = setup({ deps: { sendSetPassword } });
     const res = await app.inject({
@@ -87,13 +87,7 @@ describe('POST /api/orgs/:orgId/members (E5-S3 admin create)', () => {
     expect(res.json().member).toMatchObject({ email: 'fresh@x.io', name: 'Fresh User', role: 'member' });
     expect(repo.users.some((u) => u.email === 'fresh@x.io')).toBe(true);
     expect(sendSetPassword).toHaveBeenCalledTimes(1);
-    expect(sendSetPassword).toHaveBeenCalledWith(
-      expect.objectContaining({
-        email: 'fresh@x.io',
-        name: 'Fresh User',
-        url: expect.stringContaining('set-password'),
-      }),
-    );
+    expect(sendSetPassword).toHaveBeenCalledWith({ email: 'fresh@x.io', name: 'Fresh User' });
     expect(audit.entries[0]).toMatchObject({ action: AUDIT_ACTIONS.memberAdded });
     await app.close();
   });

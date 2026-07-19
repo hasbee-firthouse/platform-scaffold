@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { AUDIT_ACTIONS } from '@platform/audit';
 import { paginationRequestSchema } from '@platform/contracts';
 import { requireUser } from '../../lib/session.js';
-import { setPasswordUrl, type OrgRouteDeps } from './deps.js';
+import type { OrgRouteDeps } from './deps.js';
 import { authedCaller, authorizeOrg } from './authorization.js';
 import { conflict, notFound, withOrgErrors } from './errors.js';
 import { countOwners, wouldRemoveLastOwner } from './invariants.js';
@@ -178,9 +178,10 @@ async function requireMember(deps: OrgRouteDeps, orgId: string, memberId: string
 /**
  * Admin-create a member (E5-S3): if a user with `email` already exists, add a
  * membership in the org (409 if they are already a member); otherwise create an
- * unverified, password-less user, add the membership, and email them a
- * set-password link. Returns the new membership and whether a user was created
- * (so the caller can answer 201 vs 200). Writes a `member.added` audit row.
+ * email-verified, password-less user, add the membership, and trigger their
+ * set-password onboarding (a better-auth password reset). Returns the new
+ * membership and whether a user was created (so the caller can answer 201 vs
+ * 200). Writes a `member.added` audit row.
  */
 async function addOrCreateMember(
   deps: OrgRouteDeps,
@@ -200,11 +201,7 @@ async function addOrCreateMember(
 
   const created = await deps.repo.createUser({ email: body.email, name: body.name ?? body.email });
   const membership = await deps.repo.addMember(orgId, created.id, body.role);
-  await deps.sendSetPassword({
-    email: created.email,
-    name: created.name,
-    url: setPasswordUrl(deps.appUrl, created.email),
-  });
+  await deps.sendSetPassword({ email: created.email, name: created.name });
   await auditMemberAdded(deps, orgId, membership.id, actorUserId, body.role);
   return { member: membership, created: true };
 }

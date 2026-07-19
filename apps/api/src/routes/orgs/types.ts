@@ -115,14 +115,16 @@ export type InviteSender = (input: {
 export const noopInviteSender: InviteSender = async () => {};
 
 /**
- * The email delivery seam for admin-created members (E5-S3): sends the
- * set-password link to a freshly-created user. Production wires this over
- * `ctx.email` (template `reset`); unit tests inject a fake.
+ * The onboarding seam for admin-created members (E5-S3): triggers a password
+ * reset for a freshly-created, credential-less user so they receive a real
+ * better-auth reset link (`/reset-password?token=…`) to set their first
+ * password. Production wires this over the identity port's
+ * `request-password-reset`; unit tests inject a fake. (The user is created
+ * email-verified, so completing the reset lets them sign in.)
  */
 export type SetPasswordSender = (input: {
   email: string;
   name: string;
-  url: string;
 }) => Promise<void>;
 
 /** The no-op set-password sender used as the injectable default. */

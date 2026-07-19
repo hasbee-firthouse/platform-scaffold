@@ -76,13 +76,13 @@ describe('createAuthClient', () => {
     expect(init.method).toBe('GET');
   });
 
-  it('requests a password reset link (AC2)', async () => {
+  it('requests a password reset link via request-password-reset with a redirect (AC2)', async () => {
     const client = createAuthClient({ fetchImpl: fetchMock });
     await client.forgotPassword({ email: 'ada@example.com' });
 
     const { url, init } = lastCall(fetchMock);
-    expect(url).toBe('/api/auth/forget-password');
-    expect(bodyOf(init)).toEqual({ email: 'ada@example.com' });
+    expect(url).toBe('/api/auth/request-password-reset');
+    expect(bodyOf(init)).toEqual({ email: 'ada@example.com', redirectTo: '/reset-password' });
   });
 
   it('posts the new password and token to /reset-password (AC2)', async () => {

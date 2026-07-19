@@ -31,12 +31,19 @@ export interface WorkspacesScreenProps {
   orgId: string;
   /** Injectable data client (defaults to the same-origin module client). */
   client?: WorkspaceClient;
+  /**
+   * Navigate to a workspace's task view. Injected by the routed wrapper (which
+   * owns the router) so this screen stays router-free and unit-testable; when
+   * omitted (e.g. in isolation tests) the per-row "Open" affordance is hidden.
+   */
+  onOpenWorkspace?: (workspaceId: string) => void;
 }
 
 /** The workspace list/create/rename/delete screen. */
 export function WorkspacesScreen({
   orgId,
   client = workspaceClient,
+  onOpenWorkspace,
 }: WorkspacesScreenProps): ReactElement {
   const term = useTerm('workspace');
   const termPlural = useTerm('workspace', { plural: true, capital: true });
@@ -94,6 +101,7 @@ export function WorkspacesScreen({
             <WorkspaceRow
               key={ws.id}
               workspace={ws}
+              onOpen={onOpenWorkspace ? () => onOpenWorkspace(ws.id) : undefined}
               onRename={(name) => rename.mutate({ id: ws.id, name })}
               onDelete={() => setPendingDeletion(ws)}
             />
@@ -164,11 +172,12 @@ function CreateWorkspaceForm({ term, pending, onSubmit }: CreateWorkspaceFormPro
 
 interface WorkspaceRowProps {
   workspace: WorkspaceResponse;
+  onOpen?: () => void;
   onRename: (name: string) => void;
   onDelete: () => void;
 }
 
-function WorkspaceRow({ workspace, onRename, onDelete }: WorkspaceRowProps): ReactElement {
+function WorkspaceRow({ workspace, onOpen, onRename, onDelete }: WorkspaceRowProps): ReactElement {
   const [name, setName] = useState(workspace.name);
   const dirty = name.trim().length > 0 && name.trim() !== workspace.name;
 
@@ -184,6 +193,11 @@ function WorkspaceRow({ workspace, onRename, onDelete }: WorkspaceRowProps): Rea
       </TableCell>
       <TableCell>
         <div className="flex gap-2">
+          {onOpen ? (
+            <Button variant="ghost" size="sm" onClick={onOpen}>
+              Open {workspace.name}
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="sm"

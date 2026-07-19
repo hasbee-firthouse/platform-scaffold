@@ -151,7 +151,9 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
       await get(`/verify-email?token=${encodeURIComponent(token)}`);
     },
     async forgotPassword(input) {
-      await post('/forget-password', input);
+      // better-auth (1.6.x) exposes the reset request at request-password-reset;
+      // redirectTo is the SPA screen the emailed link lands on with ?token=… .
+      await post('/request-password-reset', { ...input, redirectTo: '/reset-password' });
     },
     async resetPassword(input) {
       await post('/reset-password', input);
