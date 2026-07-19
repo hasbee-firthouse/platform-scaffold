@@ -14,8 +14,8 @@ function me(overrides: Partial<MeResponse> = {}): MeResponse {
   return {
     user: { id: 'u1', email: 'a@b.co', name: 'Ada' },
     organizations: [
-      { id: 'o1', name: 'Acme', slug: 'acme', role: 'owner' },
-      { id: 'o2', name: 'Globex', slug: 'globex', role: 'member' },
+      { id: 'o1', name: 'Acme', slug: 'acme', type: 'team', role: 'owner' },
+      { id: 'o2', name: 'Globex', slug: 'globex', type: 'team', role: 'member' },
     ],
     activeOrganizationId: 'o1',
     activeRole: 'owner',
@@ -42,7 +42,7 @@ function renderSwitcher(client: OrgClient, navigate = vi.fn()): { navigate: Retu
 describe('OrgSwitcher (E5-S3 · AC1)', () => {
   it('renders nothing when the user belongs to a single org', async () => {
     const client = stubClient(
-      me({ organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', role: 'owner' }] }),
+      me({ organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', type: 'team', role: 'owner' }] }),
     );
     renderSwitcher(client);
 
@@ -67,6 +67,21 @@ describe('OrgSwitcher (E5-S3 · AC1)', () => {
     const globex = screen.getByRole('link', { name: /globex/i });
     expect(acme).toHaveAttribute('href', '/o/acme');
     expect(globex).toHaveAttribute('href', '/o/globex');
+  });
+
+  it('includes a personal org only when team organizations also exist', async () => {
+    const client = stubClient(
+      me({
+        organizations: [
+          { id: 'personal', name: 'Ada Personal', slug: 'ada', type: 'personal', role: 'owner' },
+          { id: 'team', name: 'Acme Team', slug: 'acme', type: 'team', role: 'owner' },
+        ],
+      }),
+    );
+    renderSwitcher(client);
+
+    expect(await screen.findByRole('link', { name: /ada personal/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /acme team/i })).toBeInTheDocument();
   });
 
   it('marks the active org as current (AC1)', async () => {

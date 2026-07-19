@@ -12,7 +12,7 @@ afterEach(cleanup);
 function me(): MeResponse {
   return {
     user: { id: 'u1', email: 'a@b.co', name: 'Ada' },
-    organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', role: 'admin' }],
+    organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', type: 'team', role: 'admin' }],
     activeOrganizationId: 'o1',
     activeRole: 'admin',
     permissions: ['org.settings.read'],

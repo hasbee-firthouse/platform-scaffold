@@ -81,8 +81,8 @@ function cannedSession(): IdentitySessionResult {
 function membershipData(): MembershipData {
   return {
     organizations: [
-      { id: 'org_1', name: 'Acme', slug: 'acme', role: 'owner' },
-      { id: 'org_2', name: 'Globex', slug: 'globex', role: 'member' },
+      { id: 'org_1', name: 'Acme', slug: 'acme', type: 'team', role: 'owner' },
+      { id: 'org_2', name: 'Ada Lovelace', slug: 'ada-lovelace', type: 'personal', role: 'owner' },
     ],
     activeOrganizationId: 'org_1',
     activeRole: 'owner',
@@ -177,8 +177,8 @@ describe('GET /api/me', () => {
         image: null,
       },
       organizations: [
-        { id: 'org_1', name: 'Acme', slug: 'acme', role: 'owner' },
-        { id: 'org_2', name: 'Globex', slug: 'globex', role: 'member' },
+        { id: 'org_1', name: 'Acme', slug: 'acme', type: 'team', role: 'owner' },
+        { id: 'org_2', name: 'Ada Lovelace', slug: 'ada-lovelace', type: 'personal', role: 'owner' },
       ],
       activeOrganizationId: 'org_1',
       activeRole: 'owner',
@@ -192,7 +192,7 @@ describe('GET /api/me', () => {
       session: cannedSession(),
       deps: {
         loadMemberships: async () => ({
-          organizations: [{ id: 'org_2', name: 'Globex', slug: 'globex', role: 'member' }],
+          organizations: [{ id: 'org_2', name: 'Globex', slug: 'globex', type: 'team', role: 'member' }],
           activeOrganizationId: 'org_2',
           activeRole: 'member',
         }),

@@ -49,9 +49,9 @@ function moduleNavLinks(registry: WebModuleRegistry, orgSlug: string, config: Pr
 }
 
 /** The fixed platform links every org exposes; admin entries carry a permission gate. */
-function platformNavLinks(orgSlug: string): ShellNavLink[] {
+function platformNavLinks(orgSlug: string, config: ProductConfig): ShellNavLink[] {
   const base = `/o/${orgSlug}`;
-  return [
+  const links: ShellNavLink[] = [
     { key: 'home', label: 'Home', to: base },
     { key: 'org', label: 'Settings', to: `${base}/settings/organization`, permission: 'org.settings.update' },
     { key: 'members', label: 'Members', to: `${base}/settings/members`, permission: 'org.members.read' },
@@ -65,6 +65,10 @@ function platformNavLinks(orgSlug: string): ShellNavLink[] {
     { key: 'audit', label: 'Audit log', to: `${base}/settings/audit-log`, permission: 'org.settings.update' },
     { key: 'security', label: 'Security', to: `${base}/settings/security` },
   ];
+  if (config.capabilities.organizations) {
+    links.push({ key: 'new-org', label: 'New organization', to: '/app/create-organization' });
+  }
+  return links;
 }
 
 function NavLink({ link }: { link: ShellNavLink }): ReactElement {
@@ -104,7 +108,7 @@ export function createOrgShell(
     const queryClient = useQueryClient();
     const slug = orgSlug ?? '';
     const orgTerm = useTerm('organization');
-    const links = [...platformNavLinks(slug), ...moduleNavLinks(registry, slug, config)];
+    const links = [...platformNavLinks(slug, config), ...moduleNavLinks(registry, slug, config)];
 
     if (!isAuthenticated(context.session)) {
       return <Outlet />;

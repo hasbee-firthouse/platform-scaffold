@@ -11,6 +11,7 @@ import {
   type AnyRoute,
 } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { defineProduct, type ProductConfig } from '@platform/config';
 import { createAppRouter } from './router.js';
 import type { WebModuleManifest } from './assemble-routes.js';
 import type { SessionState } from '../session/session.js';
@@ -22,7 +23,7 @@ afterEach(cleanup);
 function me(): MeResponse {
   return {
     user: { id: 'u1', email: 'ada@acme.co', name: 'Ada' },
-    organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', role: 'admin' }],
+    organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', type: 'team', role: 'admin' }],
     activeOrganizationId: 'o1',
     activeRole: 'admin',
     permissions: ['org.settings.read'],
@@ -30,7 +31,45 @@ function me(): MeResponse {
 }
 
 const AUTHED: SessionState = { status: 'authenticated', me: me() };
+const ORGLESS: SessionState = {
+  status: 'authenticated',
+  me: {
+    user: { id: 'u2', email: 'new@acme.co', name: 'New User' },
+    organizations: [],
+    activeOrganizationId: null,
+    activeRole: null,
+    permissions: [],
+  },
+};
+const PERSONAL: SessionState = {
+  status: 'authenticated',
+  me: {
+    user: { id: 'u3', email: 'person@acme.co', name: 'Personal User' },
+    organizations: [
+      { id: 'personal-1', name: 'Personal User', slug: 'personal-user', type: 'personal', role: 'owner' },
+    ],
+    activeOrganizationId: 'personal-1',
+    activeRole: 'owner',
+    permissions: ['workspace.tasks.read'],
+  },
+};
 const ANON: SessionState = { status: 'unauthenticated' };
+
+function productConfig(profile: 'b2b-standard' | 'b2c-simple'): ProductConfig {
+  return defineProduct({
+    name: 'Acme Suite',
+    profile,
+    branding: {
+      productName: 'Acme Suite',
+      logo: { light: '/brand/logo.svg', dark: '/brand/logo-dark.svg' },
+      favicon: '/brand/favicon.svg',
+      colors: { primary: '#4f46e5' },
+      typography: { fontFamily: 'Inter, sans-serif' },
+      radius: '0.5rem',
+    },
+    email: { fromName: 'Acme', fromAddress: 'no-reply@acme.co' },
+  });
+}
 
 function orgModuleManifest(): WebModuleManifest {
   return {
@@ -82,13 +121,14 @@ function gatedManifest(): WebModuleManifest {
 
 function renderAt(
   path: string,
-  options: { registry?: WebModuleManifest[]; session?: SessionState } = {},
+  options: { registry?: WebModuleManifest[]; session?: SessionState; config?: ProductConfig } = {},
 ): void {
-  const { registry = [], session = ANON } = options;
+  const { registry = [], session = ANON, config } = options;
   const router = createAppRouter({
     registry,
     session,
     history: createMemoryHistory({ initialEntries: [path] }),
+    ...(config ? { config } : {}),
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree: ReactElement = (
@@ -133,6 +173,45 @@ describe('authentication guard', () => {
     renderAt('/o/acme', { session: AUTHED });
     expect(await screen.findByRole('navigation', { name: /primary/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /welcome$/i })).toBeInTheDocument();
+  });
+
+  it('shows organization creation onboarding to an org-less b2b user', async () => {
+    renderAt('/', { session: ORGLESS, config: productConfig('b2b-standard') });
+
+    expect(await screen.findByRole('heading', { name: /create an organization/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/organization name/i)).toBeInTheDocument();
+  });
+
+  it('routes a b2c personal account into the same org-scoped module without org chrome', async () => {
+    renderAt('/', {
+      session: PERSONAL,
+      config: productConfig('b2c-simple'),
+      registry: [orgModuleManifest()],
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Reports Home' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+  });
+
+  it('redirects a direct personal-org URL back to the chrome-free module route', async () => {
+    renderAt('/o/personal-user', {
+      session: PERSONAL,
+      config: productConfig('b2c-simple'),
+      registry: [orgModuleManifest()],
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Reports Home' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+  });
+
+  it('does not expose organization creation when the profile disables organizations', async () => {
+    renderAt('/app/create-organization', {
+      session: PERSONAL,
+      config: productConfig('b2c-simple'),
+    });
+
+    expect(await screen.findByText(/choose a product section/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /create organization/i })).not.toBeInTheDocument();
   });
 
   it('mounts the inherited profile settings screen under the org shell', async () => {

@@ -1,6 +1,7 @@
 @layer components {
   .app-splash,
-  .auth-layout {
+  .auth-layout,
+  .onboarding-layout {
     display: grid;
     min-height: 100dvh;
     place-items: center;
@@ -10,6 +11,17 @@
   .app-splash {
     background: var(--color-muted);
     color: var(--color-muted-foreground);
+  }
+
+  .personal-layout {
+    min-height: 100dvh;
+    background: var(--color-app-background);
+    padding: clamp(1rem, 3vw, 1.75rem);
+  }
+
+  .personal-layout > .onboarding-layout {
+    min-height: calc(100dvh - 3.5rem);
+    padding: 0;
   }
 
   .auth-layout {

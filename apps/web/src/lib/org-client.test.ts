@@ -31,7 +31,7 @@ describe('createOrgClient', () => {
   it('reads the current identity from /api/me', async () => {
     fetchMock = jsonFetch(200, {
       user: { id: 'u1' },
-      organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', role: 'owner' }],
+      organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', type: 'team', role: 'owner' }],
       activeOrganizationId: 'o1',
       activeRole: 'owner',
       permissions: ['org:read'],
@@ -43,7 +43,7 @@ describe('createOrgClient', () => {
     const { url, init } = lastCall(fetchMock);
     expect(url).toBe('/api/me');
     expect(init.credentials).toBe('include');
-    expect(me.organizations).toEqual([{ id: 'o1', name: 'Acme', slug: 'acme', role: 'owner' }]);
+    expect(me.organizations).toEqual([{ id: 'o1', name: 'Acme', slug: 'acme', type: 'team', role: 'owner' }]);
     expect(me.activeOrganizationId).toBe('o1');
   });
 
@@ -64,6 +64,21 @@ describe('createOrgClient', () => {
     expect(init.method).toBe('PATCH');
     expect(bodyOf(init)).toEqual({ name: 'Ada Lovelace' });
     expect(me.user.name).toBe('Ada Lovelace');
+  });
+
+  it('creates a team organization and unwraps the created org', async () => {
+    fetchMock = jsonFetch(201, {
+      org: { id: 'o2', name: 'Northwind', slug: 'northwind', type: 'team', deletedAt: null, createdAt: 'x' },
+    });
+    const client = createOrgClient({ fetchImpl: fetchMock });
+
+    const org = await client.createOrganization({ name: 'Northwind' });
+
+    const { url, init } = lastCall(fetchMock);
+    expect(url).toBe('/api/orgs');
+    expect(init.method).toBe('POST');
+    expect(bodyOf(init)).toEqual({ name: 'Northwind' });
+    expect(org).toMatchObject({ slug: 'northwind', type: 'team' });
   });
 
   it('lists members with pagination query params', async () => {

@@ -12,8 +12,8 @@ function me(overrides: Partial<MeResponse> = {}): MeResponse {
   return {
     user: { id: 'u1', email: 'a@b.co', name: 'Ada' },
     organizations: [
-      { id: 'o1', name: 'Acme', slug: 'acme', role: 'admin' },
-      { id: 'o2', name: 'Globex', slug: 'globex', role: 'member' },
+      { id: 'o1', name: 'Acme', slug: 'acme', type: 'team', role: 'admin' },
+      { id: 'o2', name: 'Globex', slug: 'globex', type: 'team', role: 'member' },
     ],
     activeOrganizationId: 'o2',
     activeRole: 'member',

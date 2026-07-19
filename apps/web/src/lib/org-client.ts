@@ -29,6 +29,7 @@ export interface OrgMembershipSummary {
   id: string;
   name: string;
   slug: string;
+  type: OrgType;
   role: string;
 }
 
@@ -111,6 +112,7 @@ export class OrgClientError extends Error {
 export interface OrgClient {
   getMe(): Promise<MeResponse>;
   updateProfile(input: { name: string }): Promise<MeResponse>;
+  createOrganization(input: { name: string }): Promise<OrgView>;
   listMembers(orgId: string, params: PageParams): Promise<Page<MemberView>>;
   updateMemberRole(orgId: string, memberId: string, role: OrgRole): Promise<MemberView>;
   removeMember(orgId: string, memberId: string): Promise<void>;
@@ -203,6 +205,10 @@ export function createOrgClient(options: OrgClientOptions = {}): OrgClient {
     },
     async updateProfile(input) {
       return (await mutate('PATCH', '/api/me/profile', input)) as MeResponse;
+    },
+    async createOrganization(input) {
+      const body = asRecord(await mutate('POST', '/api/orgs', input));
+      return body.org as OrgView;
     },
     async listMembers(orgId, params) {
       return (await get(`/api/orgs/${orgId}/members?${pageQuery(params)}`)) as Page<MemberView>;

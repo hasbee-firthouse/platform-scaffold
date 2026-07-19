@@ -80,6 +80,21 @@ export function assembleRoutes(rootRoute: AnyRoute, registry: WebModuleRegistry)
  * Personal-scoped modules are ignored here (they mount via {@link assembleRoutes}
  * at `/app/<basePath>`), so the two calls together cover the whole registry.
  */
+export function assemblePersonalOrgModuleRoutes(
+  rootRoute: AnyRoute,
+  registry: WebModuleRegistry,
+): AnyRoute[] {
+  return registry
+    .filter((manifest) => manifest.scope === 'org')
+    .map((manifest) => {
+      const moduleRoute = createRoute({
+        getParentRoute: () => rootRoute,
+        path: `/app/${manifest.basePath}`,
+      }) as AnyRoute;
+      return moduleRoute.addChildren(manifest.webRoutes(moduleRoute)) as AnyRoute;
+    });
+}
+
 export function assembleOrgModuleRoutes(
   orgLayoutRoute: AnyRoute,
   registry: WebModuleRegistry,

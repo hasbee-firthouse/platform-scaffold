@@ -12,6 +12,7 @@ export interface OrgMembership {
   id: string;
   name: string;
   slug: string;
+  type: 'personal' | 'team';
   role: string;
 }
 
@@ -90,6 +91,7 @@ const orgMembershipSchema = z.object({
   id: z.string(),
   name: z.string(),
   slug: z.string(),
+  type: z.enum(['personal', 'team']),
   role: z.string(),
 });
 
@@ -163,6 +165,10 @@ export function registerMeRoute(app: FastifyInstance, deps: MeRouteDeps): void {
   );
 }
 
+function organizationType(value: string): OrgMembership['type'] {
+  return value === 'personal' ? 'personal' : 'team';
+}
+
 /** Build the production membership loader backed by the platform database. */
 export function buildMembershipLoader(db: NodePgDatabase): MembershipLoader {
   return async (user, session) => {
@@ -171,17 +177,21 @@ export function buildMembershipLoader(db: NodePgDatabase): MembershipLoader {
         id: schema.organization.id,
         name: schema.organization.name,
         slug: schema.organization.slug,
+        type: schema.organization.type,
         role: schema.member.role,
       })
       .from(schema.member)
       .innerJoin(schema.organization, eq(schema.member.organizationId, schema.organization.id))
       .where(eq(schema.member.userId, user.id));
 
+    const memberships: OrgMembership[] = organizations.map((org) => ({
+      ...org,
+      type: organizationType(org.type),
+    }));
     const activeOrganizationId = await loadActiveOrganizationId(db, session.id);
-    const activeRole =
-      organizations.find((org) => org.id === activeOrganizationId)?.role ?? null;
+    const activeRole = memberships.find((org) => org.id === activeOrganizationId)?.role ?? null;
 
-    return { organizations, activeOrganizationId, activeRole };
+    return { organizations: memberships, activeOrganizationId, activeRole };
   };
 }
 

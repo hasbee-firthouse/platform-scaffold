@@ -19,8 +19,14 @@ import { EmptyState } from '@platform/ui';
 import { activeOrgSlug, findOrgBySlug, isAuthenticated } from '../session/session.js';
 import type { ActiveOrg, AppRouterContext } from './route-context.js';
 import { createOrgShell } from '../shell/app-shell.js';
+import { CreateOrganizationScreen } from '../screens/onboarding/create-organization.screen.js';
 import { createSettingsRoutes } from './settings-routes.js';
-import { assembleOrgModuleRoutes, assembleRoutes, type WebModuleRegistry } from './assemble-routes.js';
+import {
+  assembleOrgModuleRoutes,
+  assemblePersonalOrgModuleRoutes,
+  assembleRoutes,
+  type WebModuleRegistry,
+} from './assemble-routes.js';
 
 /** Redirect an unauthenticated caller to sign-in; returns the authed session's identity. */
 function requireAuth(context: AppRouterContext): void {
@@ -38,7 +44,21 @@ function resolveOrg(context: AppRouterContext, orgSlug: string): ActiveOrg {
   if (!org) {
     throw notFound();
   }
-  return { orgId: org.id, orgSlug: org.slug, orgName: org.name, role: org.role, orgType: 'team' };
+  return { orgId: org.id, orgSlug: org.slug, orgName: org.name, role: org.role, orgType: org.type };
+}
+
+function resolveOrgRoute(
+  context: AppRouterContext,
+  orgSlug: string,
+  config: ProductConfig,
+  registry: WebModuleRegistry,
+): ActiveOrg {
+  const org = resolveOrg(context, orgSlug);
+  if (org.orgType === 'personal' && config.capabilities.personalAccounts) {
+    const module = registry.find((manifest) => manifest.scope === 'org');
+    throw redirect({ to: module ? `/app/${module.basePath}` : '/app' });
+  }
+  return org;
 }
 
 /** The org landing surface — a minimal welcome under the shell (E2E entry point). */
@@ -51,16 +71,61 @@ function OrgHome(): ReactElement {
   );
 }
 
-/** The personal space landing surface when the caller has no active organization. */
-function AppHome(): ReactElement {
+function personalOrg(context: AppRouterContext): ActiveOrg | null {
+  if (!isAuthenticated(context.session)) {
+    return null;
+  }
+  const org = context.session.me.organizations.find((membership) => membership.type === 'personal');
+  return org
+    ? { orgId: org.id, orgSlug: org.slug, orgName: org.name, role: org.role, orgType: 'personal' }
+    : null;
+}
+
+function PersonalLayout(): ReactElement {
   return (
-    <main className="shell-surface">
-      <EmptyState
-        title="No organizations yet"
-        description="You are signed in but not a member of any organization."
-      />
+    <main className="personal-layout">
+      <Outlet />
     </main>
   );
+}
+
+function createAppHome(config: ProductConfig): () => ReactElement {
+  return function AppHome(): ReactElement {
+    if (config.capabilities.organizations) {
+      return (
+        <CreateOrganizationScreen
+          onCreated={(org) => window.location.assign(`/o/${org.slug}`)}
+        />
+      );
+    }
+    return (
+      <section className="shell-surface">
+        <EmptyState title="Welcome" description="Choose a product section to get started." />
+      </section>
+    );
+  };
+}
+
+function indexDestination(
+  context: AppRouterContext,
+  config: ProductConfig,
+  registry: WebModuleRegistry,
+): string {
+  if (!isAuthenticated(context.session)) {
+    return '/sign-in';
+  }
+  const { me } = context.session;
+  const active = me.organizations.find((org) => org.id === me.activeOrganizationId);
+  if (active?.type === 'team') {
+    return `/o/${active.slug}`;
+  }
+  const personal = personalOrg(context);
+  const personalModule = registry.find((module) => module.scope === 'org');
+  if (config.capabilities.personalAccounts && personal && personalModule) {
+    return `/app/${personalModule.basePath}`;
+  }
+  const slug = activeOrgSlug(context.session.me);
+  return slug ? `/o/${slug}` : '/app';
 }
 
 /**
@@ -73,27 +138,28 @@ function AppHome(): ReactElement {
 export function createAppRoutes(
   rootRoute: AnyRoute,
   registry: WebModuleRegistry,
-  _config: ProductConfig,
+  config: ProductConfig,
 ): AnyRoute[] {
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
     beforeLoad: ({ context }) => {
-      const ctx = context as AppRouterContext;
-      if (!isAuthenticated(ctx.session)) {
-        throw redirect({ to: '/sign-in' });
-      }
-      const slug = activeOrgSlug(ctx.session.me);
-      throw redirect({ to: slug ? `/o/${slug}` : '/app' });
+      const destination = indexDestination(context as AppRouterContext, config, registry);
+      throw redirect({ to: destination });
     },
   }) as AnyRoute;
 
   const orgLayoutRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/o/$orgSlug',
-    component: createOrgShell(registry),
+    component: createOrgShell(registry, config),
     beforeLoad: ({ context, params }) =>
-      resolveOrg(context as AppRouterContext, (params as { orgSlug: string }).orgSlug),
+      resolveOrgRoute(
+        context as AppRouterContext,
+        (params as { orgSlug: string }).orgSlug,
+        config,
+        registry,
+      ),
   }) as AnyRoute;
 
   const orgIndexRoute = createRoute({
@@ -111,19 +177,32 @@ export function createAppRoutes(
   const appAuthLayoutRoute = createRoute({
     getParentRoute: () => rootRoute,
     id: 'app-auth',
-    component: Outlet,
-    beforeLoad: ({ context }) => requireAuth(context as AppRouterContext),
+    component: PersonalLayout,
+    beforeLoad: ({ context }) => {
+      const appContext = context as AppRouterContext;
+      requireAuth(appContext);
+      return personalOrg(appContext) ?? {};
+    },
   }) as AnyRoute;
 
   const appHomeRoute = createRoute({
     getParentRoute: () => appAuthLayoutRoute,
     path: '/app',
-    component: AppHome,
+    component: createAppHome(config),
+  }) as AnyRoute;
+  const createOrganizationRoute = createRoute({
+    getParentRoute: () => appAuthLayoutRoute,
+    path: '/app/create-organization',
+    component: createAppHome(config),
   }) as AnyRoute;
 
   appAuthLayoutRoute.addChildren([
     appHomeRoute,
+    createOrganizationRoute,
     ...assembleRoutes(appAuthLayoutRoute, registry.filter((module) => module.scope === 'personal')),
+    ...(config.capabilities.personalAccounts
+      ? assemblePersonalOrgModuleRoutes(appAuthLayoutRoute, registry)
+      : []),
   ]);
 
   return [indexRoute, orgLayoutRoute, appAuthLayoutRoute];

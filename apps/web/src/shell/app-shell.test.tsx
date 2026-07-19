@@ -22,7 +22,7 @@ afterEach(cleanup);
 function me(): MeResponse {
   return {
     user: { id: 'u1', email: 'ada@acme.co', name: 'Ada' },
-    organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', role: 'admin' }],
+    organizations: [{ id: 'o1', name: 'Acme', slug: 'acme', type: 'team', role: 'admin' }],
     activeOrganizationId: 'o1',
     activeRole: 'admin',
     permissions: [],
@@ -90,10 +90,14 @@ describe('org shell navigation', () => {
     expect(link).toHaveAttribute('href', '/o/acme/reports');
   });
 
-  it('always shows the non-privileged links (Home, Security)', async () => {
+  it('always shows the non-privileged links and organization creation for b2b', async () => {
     renderShell([]);
     expect(await screen.findByRole('link', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Security' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'New organization' })).toHaveAttribute(
+      'href',
+      '/app/create-organization',
+    );
   });
 
   it('hides org-admin nav without the permission and shows it with it (Can gate)', async () => {
