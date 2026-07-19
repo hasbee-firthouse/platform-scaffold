@@ -110,7 +110,7 @@ export class OrgClientError extends Error {
 }
 
 export interface OrgClient {
-  getMe(): Promise<MeResponse>;
+  getMe(orgSlug?: string): Promise<MeResponse>;
   updateProfile(input: { name: string }): Promise<MeResponse>;
   createOrganization(input: { name: string }): Promise<OrgView>;
   listMembers(orgId: string, params: PageParams): Promise<Page<MemberView>>;
@@ -200,8 +200,9 @@ export function createOrgClient(options: OrgClientOptions = {}): OrgClient {
   }
 
   return {
-    async getMe() {
-      return (await get('/api/me')) as MeResponse;
+    async getMe(orgSlug) {
+      const query = orgSlug ? `?orgSlug=${encodeURIComponent(orgSlug)}` : '';
+      return (await get(`/api/me${query}`)) as MeResponse;
     },
     async updateProfile(input) {
       return (await mutate('PATCH', '/api/me/profile', input)) as MeResponse;

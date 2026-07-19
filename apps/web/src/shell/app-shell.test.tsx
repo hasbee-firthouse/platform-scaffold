@@ -100,6 +100,15 @@ describe('org shell navigation', () => {
     );
   });
 
+  it('shows Invitations when URL-scoped permissions allow inviting members', async () => {
+    renderShell(['org.members.invite']);
+
+    expect(await screen.findByRole('link', { name: 'Invitations' })).toHaveAttribute(
+      'href',
+      '/o/acme/settings/invitations',
+    );
+  });
+
   it('hides org-admin nav without the permission and shows it with it (Can gate)', async () => {
     renderShell([]);
     await screen.findByRole('link', { name: 'Home' });

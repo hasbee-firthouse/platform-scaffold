@@ -7,6 +7,7 @@ import { schema } from '@platform/db';
 import { resolveRole, type PermissionRegistry, type RoleName } from '@platform/authz';
 import type { IdentitySession, IdentityUser } from '@platform/identity';
 import { requireUser } from '../lib/session.js';
+import { slugSchema } from './orgs/schemas.js';
 
 export interface OrgMembership {
   id: string;
@@ -31,6 +32,7 @@ export interface ProfileInput {
 export type MembershipLoader = (
   user: IdentityUser,
   session: IdentitySession,
+  requestedOrgSlug?: string,
 ) => Promise<MembershipData>;
 
 /** Persists a profile change and returns the refreshed user. */
@@ -95,6 +97,8 @@ const orgMembershipSchema = z.object({
   role: z.string(),
 });
 
+const meQuerySchema = z.object({ orgSlug: slugSchema.optional() });
+
 const meResponseSchema = z.object({
   user: userSchema,
   organizations: z.array(orgMembershipSchema),
@@ -145,10 +149,13 @@ export function registerMeRoute(app: FastifyInstance, deps: MeRouteDeps): void {
 
   typed.get(
     '/api/me',
-    { preHandler: requireUser, schema: { response: { 200: meResponseSchema } } },
+    {
+      preHandler: requireUser,
+      schema: { querystring: meQuerySchema, response: { 200: meResponseSchema } },
+    },
     async (request) => {
       const { user, session } = authed(request);
-      const data = await deps.loadMemberships(user, session);
+      const data = await deps.loadMemberships(user, session, request.query.orgSlug);
       return buildMeResponse(user, data, deps.permissions);
     },
   );
@@ -169,9 +176,22 @@ function organizationType(value: string): OrgMembership['type'] {
   return value === 'personal' ? 'personal' : 'team';
 }
 
+export function resolveActiveMembership(
+  organizations: OrgMembership[],
+  storedOrganizationId: string | null,
+  requestedOrgSlug?: string,
+): OrgMembership | null {
+  return (
+    organizations.find((org) => org.slug === requestedOrgSlug) ??
+    organizations.find((org) => org.id === storedOrganizationId) ??
+    organizations[0] ??
+    null
+  );
+}
+
 /** Build the production membership loader backed by the platform database. */
 export function buildMembershipLoader(db: NodePgDatabase): MembershipLoader {
-  return async (user, session) => {
+  return async (user, session, requestedOrgSlug) => {
     const organizations = await db
       .select({
         id: schema.organization.id,
@@ -188,10 +208,14 @@ export function buildMembershipLoader(db: NodePgDatabase): MembershipLoader {
       ...org,
       type: organizationType(org.type),
     }));
-    const activeOrganizationId = await loadActiveOrganizationId(db, session.id);
-    const activeRole = memberships.find((org) => org.id === activeOrganizationId)?.role ?? null;
+    const storedOrganizationId = await loadActiveOrganizationId(db, session.id);
+    const active = resolveActiveMembership(memberships, storedOrganizationId, requestedOrgSlug);
 
-    return { organizations: memberships, activeOrganizationId, activeRole };
+    return {
+      organizations: memberships,
+      activeOrganizationId: active?.id ?? null,
+      activeRole: active?.role ?? null,
+    };
   };
 }
 

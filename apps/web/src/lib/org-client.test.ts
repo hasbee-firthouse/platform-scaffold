@@ -47,6 +47,21 @@ describe('createOrgClient', () => {
     expect(me.activeOrganizationId).toBe('o1');
   });
 
+  it('scopes session bootstrap to the organization slug in the current URL', async () => {
+    fetchMock = jsonFetch(200, {
+      user: { id: 'u1' },
+      organizations: [],
+      activeOrganizationId: null,
+      activeRole: null,
+      permissions: [],
+    });
+    const client = createOrgClient({ fetchImpl: fetchMock });
+
+    await client.getMe('northwind');
+
+    expect(lastCall(fetchMock).url).toBe('/api/me?orgSlug=northwind');
+  });
+
   it('updates the current profile through /api/me/profile', async () => {
     fetchMock = jsonFetch(200, {
       user: { id: 'u1', email: 'ada@acme.co', name: 'Ada Lovelace' },

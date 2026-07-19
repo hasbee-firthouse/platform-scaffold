@@ -58,7 +58,7 @@ function ProfileRoute(): ReactElement | null {
   return (
     <ProfileScreen
       user={context.session.me.user}
-      onUpdated={(me) => queryClient.setQueryData(SESSION_QUERY_KEY, me)}
+      onUpdated={() => void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })}
     />
   );
 }

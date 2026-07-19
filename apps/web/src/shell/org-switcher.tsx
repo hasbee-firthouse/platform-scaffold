@@ -12,6 +12,7 @@ import type { ReactElement } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTerm } from '../lib/use-term.js';
 import { orgClient, type OrgClient, type OrgMembershipSummary } from '../lib/org-client.js';
+import { orgSlugFromPath, sessionQueryKey } from '../session/use-session.js';
 
 export interface OrgSwitcherProps {
   /** Injectable data client (defaults to the same-origin org client). */
@@ -30,7 +31,11 @@ export function OrgSwitcher({
   navigate = defaultNavigate,
 }: OrgSwitcherProps): ReactElement | null {
   const orgTerm = useTerm('organization');
-  const query = useQuery({ queryKey: ['me'], queryFn: () => client.getMe() });
+  const orgSlug = orgSlugFromPath(window.location.pathname);
+  const query = useQuery({
+    queryKey: sessionQueryKey(orgSlug),
+    queryFn: () => client.getMe(orgSlug),
+  });
 
   const organizations = query.data?.organizations ?? [];
   const activeOrganizationId = query.data?.activeOrganizationId ?? null;

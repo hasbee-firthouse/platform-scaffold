@@ -111,6 +111,12 @@ Available presets:
 
 After changing the profile, rebuild/restart the application. Introducing a runtime profile selector would conflict with `SPEC.md` §7.1 and the fork-and-diverge product model.
 
+## Inviting organization users
+
+Sign in as an organization owner or admin with invitation permission, open **Invitations** in the sidebar, enter the recipient email and role, and send the invitation. In local development, open Mailpit at http://localhost:8025 and follow the message's accept link. The recipient signs in or creates an account, then accepts the invitation and becomes a member with the assigned role.
+
+Directly creating a user from **Members** is a separate admin-created-account flow; normal collaboration onboarding should use **Invitations**.
+
 ## Day-to-day Docker commands
 
 ```powershell

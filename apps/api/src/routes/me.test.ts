@@ -12,6 +12,7 @@ import { fakeEmailPort, fakeJobs } from '../test-support.js';
 import { registerErrorHandler } from '../plugins/error-handler.js';
 import { registerAuthSession } from '../lib/session.js';
 import {
+  resolveActiveMembership,
   resolvePermissionsForRole,
   registerMeRoute,
   type MeRouteDeps,
@@ -147,6 +148,19 @@ describe('resolvePermissionsForRole', () => {
   });
 });
 
+describe('resolveActiveMembership', () => {
+  const organizations = membershipData().organizations;
+
+  it('prefers the organization named by the current URL slug', () => {
+    expect(resolveActiveMembership(organizations, 'org_1', 'ada-lovelace')?.id).toBe('org_2');
+  });
+
+  it('falls back to a valid stored organization and then the first membership', () => {
+    expect(resolveActiveMembership(organizations, 'org_2', 'missing')?.id).toBe('org_2');
+    expect(resolveActiveMembership(organizations, null, undefined)?.id).toBe('org_1');
+  });
+});
+
 describe('GET /api/me', () => {
   it('returns 401 UNAUTHENTICATED without a session', async () => {
     const app = buildMeApp({ session: null });
@@ -207,6 +221,40 @@ describe('GET /api/me', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().permissions).toEqual(resolvedPermissions('member'));
+    await app.close();
+  });
+
+  it('rejects a non-canonical organization slug', async () => {
+    const app = buildMeApp({ session: cannedSession() });
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/me?orgSlug=Not%20A%20Slug',
+      headers: { cookie: 'better-auth.session_token=tok_1' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('passes the URL organization slug to the membership loader', async () => {
+    const loadMemberships = vi.fn(
+      async (_user: IdentitySessionResult['user'], _session: IdentitySessionResult['session']) =>
+        membershipData(),
+    );
+    const app = buildMeApp({ session: cannedSession(), deps: { loadMemberships } });
+
+    await app.inject({
+      method: 'GET',
+      url: '/api/me?orgSlug=ada-lovelace',
+      headers: { cookie: 'better-auth.session_token=tok_1' },
+    });
+
+    expect(loadMemberships).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'user_1' }),
+      expect.objectContaining({ id: 'sess_1' }),
+      'ada-lovelace',
+    );
     await app.close();
   });
 
