@@ -45,6 +45,30 @@ describe('createAuthClient', () => {
     expect(lastCall(fetchMock).url).toBe('https://api.test/api/auth/sign-in/email');
   });
 
+  it('requests a Google OAuth redirect through the identity endpoint', async () => {
+    fetchMock = jsonFetch(200, { url: 'https://accounts.google.com/o/oauth2/auth?state=abc', redirect: true });
+    const client = createAuthClient({ fetchImpl: fetchMock });
+
+    const url = await client.signInGoogle({ callbackURL: '/' });
+
+    const { url: endpoint, init } = lastCall(fetchMock);
+    expect(endpoint).toBe('/api/auth/sign-in/social');
+    expect(bodyOf(init)).toEqual({ provider: 'google', callbackURL: '/' });
+    expect(url).toBe('https://accounts.google.com/o/oauth2/auth?state=abc');
+  });
+
+  it.each([
+    ['a missing URL', { redirect: true }],
+    ['an untrusted HTTPS URL', { url: 'https://malicious.example/steal', redirect: true }],
+  ])('rejects %s in a Google OAuth response without navigating', async (_case, response) => {
+    fetchMock = jsonFetch(200, response);
+    const client = createAuthClient({ fetchImpl: fetchMock });
+
+    await expect(client.signInGoogle({ callbackURL: '/' })).rejects.toMatchObject({
+      code: 'INVALID_OAUTH_RESPONSE',
+    });
+  });
+
   it('posts name/email/password to /sign-up/email (AC1)', async () => {
     const client = createAuthClient({ fetchImpl: fetchMock });
     await client.signUp({ name: 'Ada', email: 'ada@example.com', password: 'longpassword' });

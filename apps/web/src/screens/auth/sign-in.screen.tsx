@@ -16,9 +16,12 @@ import type { ProductConfig } from '@platform/config';
 import type { AuthClient } from '../../lib/auth-client.js';
 import {
   AuthCard,
+  AuthDivider,
   ErrorBanner,
+  GoogleAuthButton,
   resolveAuthClient,
   resolveConfig,
+  startGoogleAuth,
   useAuthMutation,
 } from './auth-screen.js';
 
@@ -37,6 +40,8 @@ export interface SignInScreenProps {
   onForgotPassword?: () => void;
   /** Invoked when a new user chooses to create an account. */
   onSignUp?: () => void;
+  /** Receives the trusted Google authorization URL; defaults to browser navigation. */
+  onGoogleRedirect?: (url: string) => void;
 }
 
 /**
@@ -51,6 +56,7 @@ export function SignInScreen({
   onSignedIn,
   onForgotPassword,
   onSignUp,
+  onGoogleRedirect,
 }: SignInScreenProps): ReactNode {
   const auth = resolveAuthClient(client);
   const product = resolveConfig(config);
@@ -94,6 +100,12 @@ export function SignInScreen({
         <ErrorBanner code={mutation.error.code} message={mutation.error.message} />
       ) : null}
 
+      <GoogleAuthButton
+        label="Continue with Google"
+        pending={mutation.pending}
+        onClick={() => void startGoogleAuth(auth, mutation, onGoogleRedirect)}
+      />
+      <AuthDivider />
       <Form {...form}>
         <form onSubmit={submit} noValidate>
           <FormField

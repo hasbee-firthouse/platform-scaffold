@@ -16,6 +16,19 @@ async function fillForm(user: ReturnType<typeof userEvent.setup>): Promise<void>
 }
 
 describe('SignUpScreen (AC1)', () => {
+  it('starts Google OAuth for account creation', async () => {
+    const user = userEvent.setup();
+    const redirectUrl = 'https://accounts.google.com/o/oauth2/auth?state=signup';
+    const client = createFakeAuthClient({ signInGoogle: vi.fn(async () => redirectUrl) });
+    const onGoogleRedirect = vi.fn();
+    render(<SignUpScreen client={client} onGoogleRedirect={onGoogleRedirect} />);
+
+    await user.click(screen.getByRole('button', { name: /sign up with google/i }));
+
+    await waitFor(() => expect(client.signInGoogle).toHaveBeenCalledWith({ callbackURL: '/' }));
+    expect(onGoogleRedirect).toHaveBeenCalledWith(redirectUrl);
+  });
+
   it('creates the account and confirms a verification email was sent', async () => {
     const user = userEvent.setup();
     const client = createFakeAuthClient();

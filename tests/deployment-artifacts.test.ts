@@ -69,6 +69,13 @@ describe('docker-compose.yml', () => {
     }
   });
 
+  it('allows Google OAuth credentials to be supplied from the local environment', () => {
+    expect(compose).toContain('${GOOGLE_CLIENT_ID:-dev-google-client-id}');
+    expect(compose).toContain('${GOOGLE_CLIENT_SECRET:-dev-google-client-secret}');
+    expect(read('.env.example')).toContain('GOOGLE_CLIENT_ID=');
+    expect(read('.env.example')).toContain('GOOGLE_CLIENT_SECRET=');
+  });
+
   it('mounts the role-provisioning init script into the Postgres init dir', () => {
     expect(compose).toContain('/docker-entrypoint-initdb.d/');
     expect(compose).toContain('scripts/init-db.sql');

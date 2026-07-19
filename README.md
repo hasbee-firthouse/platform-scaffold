@@ -78,25 +78,38 @@ The `postgres` and `app_runtime` credentials in `docker-compose.yml` are **datab
 
 This is expected. The SPA requests `GET /api/me` during startup. When there is no valid session, `/` redirects to `/sign-in`.
 
-### Where is signup?
+### Signup and email verification
 
-Signup is implemented and registered at:
+The sign-in and sign-up screens link to each other. Email/password signup requires a password of at least 10 characters and sends its verification email to Mailpit. Complete verification before signing in.
 
-```text
-http://localhost:3000/sign-up
+### Google OAuth
+
+Google buttons use Better Auth's existing Google provider. For local Docker use:
+
+1. Create a Google OAuth **Web application** client.
+2. Add `http://localhost:3000/api/auth/callback/google` as an authorized redirect URI.
+3. Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`.
+4. Rebuild the app with `docker compose --profile app up -d --build app`.
+
+The Compose defaults are placeholders, so Google login cannot complete until real credentials are supplied.
+
+## Product profiles
+
+The profile is a locked product-build decision, not a runtime environment switch. Select it in `product.config.ts`:
+
+```typescript
+profile: 'b2b-standard'
 ```
 
-The current sign-in screen does not render a link to that route. This is a UI navigation gap, not a disabled backend feature.
+Available presets:
 
-To create an account manually:
+| Profile | Behavior |
+|---|---|
+| `b2c-simple` | Personal account; signup auto-creates a hidden organization-of-one |
+| `b2b-standard` | Team organizations, creation, invitations, members, and roles |
+| `b2b-enterprise` | B2B standard plus enterprise entitlement keys |
 
-1. Open http://localhost:3000/sign-up directly.
-2. Enter a name, email address, and a password of at least 10 characters.
-3. Open Mailpit at http://localhost:8025.
-4. Open the verification email and follow its verification link.
-5. Return to the sign-in screen and log in.
-
-Email verification is required before password sign-in. The active `b2b-standard` product profile does not auto-create a personal organization for new users. The current SPA also lacks a self-service organization-creation screen, so the seeded owner account is the easiest way to explore the complete reference application.
+After changing the profile, rebuild/restart the application. Introducing a runtime profile selector would conflict with `SPEC.md` §7.1 and the fork-and-diverge product model.
 
 ## Day-to-day Docker commands
 
@@ -148,14 +161,7 @@ corepack pnpm install --frozen-lockfile
 Copy-Item .env.example .env
 ```
 
-Use a long random value for `BETTER_AUTH_SECRET`. The current `.env.example` is missing two variables required by API validation; add these placeholders for local email/password development:
-
-```dotenv
-GOOGLE_CLIENT_ID=local-dev-placeholder
-GOOGLE_CLIENT_SECRET=local-dev-placeholder
-```
-
-Real Google OAuth credentials are required only if Google login is used.
+Use a long random value for `BETTER_AUTH_SECRET`. `.env.example` includes every required variable. Replace its Google placeholders with real OAuth credentials when testing Google sign-in; email/password authentication can run with placeholders.
 
 ### 4. Migrate, seed, build, and run
 

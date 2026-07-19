@@ -88,8 +88,8 @@ services:
       # DEV-ONLY password — matches scripts/init-db.sql; change both for prod.
       APP_RUNTIME_DATABASE_URL: postgres://app_runtime:app_runtime_dev_pw@db:5432/platform
       BETTER_AUTH_SECRET: local-dev-secret-change-me
-      GOOGLE_CLIENT_ID: dev-google-client-id
-      GOOGLE_CLIENT_SECRET: dev-google-client-secret
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-dev-google-client-id}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-dev-google-client-secret}
       SMTP_URL: smtp://mailpit:1025
       LOG_LEVEL: info
     ports:

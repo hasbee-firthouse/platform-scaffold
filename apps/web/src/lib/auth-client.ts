@@ -20,6 +20,10 @@ export interface SignInInput {
   password: string;
 }
 
+export interface GoogleSignInInput {
+  callbackURL: string;
+}
+
 export interface SignUpInput {
   name: string;
   email: string;
@@ -71,6 +75,7 @@ export class AuthClientError extends Error {
 
 export interface AuthClient {
   signIn(input: SignInInput): Promise<void>;
+  signInGoogle(input: GoogleSignInInput): Promise<string>;
   signUp(input: SignUpInput): Promise<void>;
   sendVerificationEmail(input: { email: string }): Promise<void>;
   verifyEmail(token: string): Promise<void>;
@@ -123,6 +128,17 @@ function toLinkedAccountSummary(raw: unknown): LinkedAccountSummary {
   };
 }
 
+function readOAuthRedirect(body: unknown): string {
+  const candidate = stringOrNull(asRecord(body).url);
+  if (candidate && URL.canParse(candidate)) {
+    const url = new URL(candidate);
+    if (url.protocol === 'https:' && url.hostname === 'accounts.google.com') {
+      return url.href;
+    }
+  }
+  throw new AuthClientError(502, 'INVALID_OAUTH_RESPONSE', 'Google sign-in could not be started');
+}
+
 export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
   const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
   const doFetch = options.fetchImpl ?? fetch;
@@ -163,6 +179,10 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
   return {
     async signIn(input) {
       await post('/sign-in/email', input);
+    },
+    async signInGoogle(input) {
+      const body = await post('/sign-in/social', { provider: 'google', callbackURL: input.callbackURL });
+      return readOAuthRedirect(body);
     },
     async signUp(input) {
       await post('/sign-up/email', input);

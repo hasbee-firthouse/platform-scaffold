@@ -16,9 +16,12 @@ import type { ProductConfig } from '@platform/config';
 import type { AuthClient } from '../../lib/auth-client.js';
 import {
   AuthCard,
+  AuthDivider,
   ErrorBanner,
+  GoogleAuthButton,
   resolveAuthClient,
   resolveConfig,
+  startGoogleAuth,
   useAuthMutation,
 } from './auth-screen.js';
 
@@ -39,6 +42,8 @@ export interface SignUpScreenProps {
   onSignedUp?: (email: string) => void;
   /** Invoked when an existing user chooses to return to sign-in. */
   onSignIn?: () => void;
+  /** Receives the trusted Google authorization URL; defaults to browser navigation. */
+  onGoogleRedirect?: (url: string) => void;
 }
 
 /**
@@ -46,7 +51,13 @@ export interface SignUpScreenProps {
  * account can't password-sign-in until it's verified, so on success the screen
  * confirms "check your inbox" rather than dropping the user into the app.
  */
-export function SignUpScreen({ client, config, onSignedUp, onSignIn }: SignUpScreenProps): ReactNode {
+export function SignUpScreen({
+  client,
+  config,
+  onSignedUp,
+  onSignIn,
+  onGoogleRedirect,
+}: SignUpScreenProps): ReactNode {
   const auth = resolveAuthClient(client);
   const product = resolveConfig(config);
   const mutation = useAuthMutation();
@@ -84,6 +95,12 @@ export function SignUpScreen({ client, config, onSignedUp, onSignIn }: SignUpScr
       {mutation.error ? (
         <ErrorBanner code={mutation.error.code} message={mutation.error.message} />
       ) : null}
+      <GoogleAuthButton
+        label="Sign up with Google"
+        pending={mutation.pending}
+        onClick={() => void startGoogleAuth(auth, mutation, onGoogleRedirect)}
+      />
+      <AuthDivider />
       <Form {...form}>
         <form onSubmit={submit} noValidate>
           <FormField

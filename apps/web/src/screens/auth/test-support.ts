@@ -13,6 +13,7 @@ export type FakeAuthClient = {
 export function createFakeAuthClient(overrides: Partial<FakeAuthClient> = {}): AuthClient {
   const base: FakeAuthClient = {
     signIn: vi.fn(async () => undefined),
+    signInGoogle: vi.fn(async () => 'https://accounts.google.com/o/oauth2/auth'),
     signUp: vi.fn(async () => undefined),
     sendVerificationEmail: vi.fn(async () => undefined),
     verifyEmail: vi.fn(async () => undefined),

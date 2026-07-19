@@ -15,6 +15,35 @@ async function fillCredentials(user: ReturnType<typeof userEvent.setup>): Promis
 }
 
 describe('SignInScreen (AC1)', () => {
+  it('starts Google OAuth and forwards the redirect URL', async () => {
+    const user = userEvent.setup();
+    const redirectUrl = 'https://accounts.google.com/o/oauth2/auth?state=abc';
+    const client = createFakeAuthClient({ signInGoogle: vi.fn(async () => redirectUrl) });
+    const onGoogleRedirect = vi.fn();
+    render(<SignInScreen client={client} onGoogleRedirect={onGoogleRedirect} />);
+
+    await user.click(screen.getByRole('button', { name: /continue with google/i }));
+
+    await waitFor(() => expect(client.signInGoogle).toHaveBeenCalledWith({ callbackURL: '/' }));
+    expect(onGoogleRedirect).toHaveBeenCalledWith(redirectUrl);
+  });
+
+  it('surfaces a Google OAuth startup failure without redirecting', async () => {
+    const user = userEvent.setup();
+    const client = createFakeAuthClient({
+      signInGoogle: vi.fn(async () => {
+        throw new AuthClientError(502, 'INVALID_OAUTH_RESPONSE', 'Google sign-in could not be started');
+      }),
+    });
+    const onGoogleRedirect = vi.fn();
+    render(<SignInScreen client={client} onGoogleRedirect={onGoogleRedirect} />);
+
+    await user.click(screen.getByRole('button', { name: /continue with google/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('INVALID_OAUTH_RESPONSE');
+    expect(onGoogleRedirect).not.toHaveBeenCalled();
+  });
+
   it('calls the sign-in endpoint with the entered credentials', async () => {
     const user = userEvent.setup();
     const client = createFakeAuthClient();
