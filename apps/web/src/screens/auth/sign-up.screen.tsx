@@ -37,6 +37,8 @@ export interface SignUpScreenProps {
   config?: ProductConfig;
   /** Called after signup succeeds, with the email a verification link was sent to. */
   onSignedUp?: (email: string) => void;
+  /** Invoked when an existing user chooses to return to sign-in. */
+  onSignIn?: () => void;
 }
 
 /**
@@ -44,7 +46,7 @@ export interface SignUpScreenProps {
  * account can't password-sign-in until it's verified, so on success the screen
  * confirms "check your inbox" rather than dropping the user into the app.
  */
-export function SignUpScreen({ client, config, onSignedUp }: SignUpScreenProps): ReactNode {
+export function SignUpScreen({ client, config, onSignedUp, onSignIn }: SignUpScreenProps): ReactNode {
   const auth = resolveAuthClient(client);
   const product = resolveConfig(config);
   const mutation = useAuthMutation();
@@ -132,6 +134,12 @@ export function SignUpScreen({ client, config, onSignedUp }: SignUpScreenProps):
           </Button>
         </form>
       </Form>
+      <p className="mt-5 text-center text-sm text-[var(--color-muted-foreground)]">
+        Already have an account?{' '}
+        <button type="button" className="font-medium text-[var(--color-primary)]" onClick={onSignIn}>
+          Sign in
+        </button>
+      </p>
     </AuthCard>
   );
 }

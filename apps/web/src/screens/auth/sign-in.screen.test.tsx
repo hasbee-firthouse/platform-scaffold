@@ -103,4 +103,14 @@ describe('SignInScreen (AC1)', () => {
     await user.click(screen.getByRole('button', { name: /forgot password/i }));
     expect(onForgotPassword).toHaveBeenCalledTimes(1);
   });
+
+  it('offers account creation and invokes the sign-up navigation callback', async () => {
+    const user = userEvent.setup();
+    const onSignUp = vi.fn();
+    render(<SignInScreen client={createFakeAuthClient()} onSignUp={onSignUp} />);
+
+    await user.click(screen.getByRole('button', { name: /create one/i }));
+
+    expect(onSignUp).toHaveBeenCalledTimes(1);
+  });
 });

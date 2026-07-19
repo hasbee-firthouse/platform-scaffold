@@ -35,6 +35,8 @@ export interface SignInScreenProps {
   onSignedIn?: () => void;
   /** Invoked when the user chooses "Forgot password?". */
   onForgotPassword?: () => void;
+  /** Invoked when a new user chooses to create an account. */
+  onSignUp?: () => void;
 }
 
 /**
@@ -48,6 +50,7 @@ export function SignInScreen({
   config,
   onSignedIn,
   onForgotPassword,
+  onSignUp,
 }: SignInScreenProps): ReactNode {
   const auth = resolveAuthClient(client);
   const product = resolveConfig(config);
@@ -135,6 +138,12 @@ export function SignInScreen({
           </Button>
         </form>
       </Form>
+      <p className="mt-5 text-center text-sm text-[var(--color-muted-foreground)]">
+        No account?{' '}
+        <button type="button" className="font-medium text-[var(--color-primary)]" onClick={onSignUp}>
+          Create one
+        </button>
+      </p>
     </AuthCard>
   );
 }

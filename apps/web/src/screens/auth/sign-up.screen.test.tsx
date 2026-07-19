@@ -50,6 +50,16 @@ describe('SignUpScreen (AC1)', () => {
     expect(client.signUp).not.toHaveBeenCalled();
   });
 
+  it('offers existing users a route back to sign-in', async () => {
+    const user = userEvent.setup();
+    const onSignIn = vi.fn();
+    render(<SignUpScreen client={createFakeAuthClient()} onSignIn={onSignIn} />);
+
+    await user.click(screen.getByRole('button', { name: /^sign in$/i }));
+
+    expect(onSignIn).toHaveBeenCalledTimes(1);
+  });
+
   it('surfaces a server error without leaving the form', async () => {
     const user = userEvent.setup();
     const client = createFakeAuthClient({

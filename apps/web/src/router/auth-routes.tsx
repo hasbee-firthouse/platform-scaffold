@@ -67,6 +67,7 @@ function SignInRoute(): ReactElement {
     <SignInScreen
       onSignedIn={returnToApp}
       onForgotPassword={() => void navigate({ to: '/forgot-password' })}
+      onSignUp={() => void navigate({ to: '/sign-up' })}
     />
   );
 }
@@ -76,6 +77,7 @@ function SignUpRoute(): ReactElement {
   return (
     <SignUpScreen
       onSignedUp={(email) => void navigate({ to: '/verify-email', search: { email } })}
+      onSignIn={() => void navigate({ to: '/sign-in' })}
     />
   );
 }

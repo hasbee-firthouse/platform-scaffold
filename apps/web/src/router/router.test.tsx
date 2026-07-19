@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import {
   RouterProvider,
@@ -103,6 +104,17 @@ describe('public auth routes', () => {
     renderAt('/sign-in');
     expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+  });
+
+  it('navigates between sign-in and sign-up from the account prompts', async () => {
+    const user = userEvent.setup();
+    renderAt('/sign-in');
+
+    await user.click(await screen.findByRole('button', { name: /create one/i }));
+    expect(await screen.findByRole('heading', { name: /create your account/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^sign in$/i }));
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
   });
 
   it('redirects an already-authenticated visitor away from /sign-in into the app', async () => {
