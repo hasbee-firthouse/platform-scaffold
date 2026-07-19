@@ -191,6 +191,24 @@ describe('authentication guard', () => {
 
     expect(await screen.findByRole('heading', { name: 'Reports Home' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /open user menu/i })).toBeInTheDocument();
+  });
+
+  it('mounts chrome-free Profile and Security settings for b2c accounts', async () => {
+    renderAt('/app/settings/security', {
+      session: PERSONAL,
+      config: productConfig('b2c-simple'),
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Security' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+
+    cleanup();
+    renderAt('/app/settings/profile', {
+      session: PERSONAL,
+      config: productConfig('b2c-simple'),
+    });
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
   });
 
   it('redirects a direct personal-org URL back to the chrome-free module route', async () => {

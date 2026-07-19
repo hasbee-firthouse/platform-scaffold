@@ -15,7 +15,8 @@ export { userInitials } from '../lib/user-display.js';
 
 export interface UserMenuProps {
   user: MeResponse['user'];
-  orgSlug: string;
+  orgSlug?: string;
+  settingsBasePath?: string;
   client?: AuthClient;
   onSignedOut?: () => void;
 }
@@ -23,11 +24,16 @@ export interface UserMenuProps {
 export function UserMenu({
   user,
   orgSlug,
+  settingsBasePath,
   client = createAuthClient(),
   onSignedOut,
 }: UserMenuProps): ReactElement {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const accountSettingsPath = settingsBasePath ?? (orgSlug ? `/o/${orgSlug}/settings` : null);
+  if (!accountSettingsPath) {
+    throw new Error('UserMenu requires settingsBasePath or orgSlug');
+  }
 
   async function signOut(): Promise<void> {
     setPending(true);
@@ -60,10 +66,10 @@ export function UserMenu({
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <a href={`/o/${orgSlug}/settings/profile`}>Profile settings</a>
+          <a href={`${accountSettingsPath}/profile`}>Profile settings</a>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <a href={`/o/${orgSlug}/settings/security`}>Security &amp; sessions</a>
+          <a href={`${accountSettingsPath}/security`}>Security &amp; sessions</a>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

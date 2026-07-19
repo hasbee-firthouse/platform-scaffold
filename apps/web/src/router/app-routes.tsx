@@ -11,7 +11,6 @@ import {
   createRoute,
   notFound,
   redirect,
-  Outlet,
   type AnyRoute,
 } from '@tanstack/react-router';
 import type { ProductConfig } from '@platform/config';
@@ -19,8 +18,9 @@ import { EmptyState } from '@platform/ui';
 import { activeOrgSlug, findOrgBySlug, isAuthenticated } from '../session/session.js';
 import type { ActiveOrg, AppRouterContext } from './route-context.js';
 import { createOrgShell } from '../shell/app-shell.js';
+import { createPersonalShell } from '../shell/personal-shell.js';
 import { CreateOrganizationScreen } from '../screens/onboarding/create-organization.screen.js';
-import { createSettingsRoutes } from './settings-routes.js';
+import { createSettingsRoutes, createUserSettingsRoutes } from './settings-routes.js';
 import {
   assembleOrgModuleRoutes,
   assemblePersonalOrgModuleRoutes,
@@ -79,14 +79,6 @@ function personalOrg(context: AppRouterContext): ActiveOrg | null {
   return org
     ? { orgId: org.id, orgSlug: org.slug, orgName: org.name, role: org.role, orgType: 'personal' }
     : null;
-}
-
-function PersonalLayout(): ReactElement {
-  return (
-    <main className="personal-layout">
-      <Outlet />
-    </main>
-  );
 }
 
 function createAppHome(config: ProductConfig): () => ReactElement {
@@ -177,7 +169,7 @@ export function createAppRoutes(
   const appAuthLayoutRoute = createRoute({
     getParentRoute: () => rootRoute,
     id: 'app-auth',
-    component: PersonalLayout,
+    component: createPersonalShell(config),
     beforeLoad: ({ context }) => {
       const appContext = context as AppRouterContext;
       requireAuth(appContext);
@@ -199,6 +191,7 @@ export function createAppRoutes(
   appAuthLayoutRoute.addChildren([
     appHomeRoute,
     createOrganizationRoute,
+    ...createUserSettingsRoutes(appAuthLayoutRoute, 'app/settings'),
     ...assembleRoutes(appAuthLayoutRoute, registry.filter((module) => module.scope === 'personal')),
     ...(config.capabilities.personalAccounts
       ? assemblePersonalOrgModuleRoutes(appAuthLayoutRoute, registry)

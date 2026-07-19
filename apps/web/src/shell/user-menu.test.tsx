@@ -35,6 +35,22 @@ describe('UserMenu', () => {
     );
   });
 
+  it('supports chrome-free personal-account settings paths', async () => {
+    const user = userEvent.setup();
+    render(<UserMenu user={USER} settingsBasePath="/app/settings" />);
+
+    await user.click(screen.getByRole('button', { name: /open user menu/i }));
+
+    expect(screen.getByRole('menuitem', { name: /profile settings/i })).toHaveAttribute(
+      'href',
+      '/app/settings/profile',
+    );
+    expect(screen.getByRole('menuitem', { name: /security & sessions/i })).toHaveAttribute(
+      'href',
+      '/app/settings/security',
+    );
+  });
+
   it('signs out through the auth API and invokes the shell completion callback', async () => {
     const user = userEvent.setup();
     const client = createFakeAuthClient();

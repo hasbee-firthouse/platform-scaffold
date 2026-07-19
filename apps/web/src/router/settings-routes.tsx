@@ -21,7 +21,7 @@ import { ProfileScreen } from '../screens/settings-user/profile.screen.js';
 import { SecurityScreen } from '../screens/settings-user/security.screen.js';
 import { isAuthenticated } from '../session/session.js';
 import { SESSION_QUERY_KEY } from '../session/use-session.js';
-import type { OrgRouteContext } from './route-context.js';
+import type { AppRouterContext } from './route-context.js';
 import { useActiveOrg } from './use-active-org.js';
 
 function GeneralRoute(): ReactElement {
@@ -50,7 +50,7 @@ function AuditLogRoute(): ReactElement {
 }
 
 function ProfileRoute(): ReactElement | null {
-  const context = useRouteContext({ strict: false }) as unknown as OrgRouteContext;
+  const context = useRouteContext({ strict: false }) as unknown as AppRouterContext;
   const queryClient = useQueryClient();
   if (!isAuthenticated(context.session)) {
     return null;
@@ -67,6 +67,15 @@ function SecurityRoute(): ReactElement {
   return <SecurityScreen />;
 }
 
+export function createUserSettingsRoutes(
+  parentRoute: AnyRoute,
+  prefix = 'settings',
+): AnyRoute[] {
+  const route = (path: string, component: () => ReactElement | null): AnyRoute =>
+    createRoute({ getParentRoute: () => parentRoute, path: `${prefix}/${path}`, component }) as AnyRoute;
+  return [route('profile', ProfileRoute), route('security', SecurityRoute)];
+}
+
 /** Build the settings child routes under the given org layout route. */
 export function createSettingsRoutes(orgLayoutRoute: AnyRoute): AnyRoute[] {
   const route = (path: string, component: () => ReactElement | null): AnyRoute =>
@@ -78,7 +87,6 @@ export function createSettingsRoutes(orgLayoutRoute: AnyRoute): AnyRoute[] {
     route('settings/invitations', InvitationsRoute),
     route('settings/roles', RolesRoute),
     route('settings/audit-log', AuditLogRoute),
-    route('settings/profile', ProfileRoute),
-    route('settings/security', SecurityRoute),
+    ...createUserSettingsRoutes(orgLayoutRoute),
   ];
 }
