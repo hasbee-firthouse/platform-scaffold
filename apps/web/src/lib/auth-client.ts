@@ -31,6 +31,12 @@ export interface ResetPasswordInput {
   newPassword: string;
 }
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+  revokeOtherSessions: boolean;
+}
+
 /** One row in the active-sessions list rendered by the Security screen (AC3). */
 export interface SessionSummary {
   id: string;
@@ -38,6 +44,12 @@ export interface SessionSummary {
   userAgent: string | null;
   ipAddress: string | null;
   createdAt: string | null;
+}
+
+export interface LinkedAccountSummary {
+  id: string;
+  providerId: string;
+  accountId: string;
 }
 
 /**
@@ -64,6 +76,8 @@ export interface AuthClient {
   verifyEmail(token: string): Promise<void>;
   forgotPassword(input: { email: string }): Promise<void>;
   resetPassword(input: ResetPasswordInput): Promise<void>;
+  changePassword(input: ChangePasswordInput): Promise<void>;
+  listAccounts(): Promise<LinkedAccountSummary[]>;
   listSessions(): Promise<SessionSummary[]>;
   revokeOtherSessions(): Promise<void>;
   acceptInvitation(input: { invitationId: string }): Promise<void>;
@@ -97,6 +111,15 @@ function toSessionSummary(raw: unknown): SessionSummary {
     userAgent: stringOrNull(record.userAgent),
     ipAddress: stringOrNull(record.ipAddress),
     createdAt: stringOrNull(record.createdAt),
+  };
+}
+
+function toLinkedAccountSummary(raw: unknown): LinkedAccountSummary {
+  const record = asRecord(raw);
+  return {
+    id: String(record.id ?? ''),
+    providerId: String(record.providerId ?? ''),
+    accountId: String(record.accountId ?? ''),
   };
 }
 
@@ -157,6 +180,13 @@ export function createAuthClient(options: AuthClientOptions = {}): AuthClient {
     },
     async resetPassword(input) {
       await post('/reset-password', input);
+    },
+    async changePassword(input) {
+      await post('/change-password', input);
+    },
+    async listAccounts() {
+      const body = await get('/list-accounts');
+      return Array.isArray(body) ? body.map(toLinkedAccountSummary) : [];
     },
     async listSessions() {
       const body = await get('/list-sessions');

@@ -55,10 +55,10 @@ function RolesView({ orgId, client }: { orgId: string; client: OrgClient }): Rea
   const matrix: RolesMatrix = query.data ?? { permissions: [], roles: [] };
 
   return (
-    <section className="flex flex-col gap-4">
-      <header>
+    <section className="page-stack">
+      <header className="page-header">
         <h1 className="text-lg font-semibold">Roles &amp; permissions</h1>
-        <p className="text-sm text-[var(--color-muted)]">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
           Built-in roles are defined in code and cannot be edited.
         </p>
       </header>
@@ -97,7 +97,7 @@ function Grant({ granted }: { granted: boolean }): ReactElement {
     <span
       role="img"
       aria-label={granted ? 'granted' : 'not granted'}
-      className={granted ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted)]'}
+      className={granted ? 'text-[var(--color-primary)]' : 'text-[var(--color-muted-foreground)]'}
     >
       {granted ? '✓' : '—'}
     </span>

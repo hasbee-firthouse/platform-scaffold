@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "./shell.css";
+@import "./surfaces.css";
+@source "../../../../packages/platform-ui/src";
+@source "../../../../modules";
 
 /*
  * Build-time fallback values only. The real values are set at runtime by
@@ -10,14 +14,75 @@
  */
 @theme {
   --color-primary: #4f46e5;
-  --color-secondary: #64748b;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #eef2ff;
+  --color-secondary-foreground: #3730a3;
   --color-accent: #4f46e5;
-  --color-destructive: #ef4444;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-app-background: #f6f7fb;
   --color-background: #ffffff;
+  --color-card: #ffffff;
   --color-foreground: #0f172a;
   --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
   --color-border: #e2e8f0;
+  --color-sidebar: #0f1430;
+  --color-sidebar-foreground: #c7cbe6;
+  --color-sidebar-heading: #ffffff;
   --font-family: Inter, sans-serif;
   --font-family-heading: Inter, sans-serif;
   --radius: 0.5rem;
+}
+
+@layer base {
+  html {
+    min-width: 20rem;
+    min-height: 100%;
+    background: var(--color-app-background);
+    color: var(--color-foreground);
+    font-family: var(--font-family);
+  }
+
+  html[data-theme="dark"] {
+    --color-primary-foreground: #1e1b4b;
+    --color-secondary: #1e293b;
+    --color-secondary-foreground: #c7d2fe;
+    --color-destructive: #f87171;
+    --color-destructive-foreground: #450a0a;
+    --color-app-background: #0b1120;
+    --color-background: #111a2e;
+    --color-card: #111a2e;
+    --color-foreground: #e2e8f0;
+    --color-muted: #1e293b;
+    --color-muted-foreground: #94a3b8;
+    --color-border: #24304a;
+    --color-sidebar: #070b1c;
+    --color-sidebar-foreground: #aab0d6;
+    --color-sidebar-heading: #e2e8f0;
+  }
+
+  body,
+  #root,
+  .app-root {
+    min-height: 100vh;
+  }
+
+  body {
+    background: var(--color-app-background);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-family-heading);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
 }

@@ -43,13 +43,13 @@ export function GeneralScreen({
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-xl flex-col gap-4">
-      <header>
+    <section className="page-stack max-w-xl">
+      <header className="page-header">
         <h1 className="text-lg font-semibold">{orgTerm} settings</h1>
       </header>
 
       <form onSubmit={submit} className="flex flex-col gap-4" aria-label={`${orgTerm} settings`}>
-        <label className="flex flex-col gap-1 text-sm text-[var(--color-muted)]">
+        <label className="flex flex-col gap-1 text-sm text-[var(--color-muted-foreground)]">
           Name
           <Input
             aria-label="Name"
@@ -58,7 +58,7 @@ export function GeneralScreen({
             required
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm text-[var(--color-muted)]">
+        <label className="flex flex-col gap-1 text-sm text-[var(--color-muted-foreground)]">
           Slug
           <Input
             aria-label="Slug"
@@ -74,7 +74,7 @@ export function GeneralScreen({
           </p>
         ) : null}
         {save.isSuccess ? (
-          <p role="status" className="text-sm text-[var(--color-muted)]">
+          <p role="status" className="text-sm text-[var(--color-muted-foreground)]">
             Saved.
           </p>
         ) : null}

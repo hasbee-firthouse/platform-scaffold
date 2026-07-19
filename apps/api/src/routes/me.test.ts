@@ -256,23 +256,27 @@ describe('PATCH /api/me/profile', () => {
     const response = await app.inject({
       method: 'PATCH',
       url: '/api/me/profile',
-      payload: { name: 'Ada B. Lovelace' },
+      payload: { name: '  Ada B. Lovelace  ' },
       headers: { cookie: 'better-auth.session_token=tok_1' },
     });
 
     expect(response.statusCode).toBe(200);
-    expect(updateProfile).toHaveBeenCalledTimes(1);
+    expect(updateProfile).toHaveBeenCalledWith(expect.any(Object), { name: 'Ada B. Lovelace' });
     expect(response.json()).toMatchObject({ user: { name: 'Ada B. Lovelace' } });
     await app.close();
   });
 
-  it('rejects an empty profile update body with 400 VALIDATION_FAILED', async () => {
+  it.each([
+    ['an empty name', { name: '' }],
+    ['a name longer than 120 characters', { name: 'A'.repeat(121) }],
+    ['an unknown field', { name: 'Ada Lovelace', role: 'owner' }],
+  ])('rejects %s with 400 VALIDATION_FAILED', async (_case, payload) => {
     const app = buildMeApp({ session: cannedSession() });
 
     const response = await app.inject({
       method: 'PATCH',
       url: '/api/me/profile',
-      payload: { name: '' },
+      payload,
       headers: { cookie: 'better-auth.session_token=tok_1' },
     });
 

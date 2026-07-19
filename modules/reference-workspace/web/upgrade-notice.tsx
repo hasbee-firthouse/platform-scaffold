@@ -35,7 +35,7 @@ export function UpgradeNotice({ config = defaultConfig }: UpgradeNoticeProps = {
       <h2 id="workspace-upgrade-heading" className="text-base font-semibold">
         Upgrade required
       </h2>
-      <p className="text-sm text-[var(--color-muted)]">
+      <p className="text-sm text-[var(--color-muted-foreground)]">
         You&apos;ve reached the task limit for your current plan. Contact us to unlock more.
       </p>
       <a

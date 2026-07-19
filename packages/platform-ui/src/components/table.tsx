@@ -6,7 +6,12 @@ export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElemen
   ({ className, ...props }, ref) => (
     <table
       ref={ref}
-      className={cn('w-full border-collapse text-sm text-[var(--color-foreground)]', className)}
+      className={cn(
+        'w-full overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] ' +
+          'border-separate border-spacing-0 bg-[var(--color-background)] text-sm ' +
+          'text-[var(--color-foreground)] shadow-sm',
+        className,
+      )}
       {...props}
     />
   ),
@@ -42,7 +47,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, ThHTMLAttributes<HTMLT
       ref={ref}
       className={cn(
         'border-b border-[var(--color-border)] px-4 py-2.5 text-left text-xs font-semibold ' +
-          'uppercase tracking-wide text-[var(--color-muted)]',
+          'uppercase tracking-wide text-[var(--color-muted-foreground)]',
         className,
       )}
       {...props}

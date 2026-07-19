@@ -53,7 +53,7 @@ export const ToastDescription = forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitive.Description
     ref={ref}
-    className={cn('text-sm text-[var(--color-muted)]', className)}
+    className={cn('text-sm text-[var(--color-muted-foreground)]', className)}
     {...props}
   />
 ));

@@ -75,6 +75,15 @@ function renderShell(
 }
 
 describe('org shell navigation', () => {
+  it('renders the branded shell header, active organization breadcrumb, and user menu', async () => {
+    renderShell([]);
+
+    expect(await screen.findByText('Scaffold Reference')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /scaffold reference logo/i })).toBeInTheDocument();
+    expect(screen.getByRole('banner')).toHaveTextContent('/o/acme');
+    expect(screen.getByRole('button', { name: /open user menu/i })).toHaveTextContent('Ada');
+  });
+
   it('links each module nav entry to /o/:orgSlug/<basePath>', async () => {
     renderShell([]);
     const link = await screen.findByRole('link', { name: 'Reports' });

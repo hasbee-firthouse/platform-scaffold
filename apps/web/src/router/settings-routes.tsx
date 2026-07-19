@@ -10,13 +10,18 @@
  * `/o/$orgSlug` layout, e.g. `settings/members`.
  */
 import type { ReactElement } from 'react';
-import { createRoute, type AnyRoute } from '@tanstack/react-router';
+import { createRoute, useRouteContext, type AnyRoute } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { GeneralScreen } from '../screens/settings-org/general.screen.js';
 import { MembersScreen } from '../screens/settings-org/members.screen.js';
 import { InvitationsScreen } from '../screens/settings-org/invitations.screen.js';
 import { RolesScreen } from '../screens/settings-org/roles.screen.js';
 import { AuditLogScreen } from '../screens/settings-org/audit-log.screen.js';
+import { ProfileScreen } from '../screens/settings-user/profile.screen.js';
 import { SecurityScreen } from '../screens/settings-user/security.screen.js';
+import { isAuthenticated } from '../session/session.js';
+import { SESSION_QUERY_KEY } from '../session/use-session.js';
+import type { OrgRouteContext } from './route-context.js';
 import { useActiveOrg } from './use-active-org.js';
 
 function GeneralRoute(): ReactElement {
@@ -44,6 +49,20 @@ function AuditLogRoute(): ReactElement {
   return <AuditLogScreen orgId={org.orgId} />;
 }
 
+function ProfileRoute(): ReactElement | null {
+  const context = useRouteContext({ strict: false }) as unknown as OrgRouteContext;
+  const queryClient = useQueryClient();
+  if (!isAuthenticated(context.session)) {
+    return null;
+  }
+  return (
+    <ProfileScreen
+      user={context.session.me.user}
+      onUpdated={(me) => queryClient.setQueryData(SESSION_QUERY_KEY, me)}
+    />
+  );
+}
+
 function SecurityRoute(): ReactElement {
   return <SecurityScreen />;
 }
@@ -59,6 +78,7 @@ export function createSettingsRoutes(orgLayoutRoute: AnyRoute): AnyRoute[] {
     route('settings/invitations', InvitationsRoute),
     route('settings/roles', RolesRoute),
     route('settings/audit-log', AuditLogRoute),
+    route('settings/profile', ProfileRoute),
     route('settings/security', SecurityRoute),
   ];
 }

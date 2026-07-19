@@ -33,7 +33,7 @@ export function AuthCard({ title, subtitle, children }: AuthCardProps): ReactNod
     <Card className="mx-auto w-full max-w-[420px] p-7">
       <h2 className="text-xl font-semibold text-[var(--color-foreground)]">{title}</h2>
       {subtitle ? (
-        <p className="mb-5 mt-1.5 text-sm text-[var(--color-muted)]">{subtitle}</p>
+        <p className="mb-5 mt-1.5 text-sm text-[var(--color-muted-foreground)]">{subtitle}</p>
       ) : null}
       {children}
     </Card>

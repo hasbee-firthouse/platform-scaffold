@@ -25,6 +25,21 @@ describe('SecurityScreen (AC3)', () => {
     expect(screen.getByText('203.0.113.1')).toBeInTheDocument();
   });
 
+  it('lists linked authentication providers without showing provider credentials', async () => {
+    const client = createFakeAuthClient({
+      listAccounts: vi.fn(async () => [
+        { id: 'a1', providerId: 'credential', accountId: 'ada@acme.co' },
+        { id: 'a2', providerId: 'google', accountId: 'google-user-7' },
+      ]),
+    });
+    render(<SecurityScreen client={client} />);
+
+    expect(await screen.findByRole('heading', { name: /linked accounts/i })).toBeInTheDocument();
+    expect(screen.getByText('Password')).toBeInTheDocument();
+    expect(screen.getByText('Google')).toBeInTheDocument();
+    expect(screen.queryByText('google-user-7')).not.toBeInTheDocument();
+  });
+
   it('shows an empty state when there are no other sessions', async () => {
     const client = createFakeAuthClient({ listSessions: vi.fn(async () => []) });
     render(<SecurityScreen client={client} />);
@@ -64,5 +79,39 @@ describe('SecurityScreen (AC3)', () => {
     await user.click(screen.getByRole('button', { name: /sign out other sessions/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('UNAUTHENTICATED');
+  });
+
+  it('changes the password and requests other-session revocation', async () => {
+    const user = userEvent.setup();
+    const client = createFakeAuthClient({ listSessions: vi.fn(async () => SESSIONS) });
+    render(<SecurityScreen client={client} />);
+
+    await user.type(screen.getByLabelText(/current password/i), 'current-password');
+    await user.type(screen.getByLabelText(/^new password/i), 'replacement-password');
+    await user.type(screen.getByLabelText(/confirm new password/i), 'replacement-password');
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+
+    await waitFor(() =>
+      expect(client.changePassword).toHaveBeenCalledWith({
+        currentPassword: 'current-password',
+        newPassword: 'replacement-password',
+        revokeOtherSessions: true,
+      }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(/password updated/i);
+  });
+
+  it('validates password length and matching confirmation before calling the API', async () => {
+    const user = userEvent.setup();
+    const client = createFakeAuthClient();
+    render(<SecurityScreen client={client} />);
+
+    await user.type(screen.getByLabelText(/current password/i), 'current-password');
+    await user.type(screen.getByLabelText(/^new password/i), 'short');
+    await user.type(screen.getByLabelText(/confirm new password/i), 'different');
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+
+    expect(await screen.findByText(/^use at least 10 characters$/i)).toBeInTheDocument();
+    expect(client.changePassword).not.toHaveBeenCalled();
   });
 });

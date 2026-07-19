@@ -131,12 +131,12 @@ function AuditLogViewer({ orgId, fetchAuditLogs }: ViewerProps): ReactElement {
   };
 
   return (
-    <section className="flex flex-col gap-4">
-      <header>
+    <section className="page-stack">
+      <header className="page-header">
         <h1 className="text-lg font-semibold">{orgTerm} audit log</h1>
       </header>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="page-panel flex flex-wrap gap-3">
         <Input
           aria-label="Filter by action"
           placeholder="Filter by action"
@@ -194,7 +194,7 @@ function AuditLogViewer({ orgId, fetchAuditLogs }: ViewerProps): ReactElement {
         >
           Next
         </Button>
-        <span className="text-sm text-[var(--color-muted)]">{total} total</span>
+        <span className="text-sm text-[var(--color-muted-foreground)]">{total} total</span>
       </footer>
     </section>
   );

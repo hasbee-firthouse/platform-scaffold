@@ -24,7 +24,7 @@ export const TabsTrigger = forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      '-mb-px border-b-2 border-transparent px-4 py-2 text-sm text-[var(--color-muted)] ' +
+      '-mb-px border-b-2 border-transparent px-4 py-2 text-sm text-[var(--color-muted-foreground)] ' +
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] ' +
         'data-[state=active]:border-[var(--color-primary)] data-[state=active]:font-semibold ' +
         'data-[state=active]:text-[var(--color-primary)]',

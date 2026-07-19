@@ -63,7 +63,7 @@ export function ResetPasswordScreen({ token, client, onReset }: ResetPasswordScr
   if (form.formState.isSubmitSuccessful && !mutation.error) {
     return (
       <AuthCard title="Password updated">
-        <p className="text-sm text-[var(--color-muted)]">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
           Your new password is set. The old password no longer works — sign in with the new one.
         </p>
       </AuthCard>

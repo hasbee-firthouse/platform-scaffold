@@ -85,8 +85,8 @@ function InvitationsView({ orgId, client }: { orgId: string; client: OrgClient }
   const mutationError = resend.error ?? revoke.error ?? create.error;
 
   return (
-    <section className="flex flex-col gap-6">
-      <header>
+    <section className="page-stack">
+      <header className="page-header">
         <h1 className="text-lg font-semibold">Pending invitations</h1>
       </header>
 
@@ -169,7 +169,7 @@ function InviteForm({ pending, onSubmit }: InviteFormProps): ReactElement {
 
   return (
     <form onSubmit={submit} className="flex flex-wrap items-end gap-3" aria-label="Send invitation">
-      <label className="flex flex-col gap-1 text-xs text-[var(--color-muted)]">
+      <label className="flex flex-col gap-1 text-xs text-[var(--color-muted-foreground)]">
         Invite email
         <input
           aria-label="Invite email"
@@ -180,7 +180,7 @@ function InviteForm({ pending, onSubmit }: InviteFormProps): ReactElement {
           required
         />
       </label>
-      <label className="flex flex-col gap-1 text-xs text-[var(--color-muted)]">
+      <label className="flex flex-col gap-1 text-xs text-[var(--color-muted-foreground)]">
         Invite role
         <select
           aria-label="Invite role"

@@ -39,7 +39,7 @@ export function ConfirmDialog({
             {title}
           </AlertDialogPrimitive.Title>
           {description ? (
-            <AlertDialogPrimitive.Description className="mt-2 text-sm text-[var(--color-muted)]">
+            <AlertDialogPrimitive.Description className="mt-2 text-sm text-[var(--color-muted-foreground)]">
               {description}
             </AlertDialogPrimitive.Description>
           ) : null}

@@ -89,8 +89,8 @@ function MembersView({ orgId, client }: { orgId: string; client: OrgClient }): R
   const mutationError = changeRole.error ?? remove.error ?? create.error;
 
   return (
-    <section className="flex flex-col gap-6">
-      <header>
+    <section className="page-stack">
+      <header className="page-header">
         <h1 className="text-lg font-semibold">{memberTerm}</h1>
       </header>
 
@@ -243,7 +243,7 @@ const fieldClass =
 
 function Field({ label, children }: { label: string; children: ReactElement }): ReactElement {
   return (
-    <label className="flex flex-col gap-1 text-xs text-[var(--color-muted)]">
+    <label className="flex flex-col gap-1 text-xs text-[var(--color-muted-foreground)]">
       {label}
       {children}
     </label>

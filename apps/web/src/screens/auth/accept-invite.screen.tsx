@@ -52,19 +52,19 @@ export function AcceptInviteScreen({
       <dl className="mb-5 rounded-[var(--radius)] bg-[var(--color-muted)] px-3.5 py-3 text-sm">
         {invitation.invitedByName ? (
           <div className="flex justify-between py-0.5">
-            <dt className="text-[var(--color-muted)]">Invited by</dt>
+            <dt className="text-[var(--color-muted-foreground)]">Invited by</dt>
             <dd className="font-medium text-[var(--color-foreground)]">{invitation.invitedByName}</dd>
           </div>
         ) : null}
         {invitation.role ? (
           <div className="flex justify-between py-0.5">
-            <dt className="text-[var(--color-muted)]">Role</dt>
+            <dt className="text-[var(--color-muted-foreground)]">Role</dt>
             <dd className="font-mono text-[var(--color-foreground)]">{invitation.role}</dd>
           </div>
         ) : null}
         {invitation.expiresAt ? (
           <div className="flex justify-between py-0.5">
-            <dt className="text-[var(--color-muted)]">Expires</dt>
+            <dt className="text-[var(--color-muted-foreground)]">Expires</dt>
             <dd className="font-mono text-[var(--color-foreground)]">{invitation.expiresAt}</dd>
           </div>
         ) : null}

@@ -122,6 +122,13 @@ describe('authentication guard', () => {
     expect(await screen.findByRole('navigation', { name: /primary/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /welcome$/i })).toBeInTheDocument();
   });
+
+  it('mounts the inherited profile settings screen under the org shell', async () => {
+    renderAt('/o/acme/settings/profile', { session: AUTHED });
+
+    expect(await screen.findByRole('heading', { name: /profile/i })).toBeInTheDocument();
+    expect(screen.getByText('ada@acme.co')).toBeInTheDocument();
+  });
 });
 
 describe('module route assembly through the web seam', () => {

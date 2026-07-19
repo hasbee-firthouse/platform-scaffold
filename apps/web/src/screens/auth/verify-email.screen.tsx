@@ -56,7 +56,7 @@ export function VerifyEmailScreen({
   if (token && status === 'verifying') {
     return (
       <AuthCard title="Verifying your email">
-        <p className="text-sm text-[var(--color-muted)]">One moment while we confirm your link…</p>
+        <p className="text-sm text-[var(--color-muted-foreground)]">One moment while we confirm your link…</p>
       </AuthCard>
     );
   }
@@ -64,7 +64,7 @@ export function VerifyEmailScreen({
   if (token && status === 'verified') {
     return (
       <AuthCard title="Email verified">
-        <p className="text-sm text-[var(--color-muted)]">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
           Your email is verified and you’re signed in. Welcome aboard.
         </p>
       </AuthCard>
@@ -82,7 +82,7 @@ export function VerifyEmailScreen({
   // No token: post-signup "check your inbox" pending state with resend.
   return (
     <AuthCard title="Check your inbox">
-      <p className="text-sm text-[var(--color-muted)]">
+      <p className="text-sm text-[var(--color-muted-foreground)]">
         {email ? (
           <>
             We sent a verification link to{' '}

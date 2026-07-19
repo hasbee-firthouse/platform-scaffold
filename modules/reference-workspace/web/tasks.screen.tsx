@@ -96,8 +96,8 @@ export function TasksScreen({
   const otherError = !limitReached ? (create.error ?? setDone.error ?? remove.error) : null;
 
   return (
-    <section className="flex flex-col gap-6">
-      <header className="flex items-center justify-between gap-4">
+    <section className="page-stack">
+      <header className="page-header">
         <h1 className="text-lg font-semibold">{termPlural}</h1>
         <StatusFilter term={term} value={filter} onChange={setFilter} />
       </header>
@@ -154,7 +154,7 @@ interface StatusFilterProps {
 
 function StatusFilter({ term, value, onChange }: StatusFilterProps): ReactElement {
   return (
-    <label className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+    <label className="flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
       Filter {term}s
       <select
         aria-label={`Filter ${term}s by status`}

@@ -74,7 +74,7 @@ export function SignInScreen({
           className="mb-4 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2.5 text-sm"
         >
           <p className="font-medium text-[var(--color-foreground)]">Verify your email to continue</p>
-          <p className="mt-1 text-[var(--color-muted)]">
+          <p className="mt-1 text-[var(--color-muted-foreground)]">
             This account can’t sign in with a password until it’s verified.
           </p>
           <Button

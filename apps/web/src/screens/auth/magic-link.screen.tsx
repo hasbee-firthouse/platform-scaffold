@@ -57,7 +57,7 @@ export function MagicLinkScreen({ client, config }: MagicLinkScreenProps): React
   if (form.formState.isSubmitSuccessful && !mutation.error) {
     return (
       <AuthCard title="Magic link sent">
-        <p className="text-sm text-[var(--color-muted)]">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
           Check your inbox for a one-time sign-in link. It expires shortly.
         </p>
       </AuthCard>

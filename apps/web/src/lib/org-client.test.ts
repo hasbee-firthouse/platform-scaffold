@@ -47,6 +47,25 @@ describe('createOrgClient', () => {
     expect(me.activeOrganizationId).toBe('o1');
   });
 
+  it('updates the current profile through /api/me/profile', async () => {
+    fetchMock = jsonFetch(200, {
+      user: { id: 'u1', email: 'ada@acme.co', name: 'Ada Lovelace' },
+      organizations: [],
+      activeOrganizationId: null,
+      activeRole: null,
+      permissions: [],
+    });
+    const client = createOrgClient({ fetchImpl: fetchMock });
+
+    const me = await client.updateProfile({ name: 'Ada Lovelace' });
+
+    const { url, init } = lastCall(fetchMock);
+    expect(url).toBe('/api/me/profile');
+    expect(init.method).toBe('PATCH');
+    expect(bodyOf(init)).toEqual({ name: 'Ada Lovelace' });
+    expect(me.user.name).toBe('Ada Lovelace');
+  });
+
   it('lists members with pagination query params', async () => {
     fetchMock = jsonFetch(200, { items: [], total: 0 });
     const client = createOrgClient({ fetchImpl: fetchMock });

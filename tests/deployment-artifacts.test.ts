@@ -159,6 +159,12 @@ describe('docs/FORKING.md', () => {
   });
 });
 
+describe('reference brand assets', () => {
+  it.each(['logo.svg', 'logo-dark.svg', 'favicon.svg'])('ships %s in the Vite public directory', (asset) => {
+    expect(existsSync(join(repoRoot, 'apps', 'web', 'public', 'brand', asset))).toBe(true);
+  });
+});
+
 describe('root package.json', () => {
   it('exposes the dev-only seed script', () => {
     const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> };

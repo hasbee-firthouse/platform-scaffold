@@ -76,8 +76,8 @@ export function WorkspacesScreen({
   const mutationError = create.error ?? rename.error ?? remove.error;
 
   return (
-    <section className="flex flex-col gap-6">
-      <header>
+    <section className="page-stack">
+      <header className="page-header">
         <h1 className="text-lg font-semibold">{termPlural}</h1>
       </header>
 

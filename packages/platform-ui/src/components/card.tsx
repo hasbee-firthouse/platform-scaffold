@@ -45,7 +45,7 @@ export const CardFooter = forwardRef<HTMLDivElement, DivProps>(({ className, ...
   <div
     ref={ref}
     className={cn(
-      'border-t border-[var(--color-border)] px-5 py-4 text-[var(--color-muted)]',
+      'border-t border-[var(--color-border)] px-5 py-4 text-[var(--color-muted-foreground)]',
       className,
     )}
     {...props}

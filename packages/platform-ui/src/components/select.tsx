@@ -18,7 +18,7 @@ export const SelectTrigger = forwardRef<
         'border border-[var(--color-border)] bg-[var(--color-background)] ' +
         'px-3 py-2 text-sm text-[var(--color-foreground)] ' +
         'focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] ' +
-        'data-[placeholder]:text-[var(--color-muted)]',
+        'data-[placeholder]:text-[var(--color-muted-foreground)]',
       className,
     )}
     {...props}

@@ -94,6 +94,40 @@ describe('createAuthClient', () => {
     expect(bodyOf(init)).toEqual({ token: 'reset-tok', newPassword: 'brand-new-pw' });
   });
 
+  it('changes the current user password and can revoke other sessions', async () => {
+    const client = createAuthClient({ fetchImpl: fetchMock });
+
+    await client.changePassword({
+      currentPassword: 'current-password',
+      newPassword: 'replacement-password',
+      revokeOtherSessions: true,
+    });
+
+    const { url, init } = lastCall(fetchMock);
+    expect(url).toBe('/api/auth/change-password');
+    expect(bodyOf(init)).toEqual({
+      currentPassword: 'current-password',
+      newPassword: 'replacement-password',
+      revokeOtherSessions: true,
+    });
+  });
+
+  it('lists linked authentication accounts without exposing provider secrets', async () => {
+    fetchMock = jsonFetch(200, [
+      { id: 'account-1', providerId: 'credential', accountId: 'ada@acme.co', accessToken: 'secret' },
+      { id: 'account-2', providerId: 'google', accountId: 'google-user-7', refreshToken: 'secret' },
+    ]);
+    const client = createAuthClient({ fetchImpl: fetchMock });
+
+    const accounts = await client.listAccounts();
+
+    expect(lastCall(fetchMock).url).toBe('/api/auth/list-accounts');
+    expect(accounts).toEqual([
+      { id: 'account-1', providerId: 'credential', accountId: 'ada@acme.co' },
+      { id: 'account-2', providerId: 'google', accountId: 'google-user-7' },
+    ]);
+  });
+
   it('lists active sessions (AC3)', async () => {
     fetchMock = jsonFetch(200, [
       { id: 's1', token: 't1', userAgent: 'Firefox', ipAddress: '203.0.113.1', createdAt: '2026-07-16' },

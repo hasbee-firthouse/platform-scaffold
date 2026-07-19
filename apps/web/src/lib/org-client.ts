@@ -34,7 +34,7 @@ export interface OrgMembershipSummary {
 
 /** The authenticated identity plus the caller's orgs and active org. */
 export interface MeResponse {
-  user: { id: string; email: string; name: string };
+  user: { id: string; email: string; name: string; emailVerified?: boolean; image?: string | null };
   organizations: OrgMembershipSummary[];
   activeOrganizationId: string | null;
   activeRole: string | null;
@@ -110,6 +110,7 @@ export class OrgClientError extends Error {
 
 export interface OrgClient {
   getMe(): Promise<MeResponse>;
+  updateProfile(input: { name: string }): Promise<MeResponse>;
   listMembers(orgId: string, params: PageParams): Promise<Page<MemberView>>;
   updateMemberRole(orgId: string, memberId: string, role: OrgRole): Promise<MemberView>;
   removeMember(orgId: string, memberId: string): Promise<void>;
@@ -199,6 +200,9 @@ export function createOrgClient(options: OrgClientOptions = {}): OrgClient {
   return {
     async getMe() {
       return (await get('/api/me')) as MeResponse;
+    },
+    async updateProfile(input) {
+      return (await mutate('PATCH', '/api/me/profile', input)) as MeResponse;
     },
     async listMembers(orgId, params) {
       return (await get(`/api/orgs/${orgId}/members?${pageQuery(params)}`)) as Page<MemberView>;

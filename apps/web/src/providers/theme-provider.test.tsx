@@ -1,15 +1,19 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
+import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { defineProduct } from '@platform/config';
 import type { ProductConfig } from '@platform/config';
-import { ThemeProvider } from './theme-provider.js';
+import { ThemeProvider, useTheme } from './theme-provider.js';
 import defaultConfig from '../../../../product.config.js';
 
 afterEach(() => {
   cleanup();
   document.documentElement.removeAttribute('style');
+  document.documentElement.removeAttribute('data-theme');
+  localStorage.clear();
   document.title = '';
   document.querySelectorAll('link[rel="icon"]').forEach((link) => link.remove());
 });
@@ -81,5 +85,26 @@ describe('ThemeProvider', () => {
     expect(document.documentElement.style.getPropertyValue('--font-family')).toBe(
       'Source Sans 3, sans-serif',
     );
+  });
+
+  it('toggles and persists the dark theme tokens', async () => {
+    function ThemeControl(): ReactElement {
+      const theme = useTheme();
+      return <button onClick={theme.toggleTheme}>{theme.mode}</button>;
+    }
+    const user = userEvent.setup();
+    const clinicaly = buildClinicalyConfig();
+    render(
+      <ThemeProvider config={clinicaly}>
+        <ThemeControl />
+      </ThemeProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'light' }));
+
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    expect(document.documentElement.style.getPropertyValue('--color-primary')).not.toBe('#16a34a');
+    expect(localStorage.getItem('platform-theme')).toBe('dark');
+    expect(screen.getByRole('button', { name: 'dark' })).toBeInTheDocument();
   });
 });

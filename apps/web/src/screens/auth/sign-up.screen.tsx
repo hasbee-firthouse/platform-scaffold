@@ -63,7 +63,7 @@ export function SignUpScreen({ client, config, onSignedUp }: SignUpScreenProps):
   if (form.formState.isSubmitSuccessful && !mutation.error) {
     return (
       <AuthCard title="Check your inbox" subtitle={`Verify your email to finish creating your account.`}>
-        <p className="text-sm text-[var(--color-muted)]">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
           We sent a verification link to{' '}
           <span className="font-medium text-[var(--color-foreground)]">
             {form.getValues('email')}

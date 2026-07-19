@@ -49,7 +49,7 @@ export function ForgotPasswordScreen({
   if (form.formState.isSubmitSuccessful && !mutation.error) {
     return (
       <AuthCard title="Check your inbox">
-        <p className="text-sm text-[var(--color-muted)]">
+        <p className="text-sm text-[var(--color-muted-foreground)]">
           If an account exists for that email, a single-use reset link is on its way.
         </p>
         <Button

@@ -73,7 +73,7 @@ function OrgLink({ org, active, navigate }: OrgLinkProps): ReactElement {
         'rounded-[var(--radius)] px-3 py-2 text-sm ' +
         (active
           ? 'bg-[var(--color-muted)] font-semibold text-[var(--color-foreground)]'
-          : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]')
+          : 'text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]')
       }
     >
       {org.name}

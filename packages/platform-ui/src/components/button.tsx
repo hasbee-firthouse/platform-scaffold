@@ -12,11 +12,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-[var(--color-primary)] text-[var(--color-background)]',
-        secondary: 'bg-[var(--color-secondary)] text-[var(--color-background)]',
+        primary: 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]',
+        secondary: 'bg-[var(--color-secondary)] text-[var(--color-secondary-foreground)]',
         ghost:
           'bg-transparent text-[var(--color-foreground)] border border-[var(--color-border)]',
-        destructive: 'bg-[var(--color-destructive)] text-[var(--color-background)]',
+        destructive: 'bg-[var(--color-destructive)] text-[var(--color-destructive-foreground)]',
       },
       size: {
         sm: 'h-8 px-3 text-sm',

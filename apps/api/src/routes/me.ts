@@ -103,7 +103,7 @@ const meResponseSchema = z.object({
 
 const profileBodySchema = z
   .object({
-    name: z.string().min(1).optional(),
+    name: z.string().trim().min(1).max(120).optional(),
     image: z.string().min(1).nullable().optional(),
   })
   .strict();
