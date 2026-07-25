@@ -11,13 +11,12 @@
  * sees the link.
  */
 import type { ReactElement } from 'react';
-import { Link, Outlet, useLocation, useParams, useRouteContext } from '@tanstack/react-router';
+import { Outlet, useLocation, useParams, useRouteContext } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import type { PermissionId } from '@platform/authz';
 import type { ProductConfig } from '@platform/config';
 import defaultConfig from '../../../../product.config.js';
-import { Can } from '../lib/can.js';
 import { useTerm } from '../lib/use-term.js';
+import { NavGroup, NavLink, type ShellNavLink } from './nav.js';
 import { OrgSwitcher } from './org-switcher.js';
 import { resolveNavItems } from './sidebar.js';
 import { Topbar } from './topbar.js';
@@ -26,14 +25,6 @@ import { isAuthenticated } from '../session/session.js';
 import { SESSION_QUERY_KEY } from '../session/use-session.js';
 import type { OrgRouteContext } from '../router/route-context.js';
 import { emptyRegistry, type WebModuleRegistry } from '../router/assemble-routes.js';
-
-/** A resolved primary-nav link with its destination and optional permission gate. */
-interface ShellNavLink {
-  key: string;
-  label: string;
-  to: string;
-  permission?: PermissionId;
-}
 
 /** Build the org-scoped module nav links, honoring `navigation` order/visibility. */
 function moduleNavLinks(registry: WebModuleRegistry, orgSlug: string, config: ProductConfig): ShellNavLink[] {
@@ -48,11 +39,15 @@ function moduleNavLinks(registry: WebModuleRegistry, orgSlug: string, config: Pr
     .filter((link): link is ShellNavLink => link !== null);
 }
 
-/** The fixed platform links every org exposes; admin entries carry a permission gate. */
-function platformNavLinks(orgSlug: string, config: ProductConfig): ShellNavLink[] {
+/** The always-visible top-level links every org exposes above the module nav. */
+function primaryNavLinks(orgSlug: string): ShellNavLink[] {
+  return [{ key: 'home', label: 'Home', to: `/o/${orgSlug}` }];
+}
+
+/** Administrative links nested under the "Administration" tile; org-admin entries carry a permission gate. */
+function adminNavLinks(orgSlug: string, config: ProductConfig): ShellNavLink[] {
   const base = `/o/${orgSlug}`;
   const links: ShellNavLink[] = [
-    { key: 'home', label: 'Home', to: base },
     { key: 'org', label: 'Settings', to: `${base}/settings/organization`, permission: 'org.settings.update' },
     { key: 'members', label: 'Members', to: `${base}/settings/members`, permission: 'org.members.read' },
     {
@@ -69,17 +64,6 @@ function platformNavLinks(orgSlug: string, config: ProductConfig): ShellNavLink[
     links.push({ key: 'new-org', label: 'New organization', to: '/app/create-organization' });
   }
   return links;
-}
-
-function NavLink({ link }: { link: ShellNavLink }): ReactElement {
-  const anchor = (
-    <li>
-      <Link to={link.to} className="shell-nav-link" activeProps={{ className: 'shell-nav-link is-active' }}>
-        {link.label}
-      </Link>
-    </li>
-  );
-  return link.permission ? <Can permission={link.permission}>{anchor}</Can> : anchor;
 }
 
 function ProductBrand({ config }: { config: ProductConfig }): ReactElement {
@@ -108,7 +92,8 @@ export function createOrgShell(
     const queryClient = useQueryClient();
     const slug = orgSlug ?? '';
     const orgTerm = useTerm('organization');
-    const links = [...platformNavLinks(slug, config), ...moduleNavLinks(registry, slug, config)];
+    const topLevelLinks = [...primaryNavLinks(slug), ...moduleNavLinks(registry, slug, config)];
+    const adminLinks = adminNavLinks(slug, config);
 
     if (!isAuthenticated(context.session)) {
       return <Outlet />;
@@ -127,9 +112,10 @@ export function createOrgShell(
           <nav aria-label="Primary" className="shell-sidebar">
             <span className="sr-only">{orgTerm} navigation</span>
             <ul>
-              {links.map((link) => (
+              {topLevelLinks.map((link) => (
                 <NavLink key={link.key} link={link} />
               ))}
+              <NavGroup label="Administration" links={adminLinks} />
             </ul>
           </nav>
         </aside>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import {
   RouterProvider,
@@ -117,5 +117,36 @@ describe('org shell navigation', () => {
     cleanup();
     renderShell(['org.members.read']);
     expect(await screen.findByRole('link', { name: 'Members' })).toBeInTheDocument();
+  });
+
+  it('groups admin screens under an Administration disclosure, keeping Home and Workspaces top-level', async () => {
+    renderShell(['org.members.read']);
+
+    const toggle = await screen.findByRole('button', { name: /administration/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    const panel = document.getElementById('nav-group-administration');
+    expect(panel).not.toBeNull();
+    // Admin screens live inside the group; Home and the module link (Reports) stay top-level.
+    expect(within(panel as HTMLElement).getByRole('link', { name: 'Members' })).toBeInTheDocument();
+    expect(within(panel as HTMLElement).queryByRole('link', { name: 'Home' })).not.toBeInTheDocument();
+    expect(
+      within(panel as HTMLElement).queryByRole('link', { name: 'Reports' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('collapses and re-expands the Administration group on toggle', async () => {
+    renderShell(['org.members.read']);
+
+    const toggle = await screen.findByRole('button', { name: /administration/i });
+    expect(screen.getByRole('link', { name: 'Members' })).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('link', { name: 'Members' })).toBeInTheDocument();
   });
 });
