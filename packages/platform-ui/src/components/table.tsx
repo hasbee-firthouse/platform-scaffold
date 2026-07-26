@@ -4,16 +4,22 @@ import { cn } from './cn.js';
 
 export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <table
-      ref={ref}
-      className={cn(
-        'w-full overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] ' +
-          'border-separate border-spacing-0 bg-[var(--color-background)] text-sm ' +
-          'text-[var(--color-foreground)] shadow-sm',
-        className,
-      )}
-      {...props}
-    />
+    // Horizontal-scroll container: on narrow screens a wide table scrolls
+    // sideways within its own box instead of clipping or squishing, so the
+    // page body never scrolls horizontally. `tabIndex` lets keyboard users
+    // reach the scroll region.
+    <div className="w-full overflow-x-auto" tabIndex={0}>
+      <table
+        ref={ref}
+        className={cn(
+          'w-full overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] ' +
+            'border-separate border-spacing-0 bg-[var(--color-background)] text-sm ' +
+            'text-[var(--color-foreground)] shadow-sm',
+          className,
+        )}
+        {...props}
+      />
+    </div>
   ),
 );
 Table.displayName = 'Table';

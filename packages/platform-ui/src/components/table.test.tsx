@@ -30,6 +30,21 @@ describe('Table', () => {
     expect(screen.getByRole('cell', { name: 'Priya Raghavan' })).toBeInTheDocument();
   });
 
+  it('wraps the table in a horizontal-scroll container for narrow screens', () => {
+    render(
+      <Table data-testid="grid">
+        <TableBody>
+          <TableRow>
+            <TableCell>Wide content</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>,
+    );
+
+    const wrapper = screen.getByTestId('grid').parentElement;
+    expect(wrapper?.className).toContain('overflow-x-auto');
+  });
+
   it('draws hairline borders from theme tokens', () => {
     render(
       <Table data-testid="grid">
