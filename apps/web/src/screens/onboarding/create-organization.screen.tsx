@@ -26,11 +26,19 @@ type CreateOrganizationValues = z.infer<typeof createOrganizationSchema>;
 export interface CreateOrganizationScreenProps {
   client?: OrgClient;
   onCreated?: (org: OrgView) => void;
+  /**
+   * Optional return link, rendered above the form. Provided when the caller
+   * already belongs to an organization (creating an additional one) so the
+   * chrome-light onboarding screen does not strand them without navigation;
+   * omitted for first-run onboarding, where there is nowhere to go back to.
+   */
+  backTo?: { label: string; href: string };
 }
 
 export function CreateOrganizationScreen({
   client = orgClient,
   onCreated,
+  backTo,
 }: CreateOrganizationScreenProps): ReactElement {
   const organization = useTerm('organization');
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
@@ -51,6 +59,14 @@ export function CreateOrganizationScreen({
   return (
     <section className="onboarding-layout">
       <Card className="w-full max-w-[480px] p-7">
+        {backTo ? (
+          <a
+            href={backTo.href}
+            className="mb-4 inline-flex items-center gap-1 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+          >
+            <span aria-hidden="true">←</span> {backTo.label}
+          </a>
+        ) : null}
         <h1 className="text-xl font-semibold">Create an {organization.toLowerCase()}</h1>
         <p className="mb-5 mt-1.5 text-sm text-[var(--color-muted-foreground)]">
           Set up your team space. You will become its owner.

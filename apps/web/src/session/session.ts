@@ -43,3 +43,16 @@ export function activeOrgSlug(me: MeResponse): string | null {
 export function findOrgBySlug(me: MeResponse, slug: string): OrgMembershipSummary | null {
   return me.organizations.find((org) => org.slug === slug) ?? null;
 }
+
+/**
+ * The team organization a "create another organization" flow should return to:
+ * the active org when it is a team, otherwise the first team membership. `null`
+ * for a first-run user with no team org, so onboarding shows no back link.
+ */
+export function returnTeamOrg(me: MeResponse): OrgMembershipSummary | null {
+  const active = me.organizations.find((org) => org.id === me.activeOrganizationId);
+  if (active?.type === 'team') {
+    return active;
+  }
+  return me.organizations.find((org) => org.type === 'team') ?? null;
+}

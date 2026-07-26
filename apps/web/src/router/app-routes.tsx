@@ -11,11 +11,17 @@ import {
   createRoute,
   notFound,
   redirect,
+  useRouteContext,
   type AnyRoute,
 } from '@tanstack/react-router';
 import type { ProductConfig } from '@platform/config';
 import { EmptyState } from '@platform/ui';
-import { activeOrgSlug, findOrgBySlug, isAuthenticated } from '../session/session.js';
+import {
+  activeOrgSlug,
+  findOrgBySlug,
+  isAuthenticated,
+  returnTeamOrg,
+} from '../session/session.js';
 import type { ActiveOrg, AppRouterContext } from './route-context.js';
 import { createOrgShell } from '../shell/app-shell.js';
 import { createPersonalShell } from '../shell/personal-shell.js';
@@ -83,10 +89,19 @@ function personalOrg(context: AppRouterContext): ActiveOrg | null {
 
 function createAppHome(config: ProductConfig): () => ReactElement {
   return function AppHome(): ReactElement {
+    const context = useRouteContext({ strict: false }) as unknown as AppRouterContext;
     if (config.capabilities.organizations) {
+      const returnOrg = isAuthenticated(context.session)
+        ? returnTeamOrg(context.session.me)
+        : null;
       return (
         <CreateOrganizationScreen
           onCreated={(org) => window.location.assign(`/o/${org.slug}`)}
+          backTo={
+            returnOrg
+              ? { label: `Back to ${returnOrg.name}`, href: `/o/${returnOrg.slug}` }
+              : undefined
+          }
         />
       );
     }

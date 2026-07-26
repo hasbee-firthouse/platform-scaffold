@@ -43,6 +43,24 @@ describe('CreateOrganizationScreen', () => {
     expect(onCreated).toHaveBeenCalledWith(CREATED_ORG);
   });
 
+  it('omits the back link during first-run onboarding', () => {
+    render(<CreateOrganizationScreen client={onboardingClient(vi.fn())} />);
+
+    expect(screen.queryByRole('link', { name: /back to/i })).not.toBeInTheDocument();
+  });
+
+  it('renders a return link when the caller already belongs to an organization', () => {
+    render(
+      <CreateOrganizationScreen
+        client={onboardingClient(vi.fn())}
+        backTo={{ label: 'Back to Acme', href: '/o/acme' }}
+      />,
+    );
+
+    const link = screen.getByRole('link', { name: /back to acme/i });
+    expect(link).toHaveAttribute('href', '/o/acme');
+  });
+
   it('validates an empty name before calling the API', async () => {
     const user = userEvent.setup();
     const createOrganization = vi.fn();
