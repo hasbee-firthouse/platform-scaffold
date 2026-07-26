@@ -78,6 +78,17 @@ describe('MembersScreen (E5-S3 · AC2)', () => {
     );
   });
 
+  it('styles the row remove control as a discoverable destructive action', async () => {
+    const client = stubClient();
+    renderScreen(client);
+
+    await screen.findByText('Grace');
+    // Concise visible label, with the member name kept as the accessible name.
+    const rowRemove = screen.getByRole('button', { name: /remove grace/i });
+    expect(rowRemove).toHaveTextContent(/^Remove$/);
+    expect(rowRemove.className).toContain('bg-[var(--color-destructive)]');
+  });
+
   it('removes a member after confirmation (AC2)', async () => {
     const client = stubClient();
     renderScreen(client);

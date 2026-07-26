@@ -12,6 +12,7 @@ import { useState, type FormEvent, type ReactElement } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
+  ConfirmDialog,
   Table,
   TableBody,
   TableCell,
@@ -53,6 +54,7 @@ export function InvitationsScreen({
 
 function InvitationsView({ orgId, client }: { orgId: string; client: OrgClient }): ReactElement {
   const queryClient = useQueryClient();
+  const [pendingRevoke, setPendingRevoke] = useState<InvitationView | null>(null);
 
   const invitesQuery = useQuery({
     queryKey: ['invitations', orgId],
@@ -113,7 +115,7 @@ function InvitationsView({ orgId, client }: { orgId: string; client: OrgClient }
               key={invite.id}
               invite={invite}
               onResend={() => resend.mutate(invite.id)}
-              onRevoke={() => revoke.mutate(invite.id)}
+              onRevoke={() => setPendingRevoke(invite)}
             />
           ))}
         </TableBody>
@@ -123,6 +125,29 @@ function InvitationsView({ orgId, client }: { orgId: string; client: OrgClient }
       {!invitesQuery.isLoading && invitations.length === 0 ? (
         <p role="status">No pending invitations.</p>
       ) : null}
+
+      <ConfirmDialog
+        open={pendingRevoke !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingRevoke(null);
+          }
+        }}
+        title="Revoke invitation?"
+        description={
+          pendingRevoke
+            ? `The invitation to ${pendingRevoke.email} will stop working. You can send a new one later.`
+            : undefined
+        }
+        confirmLabel="Revoke"
+        destructive
+        onConfirm={() => {
+          if (pendingRevoke) {
+            revoke.mutate(pendingRevoke.id);
+            setPendingRevoke(null);
+          }
+        }}
+      />
     </section>
   );
 }
@@ -143,8 +168,13 @@ function InvitationRow({ invite, onResend, onRevoke }: InvitationRowProps): Reac
         <Button variant="ghost" size="sm" onClick={onResend}>
           {`Resend invite to ${invite.email}`}
         </Button>
-        <Button variant="ghost" size="sm" onClick={onRevoke}>
-          {`Revoke invite to ${invite.email}`}
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={onRevoke}
+          aria-label={`Revoke invite to ${invite.email}`}
+        >
+          Revoke
         </Button>
       </TableCell>
     </TableRow>

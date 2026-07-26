@@ -177,8 +177,13 @@ function MemberRow({ member, onRoleChange, onRemove }: MemberRowProps): ReactEle
         />
       </TableCell>
       <TableCell>
-        <Button variant="ghost" size="sm" onClick={onRemove}>
-          Remove {member.name}
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={onRemove}
+          aria-label={`Remove ${member.name}`}
+        >
+          Remove
         </Button>
       </TableCell>
     </TableRow>

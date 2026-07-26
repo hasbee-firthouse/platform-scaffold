@@ -88,6 +88,10 @@ describe('InvitationsScreen (E5-S3 · AC3)', () => {
     await screen.findByText('second@b.co');
     await userEvent.click(screen.getByRole('button', { name: 'Revoke invite to second@b.co' }));
 
+    // Confirmation gate — no revoke until confirmed.
+    expect(client.revokeInvitation).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: /^revoke$/i }));
+
     await waitFor(() => expect(client.revokeInvitation).toHaveBeenCalledWith('o1', 'i2'));
   });
 

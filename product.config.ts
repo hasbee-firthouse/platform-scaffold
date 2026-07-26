@@ -11,7 +11,10 @@ export default defineProduct({
     productName: 'Scaffold Reference',
     logo: { light: '/brand/logo.svg', dark: '/brand/logo-dark.svg' },
     favicon: '/brand/favicon.svg',
-    colors: { primary: '#4f46e5' },
+    // `destructive` themes danger surfaces (e.g. the member-remove button and
+    // its confirmation). Optional like the other non-primary tokens; the dark
+    // variant is derived automatically. Falls back to the built-in red if unset.
+    colors: { primary: '#4f46e5', destructive: '#dc2626' },
     typography: { fontFamily: 'Inter, sans-serif' },
     radius: '0.5rem',
   },
