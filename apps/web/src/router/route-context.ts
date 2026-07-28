@@ -22,8 +22,9 @@ export interface ActiveOrg {
   /** The caller's role in this org (drives `<Can>` and personal-org hiding). */
   role: string;
   /**
-   * The org's lifecycle type. `/api/me` does not distinguish personal orgs, so
-   * this is `team` today; org-admin surfaces are additionally `<Can>`-gated.
+   * The org's lifecycle type, resolved from `/api/me` (which reports each
+   * membership's real `personal`/`team` type). Drives personal-org hiding of the
+   * org-admin surfaces; org-admin entries are additionally `<Can>`-gated.
    */
   orgType: OrgType;
 }

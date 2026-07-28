@@ -11,11 +11,12 @@ import {
 } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { PermissionId } from '@platform/authz';
+import { defineProduct, type ProductConfig } from '@platform/config';
 import { PermissionsProvider } from '../lib/can.js';
 import { createAppRouter } from '../router/router.js';
 import type { WebModuleManifest } from '../router/assemble-routes.js';
 import type { SessionState } from '../session/session.js';
-import type { MeResponse } from '../lib/org-client.js';
+import type { MeResponse, OrgType } from '../lib/org-client.js';
 
 afterEach(cleanup);
 
@@ -30,6 +31,14 @@ function me(): MeResponse {
 }
 
 const AUTHED: SessionState = { status: 'authenticated', me: me() };
+
+/** Every org-admin permission an owner holds — enough to surface all admin links. */
+const ALL_ADMIN_PERMISSIONS: PermissionId[] = [
+  'org.members.read',
+  'org.members.invite',
+  'org.settings.read',
+  'org.settings.update',
+];
 
 /**
  * A SYNTHETIC org-scoped module that contributes ONE sidebar nav entry. It proves
@@ -54,12 +63,31 @@ function navModuleManifest(): WebModuleManifest {
   };
 }
 
+/** An explicit b2b config (`organizations: true`) so tests asserting team-org
+ * chrome don't ride on whatever profile `product.config.ts` currently holds. */
+function b2bConfig(): ProductConfig {
+  return defineProduct({
+    name: 'Scaffold Reference',
+    profile: 'b2b-standard',
+    branding: {
+      productName: 'Scaffold Reference',
+      logo: { light: '/brand/logo.svg', dark: '/brand/logo-dark.svg' },
+      favicon: '/brand/favicon.svg',
+      colors: { primary: '#4f46e5' },
+      typography: { fontFamily: 'Inter, sans-serif' },
+      radius: '0.5rem',
+    },
+    email: { fromName: 'Scaffold Reference', fromAddress: 'no-reply@scaffold.example' },
+  });
+}
+
 function renderShell(
   permissions: PermissionId[],
   registry: WebModuleManifest[] = [navModuleManifest()],
 ): void {
   const router = createAppRouter({
     registry,
+    config: b2bConfig(),
     session: AUTHED,
     history: createMemoryHistory({ initialEntries: ['/o/acme'] }),
   });
@@ -148,5 +176,57 @@ describe('org shell navigation', () => {
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('link', { name: 'Members' })).toBeInTheDocument();
+  });
+});
+
+/**
+ * A personal org has no members / roles / invitations / settings surface — the
+ * screens render `null` (SPEC §12). The org-admin nav links must therefore be
+ * gated on org *type*, not only permission: a personal-org owner holds every
+ * permission, so a permission-only gate would still surface links that lead to
+ * blank pages. This can arise when a b2b profile (personalAccounts off, so no
+ * redirect away from `/o/:slug`) has a user with a leftover personal org.
+ */
+describe('org shell navigation for a personal org', () => {
+  function personalOrgSession(): SessionState {
+    return {
+      status: 'authenticated',
+      me: {
+        user: { id: 'u1', email: 'ada@acme.co', name: 'Ada' },
+        organizations: [{ id: 'p1', name: 'Ada', slug: 'ada', type: 'personal' as OrgType, role: 'owner' }],
+        activeOrganizationId: 'p1',
+        activeRole: 'owner',
+        permissions: ALL_ADMIN_PERMISSIONS,
+      },
+    };
+  }
+
+  function renderPersonalOrgShell(): void {
+    // A b2b profile keeps `personalAccounts` off, so the org shell renders for a
+    // personal org instead of redirecting it to `/app`.
+    const router = createAppRouter({
+      registry: [],
+      config: b2bConfig(),
+      session: personalOrgSession(),
+      history: createMemoryHistory({ initialEntries: ['/o/ada'] }),
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <PermissionsProvider permissions={new Set(ALL_ADMIN_PERMISSIONS)}>
+          <RouterProvider router={router} />
+        </PermissionsProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('hides org-admin links for a personal org even when the owner holds every permission', async () => {
+    renderPersonalOrgShell();
+
+    // The user-scoped Security link still renders, proving the shell mounted.
+    expect(await screen.findByRole('link', { name: 'Security' })).toBeInTheDocument();
+    for (const label of ['Settings', 'Members', 'Invitations', 'Roles', 'Audit log']) {
+      expect(screen.queryByRole('link', { name: label })).not.toBeInTheDocument();
+    }
   });
 });

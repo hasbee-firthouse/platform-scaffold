@@ -24,6 +24,7 @@ import { useTheme } from '../providers/theme-provider.js';
 import { isAuthenticated } from '../session/session.js';
 import { SESSION_QUERY_KEY } from '../session/use-session.js';
 import type { OrgRouteContext } from '../router/route-context.js';
+import type { OrgType } from '../lib/org-client.js';
 import { emptyRegistry, type WebModuleRegistry } from '../router/assemble-routes.js';
 
 /** Build the org-scoped module nav links, honoring `navigation` order/visibility. */
@@ -44,22 +45,33 @@ function primaryNavLinks(orgSlug: string): ShellNavLink[] {
   return [{ key: 'home', label: 'Home', to: `/o/${orgSlug}` }];
 }
 
-/** Administrative links nested under the "Administration" tile; org-admin entries carry a permission gate. */
-function adminNavLinks(orgSlug: string, config: ProductConfig): ShellNavLink[] {
+/**
+ * Administrative links nested under the "Administration" tile. The org-admin
+ * surfaces (settings, members, invitations, roles, audit) exist only for a team
+ * org — a personal org has no such surface, so its screens render `null` (SPEC
+ * §12). Those links are therefore omitted for a personal org rather than pointing
+ * at blank pages: gating on permission alone is insufficient because a personal
+ * org's owner holds every permission. `Security` is user-scoped and always shown;
+ * the org-admin entries additionally carry a permission gate.
+ */
+function adminNavLinks(orgSlug: string, config: ProductConfig, orgType: OrgType): ShellNavLink[] {
   const base = `/o/${orgSlug}`;
-  const links: ShellNavLink[] = [
-    { key: 'org', label: 'Settings', to: `${base}/settings/organization`, permission: 'org.settings.update' },
-    { key: 'members', label: 'Members', to: `${base}/settings/members`, permission: 'org.members.read' },
-    {
-      key: 'invitations',
-      label: 'Invitations',
-      to: `${base}/settings/invitations`,
-      permission: 'org.members.invite',
-    },
-    { key: 'roles', label: 'Roles', to: `${base}/settings/roles`, permission: 'org.settings.read' },
-    { key: 'audit', label: 'Audit log', to: `${base}/settings/audit-log`, permission: 'org.settings.update' },
-    { key: 'security', label: 'Security', to: `${base}/settings/security` },
-  ];
+  const links: ShellNavLink[] = [];
+  if (orgType !== 'personal') {
+    links.push(
+      { key: 'org', label: 'Settings', to: `${base}/settings/organization`, permission: 'org.settings.update' },
+      { key: 'members', label: 'Members', to: `${base}/settings/members`, permission: 'org.members.read' },
+      {
+        key: 'invitations',
+        label: 'Invitations',
+        to: `${base}/settings/invitations`,
+        permission: 'org.members.invite',
+      },
+      { key: 'roles', label: 'Roles', to: `${base}/settings/roles`, permission: 'org.settings.read' },
+      { key: 'audit', label: 'Audit log', to: `${base}/settings/audit-log`, permission: 'org.settings.update' },
+    );
+  }
+  links.push({ key: 'security', label: 'Security', to: `${base}/settings/security` });
   if (config.capabilities.organizations) {
     links.push({ key: 'new-org', label: 'New organization', to: '/app/create-organization' });
   }
@@ -93,7 +105,7 @@ export function createOrgShell(
     const slug = orgSlug ?? '';
     const orgTerm = useTerm('organization');
     const topLevelLinks = [...primaryNavLinks(slug), ...moduleNavLinks(registry, slug, config)];
-    const adminLinks = adminNavLinks(slug, config);
+    const adminLinks = adminNavLinks(slug, config, context.orgType);
 
     if (!isAuthenticated(context.session)) {
       return <Outlet />;

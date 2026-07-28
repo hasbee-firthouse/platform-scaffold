@@ -22,6 +22,8 @@ import { pathToFileURL } from 'node:url';
 import { sql } from 'drizzle-orm';
 import { createDbConnection, schema, uuidv7, type DbConnection } from '@platform/db';
 import { createAuth, type BetterAuthInstance } from '@platform/identity';
+import type { Capabilities } from '@platform/config';
+import productConfig from '../product.config.js';
 
 /** Thrown when the seed is invoked with `NODE_ENV=production`. */
 export class SeedInProductionError extends Error {
@@ -65,23 +67,65 @@ const SEED_ORG = { name: 'Acme Team', slug: 'acme-team' } as const;
 const SEED_WORKSPACE_NAME = 'Launch Plan';
 const SEED_TASK_TITLES = ['Draft the roadmap', 'Review designs', 'Ship the demo'] as const;
 
+/** One organization the seed should create, with the memberships it holds. */
+export interface PlannedOrg {
+  name: string;
+  slug: string;
+  type: 'personal' | 'team';
+  memberships: { userEmail: string; role: SeedUser['role'] }[];
+}
+
+/** Derive a stable personal-org slug from a dev user's email local part. */
+export function personalOrgSlug(email: string): string {
+  const local = email.split('@')[0] ?? email;
+  return `${local.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-personal`;
+}
+
+/**
+ * Decide what organizations the seed creates for the configured product, so dev
+ * data matches the active profile (E8-S5). A profile with self-service orgs
+ * (`organizations` on — the b2b family) gets one shared team org with every dev
+ * user as a member at their listed role. A personal-account profile (b2c-simple:
+ * `organizations` off) instead gets a personal org-of-one per user, each its own
+ * owner — exactly what a real sign-up produces under that profile, so the seeded
+ * app no longer surfaces team-org admin screens the profile is meant to hide.
+ */
+export function planSeedOrgs(
+  capabilities: Pick<Capabilities, 'organizations'>,
+  users: readonly SeedUser[],
+): PlannedOrg[] {
+  if (capabilities.organizations) {
+    return [
+      {
+        name: SEED_ORG.name,
+        slug: SEED_ORG.slug,
+        type: 'team',
+        memberships: users.map((user) => ({ userEmail: user.email, role: user.role })),
+      },
+    ];
+  }
+  return users.map((user) => ({
+    name: `${user.name}'s Workspace`,
+    slug: personalOrgSlug(user.email),
+    type: 'personal',
+    memberships: [{ userEmail: user.email, role: 'owner' }],
+  }));
+}
+
 /**
  * Build a better-auth instance for seeding. Google credentials are read from the
  * environment but never exercised — the seed only uses email/password sign-up —
- * so placeholders keep the seed runnable on a machine without OAuth secrets. No
- * personal-org hook is wired: the seed creates an explicit team org itself.
+ * so placeholders keep the seed runnable on a machine without OAuth secrets.
+ * Capabilities come from the product config; no personal-org hook is wired, so
+ * the seed creates orgs explicitly per {@link planSeedOrgs} rather than via
+ * better-auth's signup hook.
  */
 function buildSeedAuth(db: DbConnection['db']): BetterAuthInstance {
   return createAuth({
     secret: process.env.BETTER_AUTH_SECRET ?? 'dev-seed-secret',
     baseURL: process.env.APP_URL ?? 'http://localhost:3000',
     nodeEnv: 'development',
-    capabilities: {
-      personalAccounts: false,
-      organizations: true,
-      magicLink: false,
-      enterpriseEntitlements: false,
-    },
+    capabilities: productConfig.capabilities,
     db,
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? 'seed-google-client-id',
@@ -127,12 +171,15 @@ async function upsertUser(
   return id;
 }
 
-/** Create the team org (idempotent by slug) and return its id. */
-async function upsertOrg(db: DbConnection['db']): Promise<string> {
+/** Create an organization (idempotent by slug) and return its id. */
+async function upsertOrg(
+  db: DbConnection['db'],
+  org: Pick<PlannedOrg, 'name' | 'slug' | 'type'>,
+): Promise<string> {
   const existing = await db
     .select({ id: schema.organization.id })
     .from(schema.organization)
-    .where(sql`${schema.organization.slug} = ${SEED_ORG.slug}`)
+    .where(sql`${schema.organization.slug} = ${org.slug}`)
     .limit(1);
   if (existing[0]) {
     return existing[0].id;
@@ -140,7 +187,7 @@ async function upsertOrg(db: DbConnection['db']): Promise<string> {
   const id = uuidv7();
   await db
     .insert(schema.organization)
-    .values({ id, name: SEED_ORG.name, slug: SEED_ORG.slug, type: 'team' });
+    .values({ id, name: org.name, slug: org.slug, type: org.type });
   return id;
 }
 
@@ -210,20 +257,41 @@ export async function seed(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   const auth = buildSeedAuth(connection.db);
   try {
     console.log('Seeding dev data…');
-    const userIds: string[] = [];
+    const userIdByEmail = new Map<string, string>();
     for (const user of SEED_USERS) {
       const id = await upsertUser(auth, connection.db, user);
-      userIds.push(id);
+      userIdByEmail.set(user.email, id);
       console.log(`  user ${user.email} (${user.role})`);
     }
 
-    const orgId = await upsertOrg(connection.db);
-    console.log(`  org ${SEED_ORG.name} (${SEED_ORG.slug})`);
-    for (const [index, user] of SEED_USERS.entries()) {
-      await upsertMembership(connection.db, orgId, userIds[index]!, user.role);
+    const userId = (email: string): string => {
+      const id = userIdByEmail.get(email);
+      if (!id) {
+        throw new Error(`Seed failed: no user id for ${email}`);
+      }
+      return id;
+    };
+
+    // Match the seeded orgs to the configured profile (team vs. personal).
+    const plan = planSeedOrgs(productConfig.capabilities, SEED_USERS);
+    let workspaceOrgId: string | undefined;
+    let workspaceCreatedBy: string | undefined;
+    for (const org of plan) {
+      const orgId = await upsertOrg(connection.db, org);
+      console.log(`  org ${org.name} (${org.slug}) [${org.type}]`);
+      for (const membership of org.memberships) {
+        await upsertMembership(connection.db, orgId, userId(membership.userEmail), membership.role);
+      }
+      // Sample reference-workspace data lands in the first planned org.
+      if (workspaceOrgId === undefined && org.memberships[0]) {
+        workspaceOrgId = orgId;
+        workspaceCreatedBy = userId(org.memberships[0].userEmail);
+      }
     }
 
-    await seedReferenceWorkspace(connection.db, orgId, userIds[0]!);
+    if (workspaceOrgId && workspaceCreatedBy) {
+      await seedReferenceWorkspace(connection.db, workspaceOrgId, workspaceCreatedBy);
+    }
     console.log('Seed complete.');
   } finally {
     await connection.pool.end();

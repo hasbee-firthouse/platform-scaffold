@@ -6,7 +6,7 @@ import { defineProduct } from '@platform/config';
  */
 export default defineProduct({
   name: 'Scaffold Reference',
-  profile: 'b2b-enterprise',
+  profile: 'b2c-simple',
   branding: {
     productName: 'Scaffold Reference',
     logo: { light: '/brand/logo.svg', dark: '/brand/logo-dark.svg' },
