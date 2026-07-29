@@ -4,8 +4,9 @@ import { createAuthMiddleware } from 'better-auth/api';
 import { organization } from 'better-auth/plugins/organization';
 import { magicLink } from 'better-auth/plugins/magic-link';
 import type { BetterAuthOptions, BetterAuthPlugin } from 'better-auth';
+import { eq } from 'drizzle-orm';
 import { schema } from '@platform/db';
-import type { AuthEvent, IdentityConfig } from '../port.js';
+import type { AuthEvent, ExistingAccountEmailSender, IdentityConfig } from '../port.js';
 
 const THIRTY_DAYS_IN_SECONDS = 60 * 60 * 24 * 30;
 const ONE_DAY_IN_SECONDS = 60 * 60 * 24;
@@ -40,6 +41,8 @@ function buildPlugins(input: IdentityConfig): BetterAuthPlugin[] {
 const SIGN_IN_EMAIL_PATH = '/sign-in/email';
 /** better-auth endpoint path for sign-out. */
 const SIGN_OUT_PATH = '/sign-out';
+/** better-auth endpoint path for email/password sign-up. */
+const SIGN_UP_EMAIL_PATH = '/sign-up/email';
 
 /**
  * A normalized view of a completed auth endpoint, decoupled from better-auth's
@@ -111,12 +114,79 @@ function buildAfterHook(onAuthEvent: (event: AuthEvent) => void | Promise<void>)
   });
 }
 
-/** Build the better-auth `hooks` option, present only when an event sink is configured. */
+/** Normalize a sign-up email for lookup: trim + lowercase (better-auth stores emails lowercased). */
+function normalizeEmail(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim().toLowerCase() : null;
+}
+
+/** Look up whether an account already exists for `email`, and whether it is verified (E4-S3, enumeration-safe). */
+export async function findExistingAccount(
+  db: IdentityConfig['db'],
+  email: string,
+): Promise<{ emailVerified: boolean } | null> {
+  const rows = await db
+    .select({ emailVerified: schema.user.emailVerified })
+    .from(schema.user)
+    .where(eq(schema.user.email, email))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * The enumeration-safe duplicate-signup decision, extracted pure for testing:
+ * when an account already exists, send the "you already have an account" email
+ * (carrying whether it is verified) and report that it fired.
+ */
+export async function notifyIfExistingAccount(
+  existing: { emailVerified: boolean } | null,
+  email: string,
+  send: ExistingAccountEmailSender,
+): Promise<boolean> {
+  if (!existing) {
+    return false;
+  }
+  await send({ email, verified: existing.emailVerified });
+  return true;
+}
+
+type AuthBeforeHook = NonNullable<NonNullable<BetterAuthOptions['hooks']>['before']>;
+
+/**
+ * Before `/sign-up/email`: if the email already has an account, send the
+ * enumeration-safe "you already have an account" email as a SIDE EFFECT. The
+ * request is deliberately NOT short-circuited — better-auth still returns its own
+ * neutral response (it never creates a second user for an existing email), so the
+ * endpoint reveals nothing, while the real owner gets an actionable email instead
+ * of being stranded on "check your inbox". Reading the email defensively: an
+ * unreadable body just skips the notice and falls through to the normal flow.
+ */
+function buildBeforeHook(send: ExistingAccountEmailSender, db: IdentityConfig['db']): AuthBeforeHook {
+  return createAuthMiddleware(async (ctx) => {
+    if (ctx.path !== SIGN_UP_EMAIL_PATH) {
+      return;
+    }
+    const email = normalizeEmail((ctx.body as { email?: unknown } | undefined)?.email);
+    if (!email) {
+      return;
+    }
+    await notifyIfExistingAccount(await findExistingAccount(db, email), email, send);
+  });
+}
+
+/**
+ * Build the better-auth `hooks` option. Present when either an auth-event sink
+ * (`after`) or a duplicate-signup notifier (`before`) is configured; `undefined`
+ * when neither is, so hook-free tests keep passing.
+ */
 function buildAuthHooks(input: IdentityConfig): BetterAuthOptions['hooks'] {
-  if (!input.onAuthEvent) {
+  const after = input.onAuthEvent ? buildAfterHook(input.onAuthEvent) : undefined;
+  const before = input.sendExistingAccountEmail
+    ? buildBeforeHook(input.sendExistingAccountEmail, input.db)
+    : undefined;
+  if (!after && !before) {
     return undefined;
   }
-  return { after: buildAfterHook(input.onAuthEvent) };
+  return { ...(before ? { before } : {}), ...(after ? { after } : {}) };
 }
 
 /**

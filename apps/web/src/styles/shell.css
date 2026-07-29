@@ -211,6 +211,27 @@
     padding: 0.25rem 0.625rem 0.25rem 0.25rem;
   }
 
+  /* Dropdown caret: a crisp CSS chevron (points down; rotates up when open),
+     replacing the inconsistent U+2304 glyph. Radix sets data-state on the trigger. */
+  .user-menu-caret {
+    width: 0.375rem;
+    height: 0.375rem;
+    margin-left: 0.125rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    opacity: 0.55;
+    transform: translateY(-1px) rotate(45deg);
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+
+  .user-menu-trigger:hover .user-menu-caret {
+    opacity: 0.85;
+  }
+
+  .user-menu-trigger[data-state="open"] .user-menu-caret {
+    transform: translateY(1px) rotate(225deg);
+  }
+
   .user-avatar {
     display: grid;
     width: 1.875rem;

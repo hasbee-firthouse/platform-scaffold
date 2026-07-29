@@ -56,7 +56,7 @@ export function UserMenu({
             {userInitials(user.name)}
           </span>
           <span className="user-menu-name">{userFirstName(user.name)}</span>
-          <span aria-hidden="true">⌄</span>
+          <span className="user-menu-caret" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
