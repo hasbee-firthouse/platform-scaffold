@@ -1,33 +1,4 @@
 @layer components {
-  .personal-shell {
-    min-height: 100dvh;
-    background: var(--color-app-background);
-  }
-
-  .personal-topbar {
-    display: flex;
-    min-height: 3.75rem;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-card);
-    padding: 0.625rem clamp(1rem, 3vw, 1.75rem);
-  }
-
-  .personal-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    color: var(--color-foreground);
-    font-size: 0.9375rem;
-    font-weight: 650;
-  }
-
-  .personal-brand img {
-    width: 1.875rem;
-    height: 1.875rem;
-  }
-
   .shell-layout {
     display: grid;
     min-height: 100dvh;
@@ -139,16 +110,21 @@
   }
 
   .shell-nav-group-chevron {
-    width: 0;
-    height: 0;
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    border-left: 5px solid currentColor;
-    transition: transform 150ms ease;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    opacity: 0.75;
+    transform: translateY(-1px) rotate(-45deg);
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+
+  .shell-nav-group-toggle:hover .shell-nav-group-chevron {
+    opacity: 1;
   }
 
   .shell-nav-group-toggle[aria-expanded="true"] .shell-nav-group-chevron {
-    transform: rotate(90deg);
+    transform: translateY(-2px) rotate(45deg);
   }
 
   .shell-nav-group-items {

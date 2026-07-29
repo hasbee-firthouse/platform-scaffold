@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
 import { makeErrorEnvelope, type ErrorEnvelope } from '@platform/contracts';
 
@@ -64,6 +64,7 @@ export interface AuthRateLimitRouteConfig {
   rateLimit: {
     max: number;
     timeWindow: number;
+    keyGenerator: (req: FastifyRequest) => string;
     errorResponseBuilder: () => RateLimitedError;
   };
 }
@@ -74,12 +75,19 @@ export interface AuthRateLimitRouteConfig {
  * `buildApp`) as a per-route override; past the limit the plugin throws the
  * {@link RateLimitedError} this builds, which the auth plugin's scoped handler
  * turns into a 429 `RATE_LIMITED` envelope.
+ *
+ * The `keyGenerator` puts this strict budget in its OWN per-IP bucket
+ * (`auth-strict:<ip>`), separate from the generous global limiter. Only the
+ * credential-sensitive endpoints carry this config (see `auth.ts`); routine
+ * traffic like sign-out and session reads stays on the global budget, so it can
+ * neither exhaust this abuse budget nor be blocked by it.
  */
 export function authRateLimitRouteConfig(options: RateLimitOptions = {}): AuthRateLimitRouteConfig {
   return {
     rateLimit: {
       max: options.max ?? AUTH_RATE_LIMIT_MAX,
       timeWindow: options.timeWindowMs ?? AUTH_RATE_LIMIT_WINDOW_MS,
+      keyGenerator: (req) => `auth-strict:${req.ip}`,
       errorResponseBuilder: () => new RateLimitedError(),
     },
   };
