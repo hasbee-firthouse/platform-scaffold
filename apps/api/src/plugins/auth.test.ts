@@ -125,4 +125,25 @@ describe('registerAuthPlugin (/api/auth mount)', () => {
     });
     await app.close();
   });
+
+  it('keeps sign-out on the generous budget so the strict credential limit cannot block it', async () => {
+    // Regression: sign-out shares `/api/auth/*` but must NOT draw from the
+    // sign-in abuse budget. Exhausting sign-in (429) must leave sign-out working.
+    const handler = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    const identity: IdentityPort = { handler, getSession: async () => null };
+    const app = buildAppWith(identity);
+    await registerRateLimit(app);
+    await registerAuthPlugin(app);
+
+    for (let attempt = 0; attempt <= AUTH_RATE_LIMIT_MAX; attempt += 1) {
+      await app.inject({ method: 'POST', url: '/api/auth/sign-in/email' });
+    }
+    const blockedSignIn = await app.inject({ method: 'POST', url: '/api/auth/sign-in/email' });
+    expect(blockedSignIn.statusCode).toBe(429);
+
+    // Sign-out is on the separate global bucket → still succeeds.
+    const signOut = await app.inject({ method: 'POST', url: '/api/auth/sign-out' });
+    expect(signOut.statusCode).toBe(200);
+    await app.close();
+  });
 });

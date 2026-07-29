@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import pino from 'pino';
 import { createTransport } from 'nodemailer';
-import { loadProductConfig } from '@platform/config';
+import { loadProductConfig, type ProductConfig } from '@platform/config';
 import { createDbConnection } from '@platform/db';
 import { authEventToEntry, createAuditWriter } from '@platform/audit';
 import { createAuth, toIdentityPort } from '@platform/identity';
@@ -41,6 +41,32 @@ function buildEmailAdapter(env: Env): EmailAdapter {
   return env.NODE_ENV === 'production'
     ? createSmtpAdapter(env.SMTP_URL)
     : createDevAdapter(createTransport(env.SMTP_URL));
+}
+
+/**
+ * Content for the enumeration-safe "you already have an account" email sent when
+ * someone signs up with an address that already has an account. Rendered through
+ * the `generic` template (no bespoke template needed); the copy differs for a
+ * verified account (just sign in / reset) vs. an unverified one (finish signing up).
+ */
+function existingAccountEmail(config: ProductConfig, appUrl: string, verified: boolean) {
+  const product = config.branding.productName;
+  const signInUrl = `${appUrl}/sign-in`;
+  return verified
+    ? {
+        subject: `You already have a ${product} account`,
+        heading: 'You already have an account',
+        body: `Someone just tried to create a ${product} account with this email address, but you already have one. If that was you, simply sign in — there's no need to sign up again. Forgot your password? Use the "Forgot password" link on the sign-in page.`,
+        actionUrl: signInUrl,
+        actionLabel: 'Sign in',
+      }
+    : {
+        subject: `Finish setting up your ${product} account`,
+        heading: 'Finish signing up',
+        body: `You already started creating a ${product} account with this email but haven't verified it yet. Sign in to request a fresh verification link and finish setting up your account.`,
+        actionUrl: signInUrl,
+        actionLabel: 'Sign in',
+      };
 }
 
 /** Process entry point (E2-S1): validate env, load the product config, boot, listen, install shutdown. */
@@ -93,6 +119,11 @@ async function main(): Promise<void> {
         email.send({ to, template: 'reset', data: { resetUrl: url } }),
       sendMagicLink: ({ email: to, url }) =>
         email.send({ to, template: 'magic-link', data: { magicLinkUrl: url } }),
+      // Enumeration-safe duplicate-signup notice: the endpoint returns the same
+      // neutral response either way, so the real owner still gets an actionable
+      // email instead of being stranded on "check your inbox" (E4-S3).
+      sendExistingAccountEmail: ({ email: to, verified }) =>
+        email.send({ to, template: 'generic', data: existingAccountEmail(config, env.APP_URL, verified) }),
     }),
   );
 

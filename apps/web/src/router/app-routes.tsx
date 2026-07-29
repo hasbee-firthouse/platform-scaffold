@@ -184,7 +184,7 @@ export function createAppRoutes(
   const appAuthLayoutRoute = createRoute({
     getParentRoute: () => rootRoute,
     id: 'app-auth',
-    component: createPersonalShell(config),
+    component: createPersonalShell(registry, config),
     beforeLoad: ({ context }) => {
       const appContext = context as AppRouterContext;
       requireAuth(appContext);

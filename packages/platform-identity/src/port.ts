@@ -97,6 +97,16 @@ export interface ResetPasswordEmailInput {
 /** Delivers the "reset your password" transactional email. Optional; when omitted better-auth's no-op default stands. */
 export type ResetPasswordEmailSender = (input: ResetPasswordEmailInput) => Promise<void>;
 
+/** What the enumeration-safe duplicate-signup email needs: the recipient and whether their account is already verified. */
+export interface ExistingAccountEmailInput {
+  email: string;
+  /** True when the existing account has already verified its email (→ "sign in / reset"); false when it never finished signup (→ "finish signing up"). */
+  verified: boolean;
+}
+
+/** Delivers the "you already have an account" email on a duplicate sign-up attempt. Optional; when omitted no such email is sent. */
+export type ExistingAccountEmailSender = (input: ExistingAccountEmailInput) => Promise<void>;
+
 /** The freshly-created user handed to the personal-org auto-create hook (E5-S2 · AC#1). */
 export interface NewUserForPersonalOrg {
   id: string;
@@ -138,6 +148,15 @@ export interface IdentityConfig {
    * `sendResetPassword` option is registered and better-auth's default stands.
    */
   sendResetPasswordEmail?: ResetPasswordEmailSender;
+  /**
+   * Optional sender invoked when someone tries to sign up with an email that
+   * already has an account (SPEC §13, enumeration-safe). The `/sign-up/email`
+   * endpoint returns the SAME neutral response either way, so it never reveals
+   * whether the email exists; this closes the loop so the real owner receives an
+   * actionable email instead of being stranded on "check your inbox". When
+   * omitted, no such email is sent (tests without email keep passing).
+   */
+  sendExistingAccountEmail?: ExistingAccountEmailSender;
   /**
    * Optional sink for authentication events (E2-S3 · AC3). When provided, the
    * adapter invokes it for sign-in success/failure and sign-out; when omitted,

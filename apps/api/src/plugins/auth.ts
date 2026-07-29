@@ -1,7 +1,28 @@
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { IDENTITY_MOUNT_BASE_PATH } from '@platform/identity';
 import { toProxyRequest } from '../lib/session.js';
 import { authRateLimitRouteConfig, buildRateLimitedEnvelope, isRateLimitedError } from './rate-limit.js';
+
+/**
+ * The credential-sensitive auth endpoints that carry the strict anti-abuse
+ * budget (E4-S3 · AC4): sign-in, sign-up, password reset, magic-link and
+ * verification-email sends — the paths worth throttling against credential
+ * stuffing, reset-link abuse and email bombing.
+ *
+ * Everything else under `/api/auth/*` — session reads, `sign-out`,
+ * `list-sessions` — deliberately stays on the generous GLOBAL limiter. This is
+ * why routine traffic can no longer exhaust the strict budget and 429 a
+ * legitimate sign-out. Paths are relative to {@link IDENTITY_MOUNT_BASE_PATH}.
+ */
+const SENSITIVE_AUTH_PATHS = [
+  '/sign-in/email',
+  '/sign-in/magic-link',
+  '/sign-up/email',
+  '/request-password-reset',
+  '/reset-password',
+  '/send-verification-email',
+  '/change-password',
+] as const;
 
 /**
  * Mount the identity handler at `/api/auth/*` (E4-S2 AC#1). Every request under
@@ -32,18 +53,28 @@ export async function registerAuthPlugin(app: FastifyInstance): Promise<void> {
       throw error;
     });
 
-    // Stricter auth-endpoint rate limit (E4-S3 · AC4): the global
-    // `@fastify/rate-limit` plugin reads this per-route `config.rateLimit`
-    // override, so past the threshold requests get a 429 `RATE_LIMITED`
-    // envelope. Harmless when no limiter is registered (e.g. unit tests).
-    scope.all(
-      `${IDENTITY_MOUNT_BASE_PATH}/*`,
-      { config: authRateLimitRouteConfig() },
-      async (request, reply) => {
-        const response = await request.server.platform.identity.handler(toProxyRequest(request));
-        await sendWebResponse(reply, response);
-      },
-    );
+    // Every auth request is bridged to the framework-neutral identity handler
+    // and its web `Response` streamed back — identical regardless of which route
+    // matched. `toProxyRequest` rebuilds the full path, so better-auth sees the
+    // real endpoint whether it matched a sensitive static route or the wildcard.
+    const forward = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+      const response = await request.server.platform.identity.handler(toProxyRequest(request));
+      await sendWebResponse(reply, response);
+    };
+
+    // Strict anti-abuse budget (E4-S3 · AC4) on the credential-sensitive
+    // endpoints ONLY — the global `@fastify/rate-limit` plugin reads this
+    // per-route `config.rateLimit` override, and its own `keyGenerator` isolates
+    // the budget in a dedicated bucket. Harmless when no limiter is registered
+    // (e.g. unit tests).
+    for (const path of SENSITIVE_AUTH_PATHS) {
+      scope.all(`${IDENTITY_MOUNT_BASE_PATH}${path}`, { config: authRateLimitRouteConfig() }, forward);
+    }
+
+    // Everything else under the mount (session reads, sign-out, …) falls to the
+    // generous global limiter — no per-route override, so it can never be
+    // blocked by the strict credential budget above.
+    scope.all(`${IDENTITY_MOUNT_BASE_PATH}/*`, forward);
   });
 }
 

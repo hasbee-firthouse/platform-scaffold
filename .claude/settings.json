@@ -52,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/enforce-length-pre.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/enforce-length-pre.js\"",
             "timeout": 5000
           }
         ]
@@ -64,47 +64,47 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/scope-directory.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/scope-directory.js\"",
             "timeout": 5000
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/protect-env.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-env.js\"",
             "timeout": 5000
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/detect-secrets.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/detect-secrets.js\"",
             "timeout": 5000
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/lint-on-save.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/lint-on-save.js\"",
             "timeout": 15000
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/typecheck.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/typecheck.js\"",
             "timeout": 30000
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/check-architecture.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-architecture.js\"",
             "timeout": 5000
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/check-function-length.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-function-length.js\"",
             "timeout": 5000
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/check-file-length.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-file-length.js\"",
             "timeout": 5000
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/track-writes.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/track-writes.js\"",
             "timeout": 5000
           }
         ]
@@ -114,12 +114,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/pre-commit-gate.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-gate.js\"",
             "timeout": 30000
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/sprint-contract-gate.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/sprint-contract-gate.js\"",
             "timeout": 5000
           }
         ]
@@ -130,7 +130,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/require-review.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/require-review.js\"",
             "timeout": 10000
           }
         ]
@@ -141,7 +141,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/task-completed.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/task-completed.js\"",
             "timeout": 5000
           }
         ]
@@ -152,7 +152,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/teammate-idle-check.js",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/teammate-idle-check.js\"",
             "timeout": 5000
           }
         ]

@@ -7,6 +7,7 @@ import {
   buildDatabaseHooks,
   createAuth,
   MissingMagicLinkSenderError,
+  notifyIfExistingAccount,
   shouldAutoCreatePersonalOrg,
 } from './auth.js';
 
@@ -212,5 +213,33 @@ describe('personal-org auto-create hook (E5-S2 · AC#1)', () => {
   it('wires databaseHooks into the constructed auth instance', () => {
     const auth = createAuth(buildConfig({ createPersonalOrg: vi.fn(async () => undefined) }));
     expect(auth.options.databaseHooks?.user?.create?.after).toBeTypeOf('function');
+  });
+});
+
+describe('enumeration-safe duplicate sign-up (E4-S3)', () => {
+  it('notifies the existing owner with the verified flag and reports it fired', async () => {
+    const send = vi.fn(async () => undefined);
+
+    expect(await notifyIfExistingAccount({ emailVerified: true }, 'ada@x.io', send)).toBe(true);
+    expect(send).toHaveBeenCalledWith({ email: 'ada@x.io', verified: true });
+
+    send.mockClear();
+    expect(await notifyIfExistingAccount({ emailVerified: false }, 'ada@x.io', send)).toBe(true);
+    expect(send).toHaveBeenCalledWith({ email: 'ada@x.io', verified: false });
+  });
+
+  it('does nothing for a brand-new email (no existing account)', async () => {
+    const send = vi.fn(async () => undefined);
+    expect(await notifyIfExistingAccount(null, 'new@x.io', send)).toBe(false);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('registers a before hook only when a duplicate-signup sender is configured', () => {
+    expect(createAuth(buildConfig()).options.hooks?.before).toBeUndefined();
+
+    const withSender = createAuth(
+      buildConfig({ sendExistingAccountEmail: vi.fn(async () => undefined) }),
+    );
+    expect(withSender.options.hooks?.before).toBeTypeOf('function');
   });
 });

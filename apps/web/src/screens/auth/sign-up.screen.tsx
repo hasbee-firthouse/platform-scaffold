@@ -75,13 +75,25 @@ export function SignUpScreen({
 
   if (form.formState.isSubmitSuccessful && !mutation.error) {
     return (
-      <AuthCard title="Check your inbox" subtitle={`Verify your email to finish creating your account.`}>
+      <AuthCard title="Check your inbox" subtitle="We’ve emailed you a link to continue.">
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          We sent a verification link to{' '}
+          We sent an email to{' '}
           <span className="font-medium text-[var(--color-foreground)]">
             {form.getValues('email')}
           </span>
-          . The account can’t sign in with a password until it’s verified.
+          . If it’s a new address, the email has a verification link to finish creating your
+          account. If you already have an account, it has a link to sign in instead.
+        </p>
+        <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">
+          Didn’t get it? Check your spam folder, or{' '}
+          <button
+            type="button"
+            className="font-medium text-[var(--color-primary)]"
+            onClick={onSignIn}
+          >
+            go to sign in
+          </button>
+          .
         </p>
       </AuthCard>
     );
