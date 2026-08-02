@@ -19,6 +19,7 @@ function published(overrides: Partial<PublishedNoteResponse> = {}): PublishedNot
     title: 'Hello world',
     body: 'A published note.',
     authorId: 'ada',
+    authorName: 'Ada Lovelace',
     publishedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };
@@ -30,6 +31,7 @@ function comment(overrides: Partial<CommentResponse> = {}): CommentResponse {
     publishedNoteId: '22222222-2222-2222-2222-222222222222',
     readerOrgId: 'org-reader',
     userId: 'grace',
+    authorName: 'Grace Hopper',
     body: 'Great read',
     createdAt: '2026-01-02T00:00:00.000Z',
     ...overrides,
@@ -75,6 +77,8 @@ describe('LibraryScreen (Step 5 — reader feed)', () => {
     renderScreen(client);
 
     expect(await screen.findByText('Hello world')).toBeInTheDocument();
+    // Author shows a display name, not the raw user id.
+    expect(screen.getByText(/by Ada Lovelace/i)).toBeInTheDocument();
     expect(client.listLibrary).toHaveBeenCalled();
   });
 

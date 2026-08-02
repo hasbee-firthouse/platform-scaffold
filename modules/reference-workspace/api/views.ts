@@ -44,8 +44,15 @@ export function taskView(record: TaskRecord): TaskResponse {
   };
 }
 
-/** Project a {@link PublishedNoteRecord} (shared shelf) onto the wire shape. */
-export function publishedNoteView(record: PublishedNoteRecord): PublishedNoteResponse {
+/**
+ * Project a {@link PublishedNoteRecord} onto the wire shape. `authorName` is
+ * resolved by the route from the control-plane `user` table (falls back to the
+ * id when the user is unknown), so the cross-org library shows names not ids.
+ */
+export function publishedNoteView(
+  record: PublishedNoteRecord,
+  authorName: string,
+): PublishedNoteResponse {
   return {
     id: record.id,
     writerOrgId: record.writerOrgId,
@@ -53,17 +60,19 @@ export function publishedNoteView(record: PublishedNoteRecord): PublishedNoteRes
     title: record.title,
     body: record.body,
     authorId: record.authorId,
+    authorName,
     publishedAt: record.publishedAt.toISOString(),
   };
 }
 
-/** Project a {@link CommentRecord} onto the shared `commentResponseSchema` shape. */
-export function commentView(record: CommentRecord): CommentResponse {
+/** Project a {@link CommentRecord} onto the wire shape (with the resolved author name). */
+export function commentView(record: CommentRecord, authorName: string): CommentResponse {
   return {
     id: record.id,
     publishedNoteId: record.publishedNoteId,
     readerOrgId: record.readerOrgId,
     userId: record.userId,
+    authorName,
     body: record.body,
     createdAt: record.createdAt.toISOString(),
   };

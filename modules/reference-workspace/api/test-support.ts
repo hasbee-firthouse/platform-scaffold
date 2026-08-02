@@ -14,6 +14,7 @@ import type {
   NewTaskInput,
   TaskRecord,
   TaskRepository,
+  UserDirectory,
   WorkspaceMembership,
   WorkspaceRecord,
   WorkspaceRepository,
@@ -252,6 +253,21 @@ export function makeEngagementRepo(): FakeEngagementRepo {
     },
     async listComments(publishedNoteId) {
       return comments.filter((c) => c.publishedNoteId === publishedNoteId);
+    },
+  };
+}
+
+/** A configurable {@link UserDirectory}: returns the mapped display name per id. */
+export function makeUserDirectory(names: Record<string, string> = {}): UserDirectory {
+  return {
+    async names(ids) {
+      const out = new Map<string, string>();
+      for (const id of ids) {
+        if (names[id] !== undefined) {
+          out.set(id, names[id]);
+        }
+      }
+      return out;
     },
   };
 }

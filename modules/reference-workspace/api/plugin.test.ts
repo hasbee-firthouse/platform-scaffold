@@ -18,6 +18,7 @@ import {
   makeRecordingAudit,
   makeShelfRepo,
   makeTaskRepo,
+  makeUserDirectory,
   makeWorkspaceRepo,
   taskFixture,
   workspaceFixture,
@@ -53,6 +54,7 @@ function buildHarness(over: Partial<WorkspaceRoutesDeps> = {}): Harness {
     tasks: makeTaskRepo([taskFixture({ id: TASK_ID, orgId: ORG, workspaceId: WS_ID })]),
     shelf: makeShelfRepo(),
     engagement: makeEngagementRepo(),
+    users: makeUserDirectory({ 'user-1': 'Note Author', 'commenter-user': 'Commenter Person' }),
     membership: makeMembership({ roles: { ...ROLES } }),
     audit: audit.audit,
     getTaskLimit: async () => 100,
@@ -398,6 +400,8 @@ describe('cross-org library — the shared plane (SPEC §9.x)', () => {
     expect(after.json().items).toHaveLength(1);
     expect(after.json().items[0].id).toBe(TASK_ID);
     expect(after.json().items[0].writerOrgId).toBe(ORG);
+    // Author shows a display NAME, not the raw user id.
+    expect(after.json().items[0].authorName).toBe('Note Author');
 
     // ...and unpublishing takes it back off the shelf.
     await app.inject({
@@ -488,6 +492,7 @@ describe('reader engagement — likes & comments (§9.x; org-scoped for role gat
     });
     expect(list.json().items).toHaveLength(1);
     expect(list.json().items[0].body).toBe('Great read');
+    expect(list.json().items[0].authorName).toBe('Commenter Person');
   });
 
   it('lets a commenter delete their own comment but 403s deleting another user’s', async () => {

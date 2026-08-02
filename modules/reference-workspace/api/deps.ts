@@ -15,8 +15,10 @@ import { MAX_NOTES_ENTITLEMENT, referenceWorkspaceManifest } from '../manifest.j
 import {
   createDrizzleMembership,
   createDrizzleTaskRepository,
+  createDrizzleUserDirectory,
   createDrizzleWorkspaceRepository,
   type TaskRepository,
+  type UserDirectory,
   type WorkspaceMembership,
   type WorkspaceRepository,
 } from './repository.js';
@@ -50,6 +52,8 @@ export interface WorkspaceRouteDeps {
   shelf: ShelfRepository;
   /** Reader engagement (likes/comments) on the shared plane (SPEC §9.x). */
   engagement: EngagementRepository;
+  /** Resolves author/commenter display names for the cross-org library. */
+  users: UserDirectory;
   membership: WorkspaceMembership;
   audit: AuditWriter;
   /** Resolves the org's `workspace.maxTasks` numeric limit (AC3). */
@@ -89,6 +93,7 @@ export function buildWorkspaceRouteDeps(ctx: WorkspaceModuleContext): WorkspaceR
     tasks: createDrizzleTaskRepository(ctx.db),
     shelf: createDrizzleShelfRepository(ctx.db),
     engagement: createDrizzleEngagementRepository(ctx.db),
+    users: createDrizzleUserDirectory(ctx.db),
     membership: createDrizzleMembership(ctx.db),
     audit: ctx.audit,
     getTaskLimit: (orgId) => resolveTaskLimit(ctx, orgId),

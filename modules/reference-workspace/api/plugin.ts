@@ -345,7 +345,8 @@ function registerLibraryRoutes(
     { preHandler: authenticate, schema: { response: { 200: libraryListResponse } } },
     withWorkspaceErrors(async () => {
       const items = await deps.shelf.list();
-      return { items: items.map(publishedNoteView) };
+      const names = await deps.users.names(items.map((note) => note.authorId));
+      return { items: items.map((note) => publishedNoteView(note, names.get(note.authorId) ?? note.authorId)) };
     }),
   );
 
@@ -361,11 +362,16 @@ function registerLibraryRoutes(
       if (!found) {
         throw notFound('Published note not found');
       }
-      const [likeCount, likedByMe] = await Promise.all([
+      const [likeCount, likedByMe, names] = await Promise.all([
         deps.engagement.countLikes(noteId),
         deps.engagement.hasLiked(noteId, callerId(request)),
+        deps.users.names([found.authorId]),
       ]);
-      return { note: publishedNoteView(found), likeCount, likedByMe };
+      return {
+        note: publishedNoteView(found, names.get(found.authorId) ?? found.authorId),
+        likeCount,
+        likedByMe,
+      };
     }),
   );
 
@@ -375,7 +381,8 @@ function registerLibraryRoutes(
     withWorkspaceErrors(async (request) => {
       const { noteId } = request.params as z.infer<typeof libraryParams>;
       const items = await deps.engagement.listComments(noteId);
-      return { items: items.map(commentView) };
+      const names = await deps.users.names(items.map((comment) => comment.userId));
+      return { items: items.map((comment) => commentView(comment, names.get(comment.userId) ?? comment.userId)) };
     }),
   );
 }
@@ -431,7 +438,10 @@ function registerEngagementRoutes(
       await authorize(deps, orgId, userId, SPACE_PERMISSIONS.commentsWrite);
       const { body } = request.body as z.infer<typeof createCommentSchema>;
       const created = await addComment(toEngagementDeps(deps), noteId, { userId, readerOrgId: orgId }, body);
-      return reply.status(201).send({ comment: commentView(created) });
+      const names = await deps.users.names([created.userId]);
+      return reply
+        .status(201)
+        .send({ comment: commentView(created, names.get(created.userId) ?? created.userId) });
     }),
   );
 

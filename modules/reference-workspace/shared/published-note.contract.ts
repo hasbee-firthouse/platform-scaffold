@@ -12,6 +12,8 @@ export const publishedNoteResponseSchema = z.object({
   title: z.string().min(1),
   body: z.string(),
   authorId: z.string(),
+  /** The author's display name, resolved from the control-plane `user` table. */
+  authorName: z.string(),
   publishedAt: z.string().datetime(),
 });
 export type PublishedNoteResponse = z.infer<typeof publishedNoteResponseSchema>;

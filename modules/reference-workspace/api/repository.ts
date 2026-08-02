@@ -12,7 +12,7 @@
  * not an RLS tenant resource), so they query directly — they exist here only to
  * co-locate the org-scoped data access.
  */
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { schema } from '@platform/db';
 import { withOrg } from '@platform/tenancy';
@@ -75,6 +75,17 @@ export interface TaskRepository {
   setStatus(orgId: string, taskId: string, status: TaskStatus): Promise<TaskRecord | null>;
   remove(orgId: string, taskId: string): Promise<boolean>;
   countByOrg(orgId: string): Promise<number>;
+}
+
+/**
+ * Resolves user display names from the control-plane `user` table (identity plane,
+ * not an RLS tenant resource — safe to query directly). Used to show author /
+ * commenter NAMES on the cross-org library instead of opaque user ids, without a
+ * Reader needing access to the writer org's member list.
+ */
+export interface UserDirectory {
+  /** Map each id to its display name; ids with no user row are simply absent. */
+  names(ids: readonly string[]): Promise<Map<string, string>>;
 }
 
 /** Membership lookups used for authorization and assignee validation. */
@@ -237,6 +248,23 @@ export function createDrizzleTaskRepository(db: NodePgDatabase): TaskRepository 
         const [row] = await tx.select({ value: countExpr }).from(note).where(eq(note.orgId, orgId));
         return row?.value ?? 0;
       });
+    },
+  };
+}
+
+/** The production {@link UserDirectory} over the control-plane `user` table. */
+export function createDrizzleUserDirectory(db: NodePgDatabase): UserDirectory {
+  return {
+    async names(ids) {
+      const unique = [...new Set(ids)].filter((id) => id.length > 0);
+      if (unique.length === 0) {
+        return new Map();
+      }
+      const rows = await db
+        .select({ id: schema.user.id, name: schema.user.name })
+        .from(schema.user)
+        .where(inArray(schema.user.id, unique));
+      return new Map(rows.map((row) => [row.id, row.name]));
     },
   };
 }

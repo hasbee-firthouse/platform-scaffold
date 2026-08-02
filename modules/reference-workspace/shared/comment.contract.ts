@@ -12,6 +12,8 @@ export const commentResponseSchema = z.object({
   publishedNoteId: z.string().uuid(),
   readerOrgId: z.string(),
   userId: z.string(),
+  /** The commenter's display name, resolved from the control-plane `user` table. */
+  authorName: z.string(),
   body: z.string().min(1).max(COMMENT_BODY_MAX),
   createdAt: z.string().datetime(),
 });

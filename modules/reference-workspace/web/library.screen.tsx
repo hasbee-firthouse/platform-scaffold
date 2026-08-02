@@ -72,7 +72,7 @@ function LibraryCard({ orgId, note, client, open, onToggle }: LibraryCardProps):
     <li className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] p-4">
       <h2 className="text-base font-semibold">{note.title}</h2>
       <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-foreground)]">{note.body}</p>
-      <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">by {note.authorId}</p>
+      <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">by {note.authorName}</p>
       <Button variant="ghost" size="sm" onClick={onToggle} aria-expanded={open}>
         {open ? 'Close' : 'Open'} {note.title}
       </Button>
@@ -139,7 +139,7 @@ function NoteEngagement({ orgId, noteId, title, client }: NoteEngagementProps): 
 }
 
 interface CommentListProps {
-  comments: { id: string; userId: string; body: string }[];
+  comments: { id: string; authorName: string; body: string }[];
 }
 
 function CommentList({ comments }: CommentListProps): ReactElement {
@@ -150,7 +150,7 @@ function CommentList({ comments }: CommentListProps): ReactElement {
     <ul aria-label="Comments" className="flex flex-col gap-2">
       {comments.map((comment) => (
         <li key={comment.id} className="text-sm">
-          <span className="text-[var(--color-muted-foreground)]">{comment.userId}:</span> {comment.body}
+          <span className="text-[var(--color-muted-foreground)]">{comment.authorName}:</span> {comment.body}
         </li>
       ))}
     </ul>
