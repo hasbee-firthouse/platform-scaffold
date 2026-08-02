@@ -230,8 +230,20 @@ Each step is independently green; write the listed tests **first**.
    and now the `orgTypes` config, so it's a `moduleNavLinks` filter; today both nav entries show.
    A live SPA render wasn't done (needs a dev-DB reset per the squash caveat); screens are covered
    by unit tests.
-6. **Docs** — update `SPEC.md` §19 (reference module) + new §9.x; `features.json`;
-   `docs/FORKING.md` note on declaring org types + roles.
+6. **Docs + deletability check** ✅ **done (2026-08-02).** Ran the deletability check
+   non-destructively (commit → delete module + registry lines in-place → verify → restore):
+   `-r typecheck` clean, platform suite green (760, only the 3 pre-existing b2c failures),
+   `db:generate` produced a clean drop-migration, and a fresh DB migrated to a platform-only
+   schema. **Finding:** deletion is *not* purely "one directory + registry lines" for a
+   table-owning module — `@platform/tenancy` `TENANT_TABLES` + the RLS migration + pinned rls
+   tests name the module's tables (pre-existing coupling, extended by the shared plane). Per
+   decision, **documented** rather than refactored: `docs/FORKING.md` step 5 (tenancy detach) +
+   corrected squash note; SPEC §2 rule 6 caveat; SPEC §9.4 (shared-plane exception, added Step 3).
+   The manifest-declared-tables refactor is noted as deferred.
+   _Incident: a blanket `git clean -fd` during restore also removed 5 untracked, never-committed
+   pipeline-artifact dirs (specs/brd, specs/reviews, specs/design/amendments, specs/test_artefacts,
+   sprint-contracts) — unrecoverable; regenerable via pipeline skills. Use targeted removal, not
+   blanket clean, in future restores._
 
 ---
 

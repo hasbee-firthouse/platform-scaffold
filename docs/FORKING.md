@@ -97,10 +97,23 @@ deletion** (SPEC §2 rule 6, §18). Remove it cleanly:
    line(s) and its entry in **both** the `MODULE_API_REGISTRATIONS` (HTTP routes)
    and `MODULE_WORKER_REGISTRATIONS` (background jobs) arrays. The seam then
    registers nothing and `apps/api` still typechecks and boots.
-4. Remove its wiring from `modules/register-web.ts` — the module's `import` line
-   and its entry in the `WEB_MODULE_MANIFESTS` array. `WEB_MODULE_MANIFESTS` is
-   then empty: the SPA assembles no module routes, shows no module nav, and
-   `apps/web` still typechecks and builds.
+4. Remove its wiring from `modules/register-web.ts` — the module's `import` and
+   **both** its entries in `WEB_MODULE_MANIFESTS`: the reference module ships two
+   web manifests (`referenceWorkspaceWebManifest` for the Writer side at
+   `/workspace`, `referenceLibraryWebManifest` for the Reader side at `/library`).
+   With them gone the SPA assembles no module routes/nav and `apps/web` still
+   typechecks and builds.
+5. **Detach its tenant + shared tables from `@platform/tenancy`** (see the caveat
+   below — this is the one platform edit deleting a table-owning module requires):
+   - In `packages/platform-tenancy/src/rls.ts`, remove the module's org-scoped
+     tables (`space`, `note`) from `TENANT_TABLES`.
+   - Update the pinned tenancy tests (`rls.test.ts`, `rls-migration.test.ts`) that
+     assert those table names.
+   - In the RLS backstop migration (`packages/platform-db/drizzle/*_rls_backstop_policies.sql`),
+     remove the FORCE-RLS/policy/grant statements for `space`/`note` and the
+     SHARED-PLANE grants for `published_note`/`note_like`/`note_comment`. (Pre-first
+     deploy, the cleaner path is to squash — see below — which regenerates the RLS
+     migration from the now-updated `TENANT_TABLES`.)
 6. Remove its schema entry from `drizzle.config.ts`'s `schema` array
    (`'./modules/reference-workspace/api/schema.ts'`) and add your module's
    `schema.ts` path in its place.
@@ -110,7 +123,18 @@ deletion** (SPEC §2 rule 6, §18). Remove it cleanly:
    ```
 
 After this, the platform still **builds, migrates and passes its platform
-tests** — the reference module carried no platform responsibilities (SPEC A8).
+tests** — the reference module carries no platform *logic* responsibilities (SPEC A8).
+
+> **Caveat — tenancy coupling (known, refactor deferred).** A module that ships
+> org-scoped (RLS) or shared-plane tables is *not* fully "one directory + registry
+> lines" to delete: `@platform/tenancy`'s `TENANT_TABLES` and the RLS backstop
+> migration currently **name the module's tables directly** (step 5). Deleting such
+> a module therefore also touches those platform files. This is a deliberate,
+> documented coupling; a future refactor would have modules declare their
+> `tenantTables`/`sharedTables` in the manifest (like permissions/roles/entitlements)
+> so the platform composes `TENANT_TABLES` and generates the RLS migration — at
+> which point deletion returns to purely the module's own directory + registry lines.
+> A module that ships **no** tenant/shared tables needs none of step 5.
 
 > Nothing outside the module depends on it statically. Even the dev seed
 > (`scripts/seed.ts`) writes its sample workspace rows via raw SQL, so it keeps
@@ -126,6 +150,14 @@ squash it into a single clean baseline:
 rm -rf packages/platform-db/drizzle/*   # drop generated SQL + meta/_journal
 pnpm db:generate                        # regenerate ONE baseline migration
 ```
+
+The RLS backstop migration (`*_rls_backstop_policies.sql`) is **custom SQL**, not
+drizzle-generated, so `db:generate` does **not** recreate it — re-add it after the
+baseline (e.g. `pnpm exec drizzle-kit generate --custom --name rls_backstop_policies`)
+with the statements `@platform/tenancy`'s `rlsMigrationSql(TENANT_TABLES)` emits
+(plus any SHARED-PLANE grants). Because it is authored from the current
+`TENANT_TABLES`, doing this *after* step 5 above is what makes a module's tables
+fall out cleanly.
 
 Commit the single baseline. **Do this only pre-first-deploy** — once a database
 in the wild has applied migrations, history is forward-only (SPEC §20.4) and you

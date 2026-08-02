@@ -25,7 +25,7 @@ This constraint overrides stylistic preference everywhere. Concrete rules the im
 3. **Prefer boring, mainstream choices** over novel ones. Prefer a well-maintained library over hand-rolling security-sensitive code.
 4. **One way to do each thing.** One ORM, one router, one styling system, one test runner.
 5. **The Python/FastAPI port is documentation only.** The two ports are defined as clean TypeScript interfaces; no extra layers, serialization formats, or "language-neutral" machinery may be added to serve a hypothetical future port.
-6. **Delete-ability is a design goal.** `reference-workspace` must be removable by deleting one directory and one registration line.
+6. **Delete-ability is a design goal.** `reference-workspace` must be removable by deleting one directory and one registration line. **Caveat (known coupling):** a module that ships org-scoped (RLS) or shared-plane tables also requires detaching those tables from `@platform/tenancy` `TENANT_TABLES` + the RLS backstop migration, because the tenancy layer currently names module tables directly (see `docs/FORKING.md` step 5). A deferred refactor would move `tenantTables`/`sharedTables` into the module manifest to restore pure one-directory-plus-line deletion; a module with no tenant/shared tables already deletes that cleanly.
 
 ---
 
