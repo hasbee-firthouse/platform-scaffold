@@ -23,7 +23,10 @@
  */
 import type { AnyRoute } from '@tanstack/react-router';
 // --- reference-workspace module (delete these lines to remove the module) ---
-import { referenceWorkspaceWebManifest } from './reference-workspace/web/routes.js';
+import {
+  referenceLibraryWebManifest,
+  referenceWorkspaceWebManifest,
+} from './reference-workspace/web/routes.js';
 
 /** A sidebar entry a module contributes (mirrors the app's `NavContribution`). */
 export interface NavContribution {
@@ -57,6 +60,8 @@ export interface WebModuleManifest {
  * is fully supported: the SPA simply assembles no module routes.
  */
 export const WEB_MODULE_MANIFESTS: WebModuleManifest[] = [
-  // reference-workspace: mounts `/o/:orgSlug/workspace` (list) + `/:workspaceId` (tasks).
+  // reference-workspace: Writer side — `/o/:orgSlug/workspace` (spaces) + `/:workspaceId` (notes).
   referenceWorkspaceWebManifest,
+  // reference-workspace: Reader side — `/o/:orgSlug/library` (cross-org published feed).
+  referenceLibraryWebManifest,
 ];

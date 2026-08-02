@@ -8,7 +8,12 @@
  */
 import type { NavContribution } from './routes.js';
 
-/** The single "Workspaces" entry linking to the module's list screen. */
+/** The "Spaces" entry (Writer side) linking to the authoring list screen. */
 export const referenceWorkspaceNav: NavContribution[] = [
-  { id: 'reference-workspace', label: 'Workspaces', path: 'workspace' },
+  { id: 'reference-workspace', label: 'Spaces', path: 'workspace' },
+];
+
+/** The "Library" entry (Reader side) linking to the cross-org published feed. */
+export const referenceLibraryNav: NavContribution[] = [
+  { id: 'reference-library', label: 'Library', path: 'library' },
 ];

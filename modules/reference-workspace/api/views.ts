@@ -4,8 +4,15 @@
  * so these mappers project records onto the wire shape the Zod serializer
  * validates.
  */
-import type { TaskResponse, WorkspaceResponse } from '../shared/index.js';
+import type {
+  CommentResponse,
+  PublishedNoteResponse,
+  TaskResponse,
+  WorkspaceResponse,
+} from '../shared/index.js';
 import type { TaskRecord, WorkspaceRecord } from './repository.js';
+import type { PublishedNoteRecord } from './shelf-repository.js';
+import type { CommentRecord } from './engagement-repository.js';
 
 /** Project a {@link WorkspaceRecord} onto the shared `workspaceResponseSchema` shape. */
 export function workspaceView(record: WorkspaceRecord): WorkspaceResponse {
@@ -26,11 +33,38 @@ export function taskView(record: TaskRecord): TaskResponse {
     orgId: record.orgId,
     workspaceId: record.workspaceId,
     title: record.title,
+    body: record.body,
     status: record.status,
+    publishedAt: record.publishedAt ? record.publishedAt.toISOString() : null,
     assigneeMemberId: record.assigneeMemberId,
     dueDate: record.dueDate ? record.dueDate.toISOString() : null,
     createdBy: record.createdBy,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+/** Project a {@link PublishedNoteRecord} (shared shelf) onto the wire shape. */
+export function publishedNoteView(record: PublishedNoteRecord): PublishedNoteResponse {
+  return {
+    id: record.id,
+    writerOrgId: record.writerOrgId,
+    spaceId: record.spaceId,
+    title: record.title,
+    body: record.body,
+    authorId: record.authorId,
+    publishedAt: record.publishedAt.toISOString(),
+  };
+}
+
+/** Project a {@link CommentRecord} onto the shared `commentResponseSchema` shape. */
+export function commentView(record: CommentRecord): CommentResponse {
+  return {
+    id: record.id,
+    publishedNoteId: record.publishedNoteId,
+    readerOrgId: record.readerOrgId,
+    userId: record.userId,
+    body: record.body,
+    createdAt: record.createdAt.toISOString(),
   };
 }

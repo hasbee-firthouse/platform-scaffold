@@ -11,7 +11,7 @@
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { AuditWriter } from '@platform/audit';
 import { UnknownEntitlementError, type EntitlementValue } from '@platform/entitlements';
-import { MAX_TASKS_ENTITLEMENT, referenceWorkspaceManifest } from '../manifest.js';
+import { MAX_NOTES_ENTITLEMENT, referenceWorkspaceManifest } from '../manifest.js';
 import {
   createDrizzleMembership,
   createDrizzleTaskRepository,
@@ -20,6 +20,11 @@ import {
   type WorkspaceMembership,
   type WorkspaceRepository,
 } from './repository.js';
+import { createDrizzleShelfRepository, type ShelfRepository } from './shelf-repository.js';
+import {
+  createDrizzleEngagementRepository,
+  type EngagementRepository,
+} from './engagement-repository.js';
 
 /** A resolved session for an incoming request, or `null` when unauthenticated. */
 export interface WorkspaceSessionResult {
@@ -41,6 +46,10 @@ export interface WorkspaceModuleContext {
 export interface WorkspaceRouteDeps {
   workspaces: WorkspaceRepository;
   tasks: TaskRepository;
+  /** The shared, cross-org "published" shelf (SPEC §9.x). */
+  shelf: ShelfRepository;
+  /** Reader engagement (likes/comments) on the shared plane (SPEC §9.x). */
+  engagement: EngagementRepository;
   membership: WorkspaceMembership;
   audit: AuditWriter;
   /** Resolves the org's `workspace.maxTasks` numeric limit (AC3). */
@@ -49,11 +58,11 @@ export interface WorkspaceRouteDeps {
   getSession: (request: Request) => Promise<WorkspaceSessionResult | null>;
 }
 
-/** The module's declared default task limit, used when no override/registration resolves. */
-const DEFAULT_MAX_TASKS = Number(referenceWorkspaceManifest.entitlements[MAX_TASKS_ENTITLEMENT] ?? 100);
+/** The module's declared default note limit, used when no override/registration resolves. */
+const DEFAULT_MAX_NOTES = Number(referenceWorkspaceManifest.entitlements[MAX_NOTES_ENTITLEMENT] ?? 100);
 
 /**
- * Resolve the org's task limit from the entitlements resolver. Falls back to the
+ * Resolve the org's note limit from the entitlements resolver. Falls back to the
  * manifest default only when the key is not yet registered (the module's
  * entitlement registration is an integration follow-up); a boolean value (a
  * misconfiguration for a numeric limit) also falls back to the default.
@@ -63,11 +72,11 @@ async function resolveTaskLimit(
   orgId: string,
 ): Promise<number> {
   try {
-    const value = await ctx.entitlements.get(orgId, MAX_TASKS_ENTITLEMENT);
-    return typeof value === 'number' ? value : DEFAULT_MAX_TASKS;
+    const value = await ctx.entitlements.get(orgId, MAX_NOTES_ENTITLEMENT);
+    return typeof value === 'number' ? value : DEFAULT_MAX_NOTES;
   } catch (error) {
     if (error instanceof UnknownEntitlementError) {
-      return DEFAULT_MAX_TASKS;
+      return DEFAULT_MAX_NOTES;
     }
     throw error;
   }
@@ -78,6 +87,8 @@ export function buildWorkspaceRouteDeps(ctx: WorkspaceModuleContext): WorkspaceR
   return {
     workspaces: createDrizzleWorkspaceRepository(ctx.db),
     tasks: createDrizzleTaskRepository(ctx.db),
+    shelf: createDrizzleShelfRepository(ctx.db),
+    engagement: createDrizzleEngagementRepository(ctx.db),
     membership: createDrizzleMembership(ctx.db),
     audit: ctx.audit,
     getTaskLimit: (orgId) => resolveTaskLimit(ctx, orgId),

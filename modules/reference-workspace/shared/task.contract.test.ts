@@ -13,7 +13,9 @@ describe('task contracts', () => {
     orgId: 'org_abc123',
     workspaceId: '018f8b0e-2d3b-7f4e-8b2c-3d4e5f6a7b8c',
     title: 'Write the spec',
-    status: 'open' as const,
+    body: 'The full note content.',
+    status: 'draft' as const,
+    publishedAt: null,
     assigneeMemberId: null,
     dueDate: null,
     createdBy: 'user_xyz789',
@@ -21,23 +23,24 @@ describe('task contracts', () => {
     updatedAt: '2026-07-16T10:00:00.000Z',
   };
 
-  it('constrains status to the open|done enum (AC1)', () => {
-    expect(taskStatusSchema.options).toEqual(['open', 'done']);
+  it('constrains status to the draft|published enum (AC1)', () => {
+    expect(taskStatusSchema.options).toEqual(['draft', 'published']);
     expect(taskStatusSchema.safeParse('in-progress').success).toBe(false);
   });
 
-  it('accepts a well-formed task response (AC1 shape)', () => {
+  it('accepts a well-formed note response (AC1 shape)', () => {
     expect(taskResponseSchema.parse(validResponse)).toEqual(validResponse);
   });
 
-  it('accepts a done task with an assignee and a due date', () => {
-    const done = {
+  it('accepts a published note with a publish timestamp, assignee and due date', () => {
+    const published = {
       ...validResponse,
-      status: 'done' as const,
+      status: 'published' as const,
+      publishedAt: '2026-07-20T00:00:00.000Z',
       assigneeMemberId: 'member_123',
       dueDate: '2026-08-01T00:00:00.000Z',
     };
-    expect(taskResponseSchema.parse(done)).toEqual(done);
+    expect(taskResponseSchema.parse(published)).toEqual(published);
   });
 
   it('allows assigneeMemberId and dueDate to be null (nullable FK / date)', () => {
@@ -55,16 +58,18 @@ describe('task contracts', () => {
     );
   });
 
-  it('createTaskSchema defaults status to open and title is required', () => {
+  it('createTaskSchema defaults status to draft and body to empty; title is required', () => {
     expect(createTaskSchema.parse({ title: 'Ship it' })).toMatchObject({
       title: 'Ship it',
-      status: 'open',
+      body: '',
+      status: 'draft',
     });
     expect(createTaskSchema.safeParse({}).success).toBe(false);
   });
 
   it('updateTaskSchema allows a partial patch of any field', () => {
-    expect(updateTaskSchema.parse({ status: 'done' })).toEqual({ status: 'done' });
+    expect(updateTaskSchema.parse({ status: 'published' })).toEqual({ status: 'published' });
+    expect(updateTaskSchema.parse({ body: 'edited' })).toEqual({ body: 'edited' });
     expect(updateTaskSchema.parse({ assigneeMemberId: null })).toEqual({ assigneeMemberId: null });
   });
 

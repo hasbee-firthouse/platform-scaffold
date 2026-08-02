@@ -18,6 +18,12 @@ import type {
   WorkspaceRecord,
   WorkspaceRepository,
 } from './repository.js';
+import type { PublishedNoteRecord, ShelfRepository } from './shelf-repository.js';
+import type {
+  CommentRecord,
+  EngagementRepository,
+  LikeInput,
+} from './engagement-repository.js';
 
 /** An audit writer that records every appended entry. */
 export interface RecordingAudit {
@@ -106,7 +112,9 @@ export function makeTaskRepo(seed: TaskRecord[] = []): FakeTaskRepo {
         orgId,
         workspaceId: input.workspaceId,
         title: input.title,
+        body: input.body,
         status: input.status,
+        publishedAt: null,
         assigneeMemberId: input.assigneeMemberId,
         dueDate: input.dueDate,
         createdBy: input.createdBy,
@@ -116,12 +124,26 @@ export function makeTaskRepo(seed: TaskRecord[] = []): FakeTaskRepo {
       rows.push(record);
       return record;
     },
+    async patch(orgId, taskId, fields) {
+      const record = rows.find((r) => r.orgId === orgId && r.id === taskId);
+      if (!record) {
+        return null;
+      }
+      if (fields.title !== undefined) {
+        record.title = fields.title;
+      }
+      if (fields.body !== undefined) {
+        record.body = fields.body;
+      }
+      return record;
+    },
     async setStatus(orgId, taskId, status: TaskStatus) {
       const record = rows.find((r) => r.orgId === orgId && r.id === taskId);
       if (!record) {
         return null;
       }
       record.status = status;
+      record.publishedAt = status === 'published' ? ts() : null;
       return record;
     },
     async remove(orgId, taskId) {
@@ -134,6 +156,102 @@ export function makeTaskRepo(seed: TaskRecord[] = []): FakeTaskRepo {
     },
     async countByOrg(orgId) {
       return rows.filter((r) => r.orgId === orgId).length;
+    },
+  };
+}
+
+/** An in-memory {@link ShelfRepository} (the shared cross-org plane) with inspectable `rows`. */
+export interface FakeShelfRepo extends ShelfRepository {
+  rows: PublishedNoteRecord[];
+}
+
+export function makeShelfRepo(seed: PublishedNoteRecord[] = []): FakeShelfRepo {
+  const rows: PublishedNoteRecord[] = [...seed];
+  return {
+    rows,
+    async publish(input) {
+      const index = rows.findIndex((r) => r.id === input.id);
+      const record: PublishedNoteRecord = { ...input };
+      if (index >= 0) {
+        rows[index] = record;
+      } else {
+        rows.push(record);
+      }
+    },
+    async remove(noteId) {
+      const index = rows.findIndex((r) => r.id === noteId);
+      if (index >= 0) {
+        rows.splice(index, 1);
+      }
+    },
+    async list() {
+      return [...rows];
+    },
+    async find(noteId) {
+      return rows.find((r) => r.id === noteId) ?? null;
+    },
+  };
+}
+
+/** An in-memory {@link EngagementRepository} (shared plane) with inspectable state. */
+export interface FakeEngagementRepo extends EngagementRepository {
+  likes: LikeInput[];
+  comments: CommentRecord[];
+}
+
+export function makeEngagementRepo(): FakeEngagementRepo {
+  const likes: LikeInput[] = [];
+  const comments: CommentRecord[] = [];
+  return {
+    likes,
+    comments,
+    async like(input) {
+      const exists = likes.some(
+        (l) => l.publishedNoteId === input.publishedNoteId && l.userId === input.userId,
+      );
+      if (!exists) {
+        likes.push(input);
+      }
+    },
+    async unlike(publishedNoteId, userId) {
+      const index = likes.findIndex(
+        (l) => l.publishedNoteId === publishedNoteId && l.userId === userId,
+      );
+      if (index >= 0) {
+        likes.splice(index, 1);
+      }
+    },
+    async countLikes(publishedNoteId) {
+      return likes.filter((l) => l.publishedNoteId === publishedNoteId).length;
+    },
+    async hasLiked(publishedNoteId, userId) {
+      return likes.some((l) => l.publishedNoteId === publishedNoteId && l.userId === userId);
+    },
+    async addComment(input) {
+      const record: CommentRecord = {
+        id: randomUUID(),
+        publishedNoteId: input.publishedNoteId,
+        readerOrgId: input.readerOrgId,
+        userId: input.userId,
+        body: input.body,
+        createdAt: ts(),
+      };
+      comments.push(record);
+      return record;
+    },
+    async findComment(commentId) {
+      return comments.find((c) => c.id === commentId) ?? null;
+    },
+    async removeComment(commentId) {
+      const index = comments.findIndex((c) => c.id === commentId);
+      if (index < 0) {
+        return false;
+      }
+      comments.splice(index, 1);
+      return true;
+    },
+    async listComments(publishedNoteId) {
+      return comments.filter((c) => c.publishedNoteId === publishedNoteId);
     },
   };
 }
@@ -173,7 +291,9 @@ export function taskFixture(over: Partial<TaskRecord> = {}): TaskRecord {
     orgId: 'org-1',
     workspaceId: 'ws-1',
     title: 'Do the thing',
-    status: 'open',
+    body: '',
+    status: 'draft',
+    publishedAt: null,
     assigneeMemberId: null,
     dueDate: null,
     createdBy: 'user-1',

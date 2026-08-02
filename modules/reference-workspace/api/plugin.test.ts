@@ -13,8 +13,10 @@ import { AUDIT_ACTIONS } from '@platform/audit';
 import { registerWorkspaceRoutes, type WorkspaceRoutesDeps } from './plugin.js';
 import type { WorkspaceExportPayload } from './export.job.js';
 import {
+  makeEngagementRepo,
   makeMembership,
   makeRecordingAudit,
+  makeShelfRepo,
   makeTaskRepo,
   makeWorkspaceRepo,
   taskFixture,
@@ -27,7 +29,14 @@ const WS_ID = randomUUID();
 const TASK_ID = randomUUID();
 const BASE = `/api/orgs/${ORG}/workspace`;
 
-const ROLES = { 'owner-user': 'owner', 'member-user': 'member' } as const;
+const ROLES = {
+  'owner-user': 'owner',
+  'member-user': 'member',
+  'author-user': 'Author',
+  'editor-user': 'Editor',
+  'reader-user': 'Reader',
+  'commenter-user': 'Commenter',
+} as const;
 
 interface Harness {
   app: FastifyInstance;
@@ -42,6 +51,8 @@ function buildHarness(over: Partial<WorkspaceRoutesDeps> = {}): Harness {
   const deps: WorkspaceRoutesDeps = {
     workspaces: makeWorkspaceRepo([workspaceFixture({ id: WS_ID, orgId: ORG })]),
     tasks: makeTaskRepo([taskFixture({ id: TASK_ID, orgId: ORG, workspaceId: WS_ID })]),
+    shelf: makeShelfRepo(),
+    engagement: makeEngagementRepo(),
     membership: makeMembership({ roles: { ...ROLES } }),
     audit: audit.audit,
     getTaskLimit: async () => 100,
@@ -165,7 +176,7 @@ describe('task routes + permission, assignee, entitlement (AC1/AC2/AC3)', () => 
     const { app } = harness();
     const res = await app.inject({
       method: 'GET',
-      url: `${BASE}/workspaces/${WS_ID}/tasks?status=open`,
+      url: `${BASE}/workspaces/${WS_ID}/tasks?status=draft`,
       headers: asUser('member-user'),
     });
     expect(res.statusCode).toBe(200);
@@ -233,21 +244,21 @@ describe('task routes + permission, assignee, entitlement (AC1/AC2/AC3)', () => 
     expect(res.json().error.code).toBe('ENTITLEMENT_REQUIRED');
   });
 
-  it('completes, uncompletes and deletes a task (AC1)', async () => {
+  it('publishes, unpublishes and deletes a note (AC1)', async () => {
     const { app } = harness();
-    const done = await app.inject({
+    const published = await app.inject({
       method: 'POST',
-      url: `${BASE}/tasks/${TASK_ID}/complete`,
+      url: `${BASE}/tasks/${TASK_ID}/publish`,
       headers: asUser('owner-user'),
     });
-    expect(done.json().task.status).toBe('done');
+    expect(published.json().task.status).toBe('published');
 
-    const reopened = await app.inject({
+    const drafted = await app.inject({
       method: 'POST',
-      url: `${BASE}/tasks/${TASK_ID}/uncomplete`,
+      url: `${BASE}/tasks/${TASK_ID}/unpublish`,
       headers: asUser('owner-user'),
     });
-    expect(reopened.json().task.status).toBe('open');
+    expect(drafted.json().task.status).toBe('draft');
 
     const removed = await app.inject({
       method: 'DELETE',
@@ -256,5 +267,267 @@ describe('task routes + permission, assignee, entitlement (AC1/AC2/AC3)', () => 
     });
     expect(removed.statusCode).toBe(200);
     expect(removed.json().success).toBe(true);
+  });
+});
+
+describe('product roles: the Author/Editor editorial split (Step 2)', () => {
+  it('lets an Author create a note (notes.write)', async () => {
+    const { app } = harness();
+    const res = await app.inject({
+      method: 'POST',
+      url: `${BASE}/workspaces/${WS_ID}/tasks`,
+      headers: asUser('author-user'),
+      payload: { title: 'Draft note' },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().task.status).toBe('draft');
+  });
+
+  it('403s an Author who tries to publish (lacks notes.publish)', async () => {
+    const { app } = harness();
+    const res = await app.inject({
+      method: 'POST',
+      url: `${BASE}/tasks/${TASK_ID}/publish`,
+      headers: asUser('author-user'),
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.code).toBe('FORBIDDEN');
+  });
+
+  it('lets an Editor publish a note (has notes.publish)', async () => {
+    const { app } = harness();
+    const res = await app.inject({
+      method: 'POST',
+      url: `${BASE}/tasks/${TASK_ID}/publish`,
+      headers: asUser('editor-user'),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().task.status).toBe('published');
+  });
+});
+
+describe('note ownership over the API (Gap 1)', () => {
+  it('403s an Author editing a note they did not author', async () => {
+    // The seeded TASK_ID note was authored by 'user-1', not the Author.
+    const { app } = harness();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `${BASE}/tasks/${TASK_ID}`,
+      headers: asUser('author-user'),
+      payload: { title: 'Hijack' },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.code).toBe('FORBIDDEN');
+  });
+
+  it('lets an Author edit a note they authored themselves', async () => {
+    const { app } = harness();
+    const created = await app.inject({
+      method: 'POST',
+      url: `${BASE}/workspaces/${WS_ID}/tasks`,
+      headers: asUser('author-user'),
+      payload: { title: 'My draft' },
+    });
+    const id = created.json().task.id as string;
+
+    const edited = await app.inject({
+      method: 'PATCH',
+      url: `${BASE}/tasks/${id}`,
+      headers: asUser('author-user'),
+      payload: { title: 'My edit', body: 'content' },
+    });
+    expect(edited.statusCode).toBe(200);
+    expect(edited.json().task.title).toBe('My edit');
+    expect(edited.json().task.body).toBe('content');
+  });
+
+  it('lets an Editor edit any note (moderation bypass)', async () => {
+    const { app } = harness();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `${BASE}/tasks/${TASK_ID}`,
+      headers: asUser('editor-user'),
+      payload: { title: 'Moderated' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().task.title).toBe('Moderated');
+  });
+
+  it('403s an Author deleting a note they did not author', async () => {
+    const { app } = harness();
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `${BASE}/tasks/${TASK_ID}`,
+      headers: asUser('author-user'),
+    });
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+describe('cross-org library — the shared plane (SPEC §9.x)', () => {
+  it('401s an unauthenticated library read', async () => {
+    const { app } = harness();
+    const res = await app.inject({ method: 'GET', url: '/api/library' });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('serves published notes to any authenticated user; drafts never appear', async () => {
+    const { app } = harness();
+
+    // The seeded note is a draft, so the library starts empty.
+    const before = await app.inject({
+      method: 'GET',
+      url: '/api/library',
+      headers: asUser('member-user'),
+    });
+    expect(before.json().items).toHaveLength(0);
+
+    // An Editor publishes it.
+    await app.inject({
+      method: 'POST',
+      url: `${BASE}/tasks/${TASK_ID}/publish`,
+      headers: asUser('editor-user'),
+    });
+
+    // Any authenticated user reads it — the library is NOT org-scoped (§9.x).
+    const after = await app.inject({
+      method: 'GET',
+      url: '/api/library',
+      headers: asUser('member-user'),
+    });
+    expect(after.json().items).toHaveLength(1);
+    expect(after.json().items[0].id).toBe(TASK_ID);
+    expect(after.json().items[0].writerOrgId).toBe(ORG);
+
+    // ...and unpublishing takes it back off the shelf.
+    await app.inject({
+      method: 'POST',
+      url: `${BASE}/tasks/${TASK_ID}/unpublish`,
+      headers: asUser('editor-user'),
+    });
+    const gone = await app.inject({
+      method: 'GET',
+      url: '/api/library',
+      headers: asUser('member-user'),
+    });
+    expect(gone.json().items).toHaveLength(0);
+  });
+
+  it('404s a single published note that is not on the shelf', async () => {
+    const { app } = harness();
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/library/${randomUUID()}`,
+      headers: asUser('member-user'),
+    });
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error.code).toBe('NOT_FOUND');
+  });
+});
+
+describe('reader engagement — likes & comments (§9.x; org-scoped for role gating)', () => {
+  const LIB = `/api/orgs/${ORG}/library`;
+
+  async function publishSeeded(app: FastifyInstance): Promise<void> {
+    await app.inject({
+      method: 'POST',
+      url: `${BASE}/tasks/${TASK_ID}/publish`,
+      headers: asUser('editor-user'),
+    });
+  }
+
+  it('lets a Reader like a published note and reports the count', async () => {
+    const { app } = harness();
+    await publishSeeded(app);
+    const res = await app.inject({
+      method: 'POST',
+      url: `${LIB}/${TASK_ID}/like`,
+      headers: asUser('reader-user'),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ liked: true, count: 1 });
+  });
+
+  it('404s liking a note that is not published', async () => {
+    const { app } = harness();
+    const res = await app.inject({
+      method: 'POST',
+      url: `${LIB}/${TASK_ID}/like`,
+      headers: asUser('reader-user'),
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it('403s a Reader trying to comment (no comments.write)', async () => {
+    const { app } = harness();
+    await publishSeeded(app);
+    const res = await app.inject({
+      method: 'POST',
+      url: `${LIB}/${TASK_ID}/comments`,
+      headers: asUser('reader-user'),
+      payload: { body: 'I want to comment' },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('lets a Commenter comment; it shows in the note comment list', async () => {
+    const { app } = harness();
+    await publishSeeded(app);
+    const created = await app.inject({
+      method: 'POST',
+      url: `${LIB}/${TASK_ID}/comments`,
+      headers: asUser('commenter-user'),
+      payload: { body: 'Great read' },
+    });
+    expect(created.statusCode).toBe(201);
+
+    const list = await app.inject({
+      method: 'GET',
+      url: `/api/library/${TASK_ID}/comments`,
+      headers: asUser('member-user'),
+    });
+    expect(list.json().items).toHaveLength(1);
+    expect(list.json().items[0].body).toBe('Great read');
+  });
+
+  it('lets a commenter delete their own comment but 403s deleting another user’s', async () => {
+    const { app } = harness();
+    await publishSeeded(app);
+    const created = await app.inject({
+      method: 'POST',
+      url: `${LIB}/${TASK_ID}/comments`,
+      headers: asUser('commenter-user'),
+      payload: { body: 'Mine' },
+    });
+    const commentId = created.json().comment.id as string;
+
+    // owner-user holds comments.write (wildcard) but is a different user → self-scoped 403.
+    const forbidden = await app.inject({
+      method: 'DELETE',
+      url: `${LIB}/${TASK_ID}/comments/${commentId}`,
+      headers: asUser('owner-user'),
+    });
+    expect(forbidden.statusCode).toBe(403);
+
+    const ok = await app.inject({
+      method: 'DELETE',
+      url: `${LIB}/${TASK_ID}/comments/${commentId}`,
+      headers: asUser('commenter-user'),
+    });
+    expect(ok.statusCode).toBe(200);
+  });
+
+  it('reflects likeCount and likedByMe in the note detail', async () => {
+    const { app } = harness();
+    await publishSeeded(app);
+    await app.inject({ method: 'POST', url: `${LIB}/${TASK_ID}/like`, headers: asUser('reader-user') });
+
+    const detail = await app.inject({
+      method: 'GET',
+      url: `/api/library/${TASK_ID}`,
+      headers: asUser('reader-user'),
+    });
+    expect(detail.json().likeCount).toBe(1);
+    expect(detail.json().likedByMe).toBe(true);
   });
 });

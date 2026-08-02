@@ -57,7 +57,9 @@ const taskRow = {
   orgId: 'org-1',
   workspaceId: 'ws-1',
   title: 'Do it',
-  status: 'open',
+  body: '',
+  status: 'draft',
+  publishedAt: null,
   assigneeMemberId: null,
   dueDate: null,
   createdBy: 'user-1',
@@ -106,7 +108,7 @@ describe('workspace repository — every query goes through withOrg', () => {
 describe('task repository — every query goes through withOrg', () => {
   it('listByWorkspace is withOrg-scoped', async () => {
     const { db, executed } = makeFakeDb([taskRow]);
-    const rows = await createDrizzleTaskRepository(db).listByWorkspace('org-1', 'ws-1', 'open');
+    const rows = await createDrizzleTaskRepository(db).listByWorkspace('org-1', 'ws-1', 'draft');
     expect(executed).toHaveLength(1);
     expect(rows[0]?.id).toBe('task-1');
   });
@@ -116,7 +118,8 @@ describe('task repository — every query goes through withOrg', () => {
     await createDrizzleTaskRepository(db).create('org-1', {
       workspaceId: 'ws-1',
       title: 'Do it',
-      status: 'open',
+      body: '',
+      status: 'draft',
       assigneeMemberId: null,
       dueDate: null,
       createdBy: 'user-1',
@@ -126,7 +129,7 @@ describe('task repository — every query goes through withOrg', () => {
 
   it('setStatus is withOrg-scoped', async () => {
     const { db, executed } = makeFakeDb([taskRow]);
-    await createDrizzleTaskRepository(db).setStatus('org-1', 'task-1', 'done');
+    await createDrizzleTaskRepository(db).setStatus('org-1', 'task-1', 'published');
     expect(executed).toHaveLength(1);
   });
 

@@ -9,25 +9,69 @@
  *   {@link EntitlementRequiredError} → 403 `ENTITLEMENT_REQUIRED`.
  */
 import { EntitlementRequiredError } from '@platform/entitlements';
-import { MAX_TASKS_ENTITLEMENT } from '../manifest.js';
+import { ownsOrBypasses } from '@platform/authz';
+import { MAX_NOTES_ENTITLEMENT } from '../manifest.js';
 import type { TaskStatus } from '../shared/index.js';
 import type { TaskRecord, TaskRepository, WorkspaceRepository } from './repository.js';
-import { notFound, unprocessable } from './errors.js';
+import type { ShelfRepository } from './shelf-repository.js';
+import { forbidden, notFound, unprocessable } from './errors.js';
 import type { Actor } from './workspace.service.js';
+
+/**
+ * The caller of a note mutation: their user id plus whether they may moderate
+ * (edit/delete ANY note, not just their own). `canModerate` is true for
+ * Editor/owner/admin — resolved in the route from the `space.notes.publish`
+ * permission — so an Author is confined to the notes they authored (Gap 1
+ * ownership, via {@link ownsOrBypasses}).
+ */
+export interface NoteActor {
+  userId: string;
+  canModerate: boolean;
+}
+
+/** Editable note fields a title/body patch may carry. */
+export interface UpdateNoteInput {
+  title?: string;
+  body?: string;
+}
 
 /** The dependency bundle the task service runs on. */
 export interface TaskServiceDeps {
   tasks: TaskRepository;
   workspaces: WorkspaceRepository;
+  /** The shared, cross-org "published" shelf kept in sync on publish/unpublish (SPEC §9.x). */
+  shelf: ShelfRepository;
   /** True when `memberId` is a current member row of `orgId` (AC2). */
   isOrgMember: (orgId: string, memberId: string) => Promise<boolean>;
-  /** Resolves the org's `workspace.maxTasks` numeric limit (AC3). */
+  /** Resolves the org's `space.maxNotes` numeric limit (AC3). */
   getTaskLimit: (orgId: string) => Promise<number>;
 }
 
-/** Payload accepted when creating a task (dueDate already parsed to a Date). */
+/** Project a published note record onto the shared shelf's input shape. */
+function toShelfInput(note: TaskRecord): {
+  id: string;
+  writerOrgId: string;
+  spaceId: string;
+  title: string;
+  body: string;
+  authorId: string;
+  publishedAt: Date;
+} {
+  return {
+    id: note.id,
+    writerOrgId: note.orgId,
+    spaceId: note.workspaceId,
+    title: note.title,
+    body: note.body,
+    authorId: note.createdBy,
+    publishedAt: note.publishedAt ?? new Date(),
+  };
+}
+
+/** Payload accepted when creating a note (dueDate already parsed to a Date). */
 export interface CreateTaskServiceInput {
   title: string;
+  body?: string;
   status?: TaskStatus;
   assigneeMemberId?: string | null;
   dueDate?: Date | null;
@@ -68,7 +112,7 @@ export async function createTask(
   const limit = await deps.getTaskLimit(orgId);
   const existing = await deps.tasks.countByOrg(orgId);
   if (existing >= limit) {
-    throw new EntitlementRequiredError(MAX_TASKS_ENTITLEMENT);
+    throw new EntitlementRequiredError(MAX_NOTES_ENTITLEMENT);
   }
 
   const assigneeMemberId = input.assigneeMemberId ?? null;
@@ -79,11 +123,62 @@ export async function createTask(
   return deps.tasks.create(orgId, {
     workspaceId,
     title: input.title,
-    status: input.status ?? 'open',
+    body: input.body ?? '',
+    status: input.status ?? 'draft',
     assigneeMemberId,
     dueDate: input.dueDate ?? null,
     createdBy: actor.userId,
   });
+}
+
+/**
+ * Load a note (404 when missing) and assert the actor may mutate it: the author
+ * owns it, or the caller may moderate (Editor/owner/admin). Otherwise 403.
+ */
+async function requireOwnedNote(
+  deps: TaskServiceDeps,
+  orgId: string,
+  taskId: string,
+  actor: NoteActor,
+): Promise<TaskRecord> {
+  const found = await deps.tasks.find(orgId, taskId);
+  if (!found) {
+    throw notFound('Note not found');
+  }
+  if (!ownsOrBypasses(actor.userId, found.createdBy, actor.canModerate)) {
+    throw forbidden('You can only modify your own notes');
+  }
+  return found;
+}
+
+/** Edit a note's title/body — author-only unless the caller may moderate (Gap 1). */
+export async function updateNote(
+  deps: TaskServiceDeps,
+  orgId: string,
+  taskId: string,
+  actor: NoteActor,
+  input: UpdateNoteInput,
+): Promise<TaskRecord> {
+  const existing = await requireOwnedNote(deps, orgId, taskId, actor);
+  const patch: UpdateNoteInput = {};
+  if (input.title !== undefined) {
+    patch.title = input.title;
+  }
+  if (input.body !== undefined) {
+    patch.body = input.body;
+  }
+  if (Object.keys(patch).length === 0) {
+    return existing;
+  }
+  const updated = await deps.tasks.patch(orgId, taskId, patch);
+  if (!updated) {
+    throw notFound('Note not found');
+  }
+  // Keep the shared shelf in sync when editing an already-published note (§9.x).
+  if (updated.status === 'published') {
+    await deps.shelf.publish(toShelfInput(updated));
+  }
+  return updated;
 }
 
 async function setTaskStatus(
@@ -99,20 +194,43 @@ async function setTaskStatus(
   return updated;
 }
 
-/** Mark a task done (AC1). */
-export function completeTask(deps: TaskServiceDeps, orgId: string, taskId: string): Promise<TaskRecord> {
-  return setTaskStatus(deps, orgId, taskId, 'done');
+/**
+ * Publish a note — make it live and project it onto the shared cross-org shelf
+ * (§9.x), so Reader orgs can see it. Publish is Editor-only by permission.
+ */
+export async function publishTask(
+  deps: TaskServiceDeps,
+  orgId: string,
+  taskId: string,
+): Promise<TaskRecord> {
+  const updated = await setTaskStatus(deps, orgId, taskId, 'published');
+  await deps.shelf.publish(toShelfInput(updated));
+  return updated;
 }
 
-/** Re-open a done task (AC1). */
-export function uncompleteTask(deps: TaskServiceDeps, orgId: string, taskId: string): Promise<TaskRecord> {
-  return setTaskStatus(deps, orgId, taskId, 'open');
+/** Unpublish a note — return it to draft and remove it from the shared shelf (§9.x). */
+export async function unpublishTask(
+  deps: TaskServiceDeps,
+  orgId: string,
+  taskId: string,
+): Promise<TaskRecord> {
+  const updated = await setTaskStatus(deps, orgId, taskId, 'draft');
+  await deps.shelf.remove(taskId);
+  return updated;
 }
 
-/** Delete a task; 404 when it does not exist in `orgId` (AC1). */
-export async function deleteTask(deps: TaskServiceDeps, orgId: string, taskId: string): Promise<void> {
+/** Delete a note — author-only unless the caller may moderate (Gap 1); 404 when missing. */
+export async function deleteTask(
+  deps: TaskServiceDeps,
+  orgId: string,
+  taskId: string,
+  actor: NoteActor,
+): Promise<void> {
+  await requireOwnedNote(deps, orgId, taskId, actor);
   const removed = await deps.tasks.remove(orgId, taskId);
   if (!removed) {
-    throw notFound('Task not found');
+    throw notFound('Note not found');
   }
+  // A deleted note must also leave the shared shelf (§9.x).
+  await deps.shelf.remove(taskId);
 }

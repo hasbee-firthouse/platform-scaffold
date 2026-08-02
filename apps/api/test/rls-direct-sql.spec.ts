@@ -3,7 +3,7 @@
  *
  * This suite bypasses all app-layer scoping and talks raw SQL to Postgres as the
  * NON-OWNER runtime role (`app_runtime`, `NOBYPASSRLS`). It proves the
- * Row-Level-Security backstop installed by migration `0005_rls_backstop_policies`
+ * Row-Level-Security backstop installed by the `*_rls_backstop_policies` migration
  * is what actually confines a tenant:
  *   1. With `app.org_id` set to org A, a raw `SELECT` on a tenant table returns
  *      ONLY org-A rows — zero org-B rows leak even though the query has no
@@ -17,7 +17,7 @@
  * alone and not to what was inserted.
  *
  * ## Constants (source of truth: `@platform/tenancy`)
- * The tenant table (`workspace`), the GUC (`app.org_id`) and the runtime role
+ * The tenant table (`space`), the GUC (`app.org_id`) and the runtime role
  * name (`app_runtime`) are the values `@platform/tenancy`'s `TENANT_TABLES` /
  * `orgScopePredicate` / `DEFAULT_RUNTIME_ROLE` emit and that `rls.test.ts`
  * pins against drift. They are restated locally here because `@platform/tenancy`
@@ -45,14 +45,14 @@ const RUNTIME_URL = process.env.TEST_RUNTIME_DATABASE_URL ?? '';
 const LIVE = PRIVILEGED_URL.trim() !== '' && RUNTIME_URL.trim() !== '';
 
 /** Tenant table under test — matches `@platform/tenancy` TENANT_TABLES. */
-const TENANT_TABLE = 'workspace';
+const TENANT_TABLE = 'space';
 /** Transaction-local GUC `withOrg` sets and the RLS predicate reads. */
 const ORG_GUC = 'app.org_id';
 
 const ORG_A = `org-a-${randomUUID()}`;
 const ORG_B = `org-b-${randomUUID()}`;
 
-/** Insert a `workspace` row for `orgId` via the privileged (RLS-bypassing) connection. */
+/** Insert a `space` row for `orgId` via the privileged (RLS-bypassing) connection. */
 async function seedWorkspace(privileged: DbConnection, orgId: string, name: string): Promise<void> {
   await privileged.pool.query(
     `INSERT INTO "${TENANT_TABLE}" (id, org_id, name, created_by) VALUES ($1, $2, $3, $4)`,

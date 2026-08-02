@@ -66,13 +66,13 @@ export interface TenantTableSpec {
  * `org_id text NOT NULL` and use the strict predicate.
  */
 export const TENANT_TABLES: readonly TenantTableSpec[] = [
-  { table: 'workspace' },
-  { table: 'task' },
+  { table: 'space' },
+  { table: 'note' },
   { table: 'entitlement_override' },
   { table: 'audit_log', allowNullOrg: true },
 ];
 
-/** Stable per-table policy name, e.g. `workspace_org_isolation`. */
+/** Stable per-table policy name, e.g. `space_org_isolation`. */
 export function policyName(table: string): string {
   return `${table}_org_isolation`;
 }

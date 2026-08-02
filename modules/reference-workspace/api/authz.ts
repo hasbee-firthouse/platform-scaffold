@@ -4,8 +4,8 @@
  * `@platform/authz` permission set built against a registry that includes this
  * module's declared permissions, so a built-in `owner`/`admin` inherits the
  * module permissions and a `member` inherits only the read defaults. The
- * module's own `Workspace Manager` role (from the manifest) resolves to the
- * three permissions it grants. This mirrors the org routes'
+ * module's own product roles (`Author`, `Editor` — from the manifest) resolve to
+ * the permission ids they grant. This mirrors the org routes'
  * `permissionsForOrgRole` pattern so behaviour stays consistent.
  */
 import { createPermissionRegistry, hasPermission, type PermissionId } from '@platform/authz';

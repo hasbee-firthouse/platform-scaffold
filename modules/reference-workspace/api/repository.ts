@@ -1,9 +1,9 @@
 /**
- * Persistence seams for the reference-workspace module (E8-S2). The `workspace`
- * and `task` tables are org-scoped tenant RESOURCE tables, so EVERY query
- * against them runs inside {@link withOrg} — the single sanctioned path that
- * opens a transaction and sets `app.org_id` so PostgreSQL RLS (E6-S2) enforces
- * isolation. The architecture guard
+ * Persistence seams for the reference module (E8-S2). The `space` and `note`
+ * tables are org-scoped tenant RESOURCE tables, so EVERY query against them runs
+ * inside {@link withOrg} — the single sanctioned path that opens a transaction
+ * and sets `app.org_id` so PostgreSQL RLS (E6-S2) enforces isolation. The
+ * architecture guard
  * (`packages/platform-tenancy/.../no-tenant-access-outside-with-org.test.ts`)
  * statically fails the build if a module file queries a tenant table without
  * referencing `withOrg`; all such queries therefore live in this one file.
@@ -16,10 +16,10 @@ import { and, eq, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { schema } from '@platform/db';
 import { withOrg } from '@platform/tenancy';
-import { task, workspace } from './schema.js';
+import { note, space } from './schema.js';
 import type { TaskStatus } from '../shared/index.js';
 
-/** A workspace row as the services consume it (Date-valued timestamps). */
+/** A space row as the services consume it (Date-valued timestamps). */
 export interface WorkspaceRecord {
   id: string;
   orgId: string;
@@ -29,13 +29,15 @@ export interface WorkspaceRecord {
   updatedAt: Date;
 }
 
-/** A task row as the services consume it (Date-valued timestamps). */
+/** A note row as the services consume it (Date-valued timestamps). */
 export interface TaskRecord {
   id: string;
   orgId: string;
   workspaceId: string;
   title: string;
+  body: string;
   status: TaskStatus;
+  publishedAt: Date | null;
   assigneeMemberId: string | null;
   dueDate: Date | null;
   createdBy: string;
@@ -43,17 +45,18 @@ export interface TaskRecord {
   updatedAt: Date;
 }
 
-/** Fields needed to persist a new task. */
+/** Fields needed to persist a new note. */
 export interface NewTaskInput {
   workspaceId: string;
   title: string;
+  body: string;
   status: TaskStatus;
   assigneeMemberId: string | null;
   dueDate: Date | null;
   createdBy: string;
 }
 
-/** Org-scoped workspace persistence — every method routes through `withOrg`. */
+/** Org-scoped space persistence — every method routes through `withOrg`. */
 export interface WorkspaceRepository {
   list(orgId: string): Promise<WorkspaceRecord[]>;
   find(orgId: string, workspaceId: string): Promise<WorkspaceRecord | null>;
@@ -62,11 +65,13 @@ export interface WorkspaceRepository {
   remove(orgId: string, workspaceId: string): Promise<boolean>;
 }
 
-/** Org-scoped task persistence — every method routes through `withOrg`. */
+/** Org-scoped note persistence — every method routes through `withOrg`. */
 export interface TaskRepository {
   listByWorkspace(orgId: string, workspaceId: string, status?: TaskStatus): Promise<TaskRecord[]>;
   find(orgId: string, taskId: string): Promise<TaskRecord | null>;
   create(orgId: string, input: NewTaskInput): Promise<TaskRecord>;
+  /** Patch a note's editable fields (title/body); null when it does not exist. */
+  patch(orgId: string, taskId: string, fields: { title?: string; body?: string }): Promise<TaskRecord | null>;
   setStatus(orgId: string, taskId: string, status: TaskStatus): Promise<TaskRecord | null>;
   remove(orgId: string, taskId: string): Promise<boolean>;
   countByOrg(orgId: string): Promise<number>;
@@ -80,7 +85,7 @@ export interface WorkspaceMembership {
   isOrgMember(orgId: string, memberId: string): Promise<boolean>;
 }
 
-function toWorkspaceRecord(row: typeof workspace.$inferSelect): WorkspaceRecord {
+function toWorkspaceRecord(row: typeof space.$inferSelect): WorkspaceRecord {
   return {
     id: row.id,
     orgId: row.orgId,
@@ -91,13 +96,15 @@ function toWorkspaceRecord(row: typeof workspace.$inferSelect): WorkspaceRecord 
   };
 }
 
-function toTaskRecord(row: typeof task.$inferSelect): TaskRecord {
+function toTaskRecord(row: typeof note.$inferSelect): TaskRecord {
   return {
     id: row.id,
     orgId: row.orgId,
     workspaceId: row.workspaceId,
     title: row.title,
+    body: row.body,
     status: row.status as TaskStatus,
+    publishedAt: row.publishedAt ?? null,
     assigneeMemberId: row.assigneeMemberId ?? null,
     dueDate: row.dueDate ?? null,
     createdBy: row.createdBy,
@@ -113,7 +120,7 @@ export function createDrizzleWorkspaceRepository(db: NodePgDatabase): WorkspaceR
   return {
     list(orgId) {
       return withOrg(db, orgId, async (tx) => {
-        const rows = await tx.select().from(workspace).where(eq(workspace.orgId, orgId));
+        const rows = await tx.select().from(space).where(eq(space.orgId, orgId));
         return rows.map(toWorkspaceRecord);
       });
     },
@@ -121,15 +128,15 @@ export function createDrizzleWorkspaceRepository(db: NodePgDatabase): WorkspaceR
       return withOrg(db, orgId, async (tx) => {
         const [row] = await tx
           .select()
-          .from(workspace)
-          .where(and(eq(workspace.id, workspaceId), eq(workspace.orgId, orgId)));
+          .from(space)
+          .where(and(eq(space.id, workspaceId), eq(space.orgId, orgId)));
         return row ? toWorkspaceRecord(row) : null;
       });
     },
     create(orgId, input) {
       return withOrg(db, orgId, async (tx) => {
         const [row] = await tx
-          .insert(workspace)
+          .insert(space)
           .values({ orgId, name: input.name, createdBy: input.createdBy })
           .returning();
         return toWorkspaceRecord(row!);
@@ -138,9 +145,9 @@ export function createDrizzleWorkspaceRepository(db: NodePgDatabase): WorkspaceR
     rename(orgId, workspaceId, name) {
       return withOrg(db, orgId, async (tx) => {
         const [row] = await tx
-          .update(workspace)
+          .update(space)
           .set({ name })
-          .where(and(eq(workspace.id, workspaceId), eq(workspace.orgId, orgId)))
+          .where(and(eq(space.id, workspaceId), eq(space.orgId, orgId)))
           .returning();
         return row ? toWorkspaceRecord(row) : null;
       });
@@ -148,9 +155,9 @@ export function createDrizzleWorkspaceRepository(db: NodePgDatabase): WorkspaceR
     remove(orgId, workspaceId) {
       return withOrg(db, orgId, async (tx) => {
         const rows = await tx
-          .delete(workspace)
-          .where(and(eq(workspace.id, workspaceId), eq(workspace.orgId, orgId)))
-          .returning({ id: workspace.id });
+          .delete(space)
+          .where(and(eq(space.id, workspaceId), eq(space.orgId, orgId)))
+          .returning({ id: space.id });
         return rows.length > 0;
       });
     },
@@ -162,9 +169,9 @@ export function createDrizzleTaskRepository(db: NodePgDatabase): TaskRepository 
   return {
     listByWorkspace(orgId, workspaceId, status) {
       return withOrg(db, orgId, async (tx) => {
-        const base = and(eq(task.orgId, orgId), eq(task.workspaceId, workspaceId));
-        const where = status ? and(base, eq(task.status, status)) : base;
-        const rows = await tx.select().from(task).where(where);
+        const base = and(eq(note.orgId, orgId), eq(note.workspaceId, workspaceId));
+        const where = status ? and(base, eq(note.status, status)) : base;
+        const rows = await tx.select().from(note).where(where);
         return rows.map(toTaskRecord);
       });
     },
@@ -172,19 +179,20 @@ export function createDrizzleTaskRepository(db: NodePgDatabase): TaskRepository 
       return withOrg(db, orgId, async (tx) => {
         const [row] = await tx
           .select()
-          .from(task)
-          .where(and(eq(task.id, taskId), eq(task.orgId, orgId)));
+          .from(note)
+          .where(and(eq(note.id, taskId), eq(note.orgId, orgId)));
         return row ? toTaskRecord(row) : null;
       });
     },
     create(orgId, input) {
       return withOrg(db, orgId, async (tx) => {
         const [row] = await tx
-          .insert(task)
+          .insert(note)
           .values({
             orgId,
             workspaceId: input.workspaceId,
             title: input.title,
+            body: input.body,
             status: input.status,
             assigneeMemberId: input.assigneeMemberId,
             dueDate: input.dueDate,
@@ -194,12 +202,23 @@ export function createDrizzleTaskRepository(db: NodePgDatabase): TaskRepository 
         return toTaskRecord(row!);
       });
     },
-    setStatus(orgId, taskId, status) {
+    patch(orgId, taskId, fields) {
       return withOrg(db, orgId, async (tx) => {
         const [row] = await tx
-          .update(task)
-          .set({ status })
-          .where(and(eq(task.id, taskId), eq(task.orgId, orgId)))
+          .update(note)
+          .set(fields)
+          .where(and(eq(note.id, taskId), eq(note.orgId, orgId)))
+          .returning();
+        return row ? toTaskRecord(row) : null;
+      });
+    },
+    setStatus(orgId, taskId, status) {
+      return withOrg(db, orgId, async (tx) => {
+        const publishedAt = status === 'published' ? new Date() : null;
+        const [row] = await tx
+          .update(note)
+          .set({ status, publishedAt })
+          .where(and(eq(note.id, taskId), eq(note.orgId, orgId)))
           .returning();
         return row ? toTaskRecord(row) : null;
       });
@@ -207,15 +226,15 @@ export function createDrizzleTaskRepository(db: NodePgDatabase): TaskRepository 
     remove(orgId, taskId) {
       return withOrg(db, orgId, async (tx) => {
         const rows = await tx
-          .delete(task)
-          .where(and(eq(task.id, taskId), eq(task.orgId, orgId)))
-          .returning({ id: task.id });
+          .delete(note)
+          .where(and(eq(note.id, taskId), eq(note.orgId, orgId)))
+          .returning({ id: note.id });
         return rows.length > 0;
       });
     },
     countByOrg(orgId) {
       return withOrg(db, orgId, async (tx) => {
-        const [row] = await tx.select({ value: countExpr }).from(task).where(eq(task.orgId, orgId));
+        const [row] = await tx.select({ value: countExpr }).from(note).where(eq(note.orgId, orgId));
         return row?.value ?? 0;
       });
     },

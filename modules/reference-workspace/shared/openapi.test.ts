@@ -20,8 +20,11 @@ describe('shared contracts are OpenAPI-convertible (AC3 static)', () => {
     const names = schemaEntries.map(([name]) => name).sort();
     expect(names).toEqual(
       [
+        'commentResponseSchema',
+        'createCommentSchema',
         'createTaskSchema',
         'createWorkspaceSchema',
+        'publishedNoteResponseSchema',
         'taskResponseSchema',
         'updateTaskSchema',
         'updateWorkspaceSchema',
@@ -36,10 +39,10 @@ describe('shared contracts are OpenAPI-convertible (AC3 static)', () => {
     expect(json.properties).toBeTypeOf('object');
   });
 
-  it('emits the open|done enum for the task status property', () => {
+  it('emits the draft|published enum for the note status property', () => {
     const json = zodToJsonSchema(contracts.taskResponseSchema) as {
       properties: { status: { enum?: string[] } };
     };
-    expect(json.properties.status.enum).toEqual(['open', 'done']);
+    expect(json.properties.status.enum).toEqual(['draft', 'published']);
   });
 });

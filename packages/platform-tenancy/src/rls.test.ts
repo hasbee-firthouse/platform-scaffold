@@ -36,16 +36,16 @@ describe('orgScopePredicate (AC1 · text predicate, no uuid cast)', () => {
 
 describe('forceRlsStatement (AC1 · FORCE RLS)', () => {
   it('emits FORCE ROW LEVEL SECURITY so even the table owner is subject', () => {
-    expect(forceRlsStatement('workspace')).toBe(
-      'ALTER TABLE "workspace" FORCE ROW LEVEL SECURITY;',
+    expect(forceRlsStatement('space')).toBe(
+      'ALTER TABLE "space" FORCE ROW LEVEL SECURITY;',
     );
   });
 });
 
 describe('createPolicyStatement (AC1 · policy predicate)', () => {
   it('creates a PERMISSIVE FOR ALL policy scoped to the runtime role', () => {
-    expect(createPolicyStatement('task')).toBe(
-      'CREATE POLICY "task_org_isolation" ON "task" AS PERMISSIVE FOR ALL ' +
+    expect(createPolicyStatement('note')).toBe(
+      'CREATE POLICY "note_org_isolation" ON "note" AS PERMISSIVE FOR ALL ' +
         'TO "app_runtime" ' +
         "USING (org_id = current_setting('app.org_id', true)) " +
         "WITH CHECK (org_id = current_setting('app.org_id', true));",
@@ -53,7 +53,7 @@ describe('createPolicyStatement (AC1 · policy predicate)', () => {
   });
 
   it('honours a custom runtime role name', () => {
-    expect(createPolicyStatement('task', { runtimeRole: 'tenant_app' })).toContain(
+    expect(createPolicyStatement('note', { runtimeRole: 'tenant_app' })).toContain(
       'TO "tenant_app"',
     );
   });
@@ -69,7 +69,7 @@ describe('createPolicyStatement (AC1 · policy predicate)', () => {
   });
 
   it('never casts the predicate to uuid', () => {
-    expect(createPolicyStatement('workspace')).not.toContain('::uuid');
+    expect(createPolicyStatement('space')).not.toContain('::uuid');
     expect(createPolicyStatement('audit_log', { allowNullOrg: true })).not.toContain('::uuid');
   });
 });
@@ -82,23 +82,23 @@ describe('grantRuntimeStatement (AC2 · least-privilege DML grant)', () => {
   });
 
   it('honours a custom runtime role name', () => {
-    expect(grantRuntimeStatement('workspace', 'tenant_app')).toContain('TO "tenant_app"');
+    expect(grantRuntimeStatement('space', 'tenant_app')).toContain('TO "tenant_app"');
   });
 });
 
 describe('policyName', () => {
   it('derives a stable per-table policy name', () => {
-    expect(policyName('workspace')).toBe('workspace_org_isolation');
+    expect(policyName('space')).toBe('space_org_isolation');
   });
 });
 
 describe('rlsStatements (per-table bundle)', () => {
   it('emits FORCE RLS, CREATE POLICY and the runtime GRANT for a table', () => {
-    const stmts = rlsStatements('workspace');
+    const stmts = rlsStatements('space');
     expect(stmts).toEqual([
-      forceRlsStatement('workspace'),
-      createPolicyStatement('workspace'),
-      grantRuntimeStatement('workspace'),
+      forceRlsStatement('space'),
+      createPolicyStatement('space'),
+      grantRuntimeStatement('space'),
     ]);
   });
 });
@@ -106,8 +106,8 @@ describe('rlsStatements (per-table bundle)', () => {
 describe('TENANT_TABLES (canonical coverage set)', () => {
   it('covers the four org-scoped tenant tables', () => {
     expect(TENANT_TABLES.map((t) => t.table)).toEqual([
-      'workspace',
-      'task',
+      'space',
+      'note',
       'entitlement_override',
       'audit_log',
     ]);
@@ -126,7 +126,7 @@ describe('rlsMigrationSql (full migration body)', () => {
     expect(sql).toContain('--> statement-breakpoint');
   });
 
-  it.each(['workspace', 'task', 'entitlement_override', 'audit_log'])(
+  it.each(['space', 'note', 'entitlement_override', 'audit_log'])(
     'contains FORCE RLS, the policy and the grant for %s',
     (table) => {
       expect(sql).toContain(`ALTER TABLE "${table}" FORCE ROW LEVEL SECURITY;`);
@@ -141,9 +141,9 @@ describe('rlsMigrationSql (full migration body)', () => {
       .find((s) => s.includes('audit_log_org_isolation'));
     expect(auditPolicy).toContain('org_id IS NULL OR');
 
-    const workspacePolicy = sql
+    const spacePolicy = sql
       .split('--> statement-breakpoint')
-      .find((s) => s.includes('workspace_org_isolation'));
-    expect(workspacePolicy).not.toContain('org_id IS NULL');
+      .find((s) => s.includes('space_org_isolation'));
+    expect(spacePolicy).not.toContain('org_id IS NULL');
   });
 });

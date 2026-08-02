@@ -23,8 +23,9 @@ import {
 } from '@tanstack/react-router';
 import { WorkspacesScreen } from './workspaces.screen.js';
 import { TasksScreen } from './tasks.screen.js';
+import { LibraryScreen } from './library.screen.js';
 import { WorkspaceTerminologyProvider } from './terminology.js';
-import { referenceWorkspaceNav } from './nav.js';
+import { referenceLibraryNav, referenceWorkspaceNav } from './nav.js';
 
 /** A sidebar entry contributed by the module (mirrors the app's `NavContribution`). */
 export interface NavContribution {
@@ -81,6 +82,16 @@ function TasksRoute(): ReactElement {
   );
 }
 
+/** The Reader-side library feed (cross-org shared plane, §9.x). */
+function LibraryRoute(): ReactElement {
+  const orgId = useOrgId();
+  return (
+    <WorkspaceTerminologyProvider>
+      <LibraryScreen orgId={orgId} />
+    </WorkspaceTerminologyProvider>
+  );
+}
+
 /**
  * The reference-workspace web manifest. `scope: 'org'` mounts it under the org
  * shell at `basePath: 'workspace'`; its two routes are the list (index) and the
@@ -103,4 +114,25 @@ export const referenceWorkspaceWebManifest: WebModuleManifest = {
     }) as AnyRoute,
   ],
   nav: referenceWorkspaceNav,
+};
+
+/**
+ * The reader-side LIBRARY web manifest — a second org-scoped mount at
+ * `basePath: 'library'` (`/o/:orgSlug/library`). A Writer org uses `workspace`
+ * (authoring); a Reader org uses `library` (browse + engage). Which one an org
+ * sees is `orgTypes` config (Step 5) once the shell gates nav by org type;
+ * today both appear. Deleting the module removes this line too.
+ */
+export const referenceLibraryWebManifest: WebModuleManifest = {
+  id: 'reference-library',
+  basePath: 'library',
+  scope: 'org',
+  webRoutes: (moduleRoute) => [
+    createRoute({
+      getParentRoute: () => moduleRoute,
+      path: '/',
+      component: LibraryRoute,
+    }) as AnyRoute,
+  ],
+  nav: referenceLibraryNav,
 };

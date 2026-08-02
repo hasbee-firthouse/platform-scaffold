@@ -27,17 +27,17 @@
 -- SECURITY is defence-in-depth so ownership can never silently exempt a role.
 -- Roles are intentionally NOT created here — role provisioning is a deploy concern.
 -- ---------------------------------------------------------------------------
-ALTER TABLE "workspace" FORCE ROW LEVEL SECURITY;
+ALTER TABLE "space" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
-CREATE POLICY "workspace_org_isolation" ON "workspace" AS PERMISSIVE FOR ALL TO "app_runtime" USING (org_id = current_setting('app.org_id', true)) WITH CHECK (org_id = current_setting('app.org_id', true));
+CREATE POLICY "space_org_isolation" ON "space" AS PERMISSIVE FOR ALL TO "app_runtime" USING (org_id = current_setting('app.org_id', true)) WITH CHECK (org_id = current_setting('app.org_id', true));
 --> statement-breakpoint
-GRANT SELECT, INSERT, UPDATE, DELETE ON "workspace" TO "app_runtime";
+GRANT SELECT, INSERT, UPDATE, DELETE ON "space" TO "app_runtime";
 --> statement-breakpoint
-ALTER TABLE "task" FORCE ROW LEVEL SECURITY;
+ALTER TABLE "note" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
-CREATE POLICY "task_org_isolation" ON "task" AS PERMISSIVE FOR ALL TO "app_runtime" USING (org_id = current_setting('app.org_id', true)) WITH CHECK (org_id = current_setting('app.org_id', true));
+CREATE POLICY "note_org_isolation" ON "note" AS PERMISSIVE FOR ALL TO "app_runtime" USING (org_id = current_setting('app.org_id', true)) WITH CHECK (org_id = current_setting('app.org_id', true));
 --> statement-breakpoint
-GRANT SELECT, INSERT, UPDATE, DELETE ON "task" TO "app_runtime";
+GRANT SELECT, INSERT, UPDATE, DELETE ON "note" TO "app_runtime";
 --> statement-breakpoint
 ALTER TABLE "entitlement_override" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -50,3 +50,20 @@ ALTER TABLE "audit_log" FORCE ROW LEVEL SECURITY;
 CREATE POLICY "audit_log_org_isolation" ON "audit_log" AS PERMISSIVE FOR ALL TO "app_runtime" USING (org_id IS NULL OR org_id = current_setting('app.org_id', true)) WITH CHECK (org_id IS NULL OR org_id = current_setting('app.org_id', true));
 --> statement-breakpoint
 GRANT SELECT, INSERT, UPDATE, DELETE ON "audit_log" TO "app_runtime";
+--> statement-breakpoint
+-- ---------------------------------------------------------------------------
+-- SHARED PLANE (SPEC §9.x) — the deliberate exception to tenant isolation.
+--
+-- `published_note` (the shelf) and its engagement (`note_like`, `note_comment`)
+-- are the cross-org "published" plane. They are NOT org-isolated: NO RLS policy,
+-- on purpose, so a Reader in any org can read notes published by any Writer org
+-- and engage with them. The runtime role still needs explicit CRUD grants (it is
+-- a non-owner). Drafts never reach these tables; writes are self-scoped in the
+-- app layer. Approved, recorded deviation from §9.1 "no query outside withOrg"
+-- (decision #2 / SPEC §9.4).
+-- ---------------------------------------------------------------------------
+GRANT SELECT, INSERT, UPDATE, DELETE ON "published_note" TO "app_runtime";
+--> statement-breakpoint
+GRANT SELECT, INSERT, UPDATE, DELETE ON "note_like" TO "app_runtime";
+--> statement-breakpoint
+GRANT SELECT, INSERT, UPDATE, DELETE ON "note_comment" TO "app_runtime";

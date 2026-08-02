@@ -66,10 +66,10 @@ describe('WorkspacesScreen (E8-S3 · AC1)', () => {
     renderScreen(client);
 
     await screen.findByText('Launch');
-    // The default product config leaves the module nouns uncustomized, so
-    // `useTerm('workspace')` resolves to the lowercase fallback.
-    expect(screen.getByRole('heading', { name: /workspaces/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/new workspace name/i)).toBeInTheDocument();
+    // The product config relabels the module nouns via terminology, so
+    // `useTerm('workspace')` resolves to "Space"/"Spaces".
+    expect(screen.getByRole('heading', { name: /spaces/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/new space name/i)).toBeInTheDocument();
   });
 
   it('creates a workspace through the form (AC1)', async () => {
@@ -77,8 +77,8 @@ describe('WorkspacesScreen (E8-S3 · AC1)', () => {
     renderScreen(client);
 
     await screen.findByText('Launch');
-    await userEvent.type(screen.getByLabelText(/new workspace name/i), 'Fresh');
-    await userEvent.click(screen.getByRole('button', { name: /add workspace/i }));
+    await userEvent.type(screen.getByLabelText(/new space name/i), 'Fresh');
+    await userEvent.click(screen.getByRole('button', { name: /add space/i }));
 
     await waitFor(() => expect(client.createWorkspace).toHaveBeenCalledWith('o1', { name: 'Fresh' }));
   });
@@ -135,6 +135,6 @@ describe('WorkspacesScreen (E8-S3 · AC1)', () => {
     const client = stubClient({ listWorkspaces: vi.fn(async () => []) });
     renderScreen(client);
 
-    expect(await screen.findByText(/no workspaces yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no spaces yet/i)).toBeInTheDocument();
   });
 });

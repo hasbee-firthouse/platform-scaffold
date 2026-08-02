@@ -21,6 +21,21 @@ export default defineProduct({
   terminology: {
     organization: { singular: 'Organization', plural: 'Organizations' },
     member: { singular: 'Member', plural: 'Members' },
+    // Reference-module nouns: the module screens resolve `workspace`/`task` via
+    // useTerm(), so relabeling them here renames the UI to Space/Note with no
+    // component edits (SPEC §7.3). The DB tables are `space`/`note` to match.
+    workspace: { singular: 'Space', plural: 'Spaces' },
+    task: { singular: 'Note', plural: 'Notes' },
+  },
+  // Org typing (SPEC §7 / control-plane Gap 3): the two sides of the reference
+  // product. A Writer org authors notes (the `workspace`/Spaces nav; Author/Editor
+  // roles); a Reader org browses + engages (the `library` nav; Reader/Commenter
+  // roles). The shell reads this to offer the right roles per org type and — once
+  // it gates nav by type — to show the right nav. A marketplace fork would instead
+  // declare `buyer`/`seller` here the same way.
+  orgTypes: {
+    writer: { nav: ['reference-workspace'], roles: ['Author', 'Editor'] },
+    reader: { nav: ['reference-library'], roles: ['Reader', 'Commenter'] },
   },
   email: { fromName: 'Scaffold Reference', fromAddress: 'no-reply@scaffold.example' },
 });

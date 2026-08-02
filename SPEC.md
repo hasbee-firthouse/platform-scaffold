@@ -261,6 +261,38 @@ Two layers, both mandatory:
 
 Isolation test (required in CI): two orgs seeded; every org-scoped endpoint called with org A's session against org B's ids → 404/403, never data. Plus a direct-SQL test proving RLS blocks cross-tenant reads even when app scoping is bypassed.
 
+### 9.4 Shared plane (recorded exception to §9.3)
+
+_Status: **approved** (control-plane brief, decision #2 — see `docs/DECISION-framework-control-plane.md`)._
+
+Some products are two-sided: content authored in one org is meant to be read by
+**other** orgs (a Writer org's published notes read by Reader orgs; a marketplace
+seller's listings browsed by buyers). That is, by definition, a cross-tenant read —
+which §9.3 rule 1 ("no code path queries tenant tables outside `withOrg`") forbids for
+private data. The framework resolves this with **two planes**, never by weakening §9.3:
+
+1. **Private plane (unchanged):** all drafts / internal rows stay in org-scoped tables
+   with `FORCE ROW LEVEL SECURITY`. Nothing here changes.
+2. **Shared plane (this exception):** a **published-only** table (e.g. the reference
+   module's `published_note` shelf) that is **deliberately not org-isolated** — it carries
+   **no** RLS policy, so any authenticated caller reads it cross-tenant. It is written
+   **only** by the publish flow (running in the author's org context); unpublish/delete
+   remove the row. Drafts never reach it.
+
+Rules that keep the exception safe and auditable:
+
+- A shared table is **not** in `@platform/tenancy` `TENANT_TABLES` (so it gets no
+  org-isolation policy) and the runtime role receives an explicit CRUD grant in the
+  RLS migration, under a clearly-labelled "SHARED PLANE" block.
+- Any module file that queries a shared table outside `withOrg` must carry the
+  `@shared-plane` marker; the "no tenant access outside withOrg" guard exempts only
+  marked files, keeping the opt-out explicit and greppable.
+- Reads are cross-org; **engagement writes** (likes/comments) are self-scoped — tagged
+  with the caller's org + user, mutating only their own rows, only on published content.
+
+Proven (live-DB): with no `app.org_id` set, the non-owner `app_runtime` role sees shared
+rows but **zero** private `note` rows — private isolation holds while the shelf is shared.
+
 ---
 
 ## 10. Authorization
