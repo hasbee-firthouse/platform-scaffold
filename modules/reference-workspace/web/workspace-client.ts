@@ -9,7 +9,26 @@
  * the org member list — the source for the assignee picker (AC2) — comes from
  * the platform's `/api/orgs/:orgId/members` endpoint the settings screens use.
  */
-import type { TaskResponse, TaskStatus, WorkspaceResponse } from '../shared/index.js';
+import type {
+  CommentResponse,
+  PublishedNoteResponse,
+  TaskResponse,
+  TaskStatus,
+  WorkspaceResponse,
+} from '../shared/index.js';
+
+/** A published note plus the caller's engagement state (the library detail view). */
+export interface LibraryNoteDetail {
+  note: PublishedNoteResponse;
+  likeCount: number;
+  likedByMe: boolean;
+}
+
+/** The like state a like/unlike call returns. */
+export interface LikeState {
+  liked: boolean;
+  count: number;
+}
 
 /** The platform error code returned when a task-create hits the plan's task limit (AC3). */
 const ENTITLEMENT_REQUIRED = 'ENTITLEMENT_REQUIRED';
@@ -24,9 +43,10 @@ export interface WorkspaceMember {
   createdAt: string;
 }
 
-/** Payload to create a task from the add-task form: a title plus an optional assignee. */
+/** Payload to create a note from the add form: a title, optional body and assignee. */
 export interface CreateTaskInput {
   title: string;
+  body?: string;
   assigneeMemberId?: string | null;
 }
 
@@ -66,10 +86,25 @@ export interface WorkspaceClient {
   deleteWorkspace(orgId: string, workspaceId: string): Promise<void>;
   listTasks(orgId: string, workspaceId: string, status?: TaskStatus): Promise<TaskResponse[]>;
   createTask(orgId: string, workspaceId: string, input: CreateTaskInput): Promise<TaskResponse>;
-  completeTask(orgId: string, taskId: string): Promise<TaskResponse>;
-  uncompleteTask(orgId: string, taskId: string): Promise<TaskResponse>;
+  publishTask(orgId: string, taskId: string): Promise<TaskResponse>;
+  unpublishTask(orgId: string, taskId: string): Promise<TaskResponse>;
   deleteTask(orgId: string, taskId: string): Promise<void>;
   listMembers(orgId: string): Promise<WorkspaceMember[]>;
+  // --- Reader side: the cross-org library + engagement (shared plane, §9.x) ---
+  /** Every published note across all writer orgs (global read, not org-scoped). */
+  listLibrary(): Promise<PublishedNoteResponse[]>;
+  /** A single published note plus the caller's like state. */
+  getLibraryNote(noteId: string): Promise<LibraryNoteDetail>;
+  /** Comments on a published note. */
+  listComments(noteId: string): Promise<CommentResponse[]>;
+  /** Like a note as a member of `orgId` (the reader org). */
+  likeNote(orgId: string, noteId: string): Promise<LikeState>;
+  /** Remove the caller's like. */
+  unlikeNote(orgId: string, noteId: string): Promise<LikeState>;
+  /** Post a comment as a member of `orgId`. */
+  addComment(orgId: string, noteId: string, body: string): Promise<CommentResponse>;
+  /** Delete the caller's own comment. */
+  deleteComment(orgId: string, noteId: string, commentId: string): Promise<void>;
 }
 
 /** The most members the assignee picker fetches in one page (org member counts are small). */
@@ -156,15 +191,18 @@ export function createWorkspaceClient(options: WorkspaceClientOptions = {}): Wor
     },
     async createTask(orgId, workspaceId, input) {
       const payload: CreateTaskInput = { title: input.title, assigneeMemberId: input.assigneeMemberId };
+      if (input.body !== undefined) {
+        payload.body = input.body;
+      }
       const body = asRecord(await mutate('POST', `${workspaces(orgId)}/${workspaceId}/tasks`, payload));
       return body.task as TaskResponse;
     },
-    async completeTask(orgId, taskId) {
-      const body = asRecord(await mutate('POST', `${tasks(orgId)}/${taskId}/complete`));
+    async publishTask(orgId, taskId) {
+      const body = asRecord(await mutate('POST', `${tasks(orgId)}/${taskId}/publish`));
       return body.task as TaskResponse;
     },
-    async uncompleteTask(orgId, taskId) {
-      const body = asRecord(await mutate('POST', `${tasks(orgId)}/${taskId}/uncomplete`));
+    async unpublishTask(orgId, taskId) {
+      const body = asRecord(await mutate('POST', `${tasks(orgId)}/${taskId}/unpublish`));
       return body.task as TaskResponse;
     },
     async deleteTask(orgId, taskId) {
@@ -175,6 +213,37 @@ export function createWorkspaceClient(options: WorkspaceClientOptions = {}): Wor
         await get(`/api/orgs/${orgId}/members?limit=${MEMBERS_PAGE_SIZE}&offset=0`),
       );
       return (body.items ?? []) as WorkspaceMember[];
+    },
+    async listLibrary() {
+      const body = asRecord(await get('/api/library'));
+      return (body.items ?? []) as PublishedNoteResponse[];
+    },
+    async getLibraryNote(noteId) {
+      const body = asRecord(await get(`/api/library/${noteId}`));
+      return {
+        note: body.note as PublishedNoteResponse,
+        likeCount: typeof body.likeCount === 'number' ? body.likeCount : 0,
+        likedByMe: body.likedByMe === true,
+      };
+    },
+    async listComments(noteId) {
+      const body = asRecord(await get(`/api/library/${noteId}/comments`));
+      return (body.items ?? []) as CommentResponse[];
+    },
+    async likeNote(orgId, noteId) {
+      const body = asRecord(await mutate('POST', `/api/orgs/${orgId}/library/${noteId}/like`));
+      return { liked: body.liked === true, count: typeof body.count === 'number' ? body.count : 0 };
+    },
+    async unlikeNote(orgId, noteId) {
+      const body = asRecord(await mutate('DELETE', `/api/orgs/${orgId}/library/${noteId}/like`));
+      return { liked: body.liked === true, count: typeof body.count === 'number' ? body.count : 0 };
+    },
+    async addComment(orgId, noteId, body) {
+      const res = asRecord(await mutate('POST', `/api/orgs/${orgId}/library/${noteId}/comments`, { body }));
+      return res.comment as CommentResponse;
+    },
+    async deleteComment(orgId, noteId, commentId) {
+      await send(`/api/orgs/${orgId}/library/${noteId}/comments/${commentId}`, { method: 'DELETE' });
     },
   };
 }

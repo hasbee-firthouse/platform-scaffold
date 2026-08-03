@@ -17,7 +17,9 @@ function task(overrides: Partial<TaskResponse> = {}): TaskResponse {
     orgId: 'o1',
     workspaceId: 'w1',
     title: 'Write spec',
-    status: 'open',
+    body: '',
+    status: 'draft',
+    publishedAt: null,
     assigneeMemberId: null,
     dueDate: null,
     createdBy: 'u1',
@@ -46,11 +48,13 @@ function stubClient(overrides: Partial<WorkspaceClient> = {}): WorkspaceClient {
     renameWorkspace: vi.fn(),
     deleteWorkspace: vi.fn(),
     listTasks: vi.fn(async (_o: string, _w: string, status?: string) =>
-      status === 'done' ? [task({ id: 't2', title: 'Ship it', status: 'done' })] : [task()],
+      status === 'published'
+        ? [task({ id: 't2', title: 'Ship it', status: 'published' })]
+        : [task()],
     ),
     createTask: vi.fn(async () => task({ id: 't9', title: 'Fresh' })),
-    completeTask: vi.fn(async () => task({ status: 'done' })),
-    uncompleteTask: vi.fn(async () => task({ status: 'open' })),
+    publishTask: vi.fn(async () => task({ status: 'published' })),
+    unpublishTask: vi.fn(async () => task({ status: 'draft' })),
     deleteTask: vi.fn(async () => undefined),
     listMembers: vi.fn(async () => [
       member(),
@@ -71,22 +75,22 @@ function renderScreen(client: WorkspaceClient): void {
 }
 
 describe('TasksScreen (E8-S3 · AC1/AC2/AC3)', () => {
-  it('lists open tasks by default (AC1)', async () => {
+  it('lists draft notes by default (AC1)', async () => {
     const client = stubClient();
     renderScreen(client);
 
     expect(await screen.findByText('Write spec')).toBeInTheDocument();
-    expect(client.listTasks).toHaveBeenCalledWith('o1', 'w1', 'open');
+    expect(client.listTasks).toHaveBeenCalledWith('o1', 'w1', 'draft');
   });
 
-  it('filters to done tasks when the status filter changes (AC1)', async () => {
+  it('filters to published notes when the status filter changes (AC1)', async () => {
     const client = stubClient();
     renderScreen(client);
 
     await screen.findByText('Write spec');
-    await userEvent.selectOptions(screen.getByLabelText(/filter/i), 'done');
+    await userEvent.selectOptions(screen.getByLabelText(/filter/i), 'published');
 
-    await waitFor(() => expect(client.listTasks).toHaveBeenLastCalledWith('o1', 'w1', 'done'));
+    await waitFor(() => expect(client.listTasks).toHaveBeenLastCalledWith('o1', 'w1', 'published'));
     expect(await screen.findByText('Ship it')).toBeInTheDocument();
   });
 
@@ -95,8 +99,8 @@ describe('TasksScreen (E8-S3 · AC1/AC2/AC3)', () => {
     renderScreen(client);
 
     await screen.findByText('Write spec');
-    await userEvent.type(screen.getByLabelText(/new task title/i), 'Fresh');
-    await userEvent.click(screen.getByRole('button', { name: /add task/i }));
+    await userEvent.type(screen.getByLabelText(/new note title/i), 'Fresh');
+    await userEvent.click(screen.getByRole('button', { name: /add note/i }));
 
     await waitFor(() =>
       expect(client.createTask).toHaveBeenCalledWith('o1', 'w1', {
@@ -115,9 +119,9 @@ describe('TasksScreen (E8-S3 · AC1/AC2/AC3)', () => {
     // The picker lists current org members.
     expect(await screen.findByRole('option', { name: 'Grace Hopper' })).toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText(/new task title/i), 'Assigned work');
+    await userEvent.type(screen.getByLabelText(/new note title/i), 'Assigned work');
     await userEvent.selectOptions(screen.getByLabelText(/assignee/i), 'm2');
-    await userEvent.click(screen.getByRole('button', { name: /add task/i }));
+    await userEvent.click(screen.getByRole('button', { name: /add note/i }));
 
     await waitFor(() =>
       expect(client.createTask).toHaveBeenCalledWith('o1', 'w1', {
@@ -127,26 +131,26 @@ describe('TasksScreen (E8-S3 · AC1/AC2/AC3)', () => {
     );
   });
 
-  it('completes an open task (AC1)', async () => {
+  it('publishes a draft note (AC1)', async () => {
     const client = stubClient();
     renderScreen(client);
 
     await screen.findByText('Write spec');
-    await userEvent.click(screen.getByRole('button', { name: /complete write spec/i }));
+    await userEvent.click(screen.getByRole('button', { name: /publish write spec/i }));
 
-    await waitFor(() => expect(client.completeTask).toHaveBeenCalledWith('o1', 't1'));
+    await waitFor(() => expect(client.publishTask).toHaveBeenCalledWith('o1', 't1'));
   });
 
-  it('uncompletes a done task (AC1)', async () => {
+  it('unpublishes a published note (AC1)', async () => {
     const client = stubClient({
-      listTasks: vi.fn(async () => [task({ status: 'done' })]),
+      listTasks: vi.fn(async () => [task({ status: 'published' })]),
     });
     renderScreen(client);
 
     await screen.findByText('Write spec');
-    await userEvent.click(screen.getByRole('button', { name: /reopen write spec/i }));
+    await userEvent.click(screen.getByRole('button', { name: /unpublish write spec/i }));
 
-    await waitFor(() => expect(client.uncompleteTask).toHaveBeenCalledWith('o1', 't1'));
+    await waitFor(() => expect(client.unpublishTask).toHaveBeenCalledWith('o1', 't1'));
   });
 
   it('deletes a task (AC1)', async () => {
@@ -164,8 +168,8 @@ describe('TasksScreen (E8-S3 · AC1/AC2/AC3)', () => {
     renderScreen(client);
 
     await screen.findByText('Write spec');
-    expect(screen.getByRole('heading', { name: /tasks/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/new task title/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /notes/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/new note title/i)).toBeInTheDocument();
   });
 
   it('shows the upgrade notice when creating a task hits the task limit (AC3)', async () => {
@@ -177,8 +181,8 @@ describe('TasksScreen (E8-S3 · AC1/AC2/AC3)', () => {
     renderScreen(client);
 
     await screen.findByText('Write spec');
-    await userEvent.type(screen.getByLabelText(/new task title/i), 'One too many');
-    await userEvent.click(screen.getByRole('button', { name: /add task/i }));
+    await userEvent.type(screen.getByLabelText(/new note title/i), 'One too many');
+    await userEvent.click(screen.getByRole('button', { name: /add note/i }));
 
     expect(await screen.findByText(/upgrade required/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /contact us/i })).toBeInTheDocument();

@@ -226,13 +226,13 @@ async function seedReferenceWorkspace(
   try {
     const workspaceId = uuidv7();
     await db.execute(
-      sql`insert into workspace (id, org_id, name, created_by)
+      sql`insert into space (id, org_id, name, created_by)
           values (${workspaceId}, ${orgId}, ${SEED_WORKSPACE_NAME}, ${createdBy})`,
     );
     for (const title of SEED_TASK_TITLES) {
       await db.execute(
-        sql`insert into task (id, org_id, workspace_id, title, status, created_by)
-            values (${uuidv7()}, ${orgId}, ${workspaceId}, ${title}, 'open', ${createdBy})`,
+        sql`insert into note (id, org_id, workspace_id, title, status, created_by)
+            values (${uuidv7()}, ${orgId}, ${workspaceId}, ${title}, 'draft', ${createdBy})`,
       );
     }
     console.log(`  seeded workspace "${SEED_WORKSPACE_NAME}" with ${SEED_TASK_TITLES.length} tasks`);

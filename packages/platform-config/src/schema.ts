@@ -66,6 +66,25 @@ export const emailIdentitySchema = z.object({
 export type EmailIdentity = z.infer<typeof emailIdentitySchema>;
 
 /**
+ * Org typing — a control-plane knob (see `docs/DECISION-framework-control-plane.md`,
+ * Gap 3). Generalizes the built-in `organization.type` (`personal|team`) into
+ * product-declared types, each mapping to the module nav it shows and the module
+ * roles offered on its Members screen. Optional: products that do not use org
+ * typing omit the whole `orgTypes` block and nothing changes.
+ */
+export const orgTypeSchema = z.object({
+  /** Module nav ids shown to an org of this type. */
+  nav: z.array(z.string()).optional(),
+  /** Module role names offered when inviting/assigning within an org of this type. */
+  roles: z.array(z.string()).optional(),
+});
+export type OrgType = z.infer<typeof orgTypeSchema>;
+
+/** A product's declared org types, keyed by type name (e.g. `writer`, `reader`). */
+export const orgTypesSchema = z.record(orgTypeSchema);
+export type OrgTypes = z.infer<typeof orgTypesSchema>;
+
+/**
  * The shape a product author writes. `capabilities` and `terminology` are
  * optional here: the profile and built-in defaults fill the gaps during
  * resolution in {@link defineProduct}.
@@ -77,6 +96,7 @@ export const productInputSchema = z.object({
   branding: brandingSchema,
   terminology: terminologySchema.optional(),
   navigation: navigationSchema.optional(),
+  orgTypes: orgTypesSchema.optional(),
   email: emailIdentitySchema,
 });
 export type ProductInput = z.input<typeof productInputSchema>;

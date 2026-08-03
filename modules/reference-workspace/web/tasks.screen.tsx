@@ -33,8 +33,8 @@ import {
 } from './workspace-client.js';
 import type { TaskResponse, TaskStatus } from '../shared/index.js';
 
-/** The status filter over the task list; `all` drops the server-side status query. */
-export type TaskFilter = 'all' | 'open' | 'done';
+/** The status filter over the note list; `all` drops the server-side status query. */
+export type TaskFilter = 'all' | 'draft' | 'published';
 
 /** Token-driven class for the native selects (kept token-only — no literal colors, AC3). */
 const fieldClass =
@@ -61,7 +61,7 @@ export function TasksScreen({
   const term = useTerm('task');
   const termPlural = useTerm('task', { plural: true, capital: true });
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<TaskFilter>('open');
+  const [filter, setFilter] = useState<TaskFilter>('draft');
 
   const tasksQuery = useQuery({
     queryKey: ['tasks', orgId, workspaceId, filter],
@@ -76,13 +76,13 @@ export function TasksScreen({
     queryClient.invalidateQueries({ queryKey: ['tasks', orgId, workspaceId] }).then(() => undefined);
 
   const create = useMutation({
-    mutationFn: (input: { title: string; assigneeMemberId: string | null }) =>
+    mutationFn: (input: { title: string; assigneeMemberId: string | null; body?: string }) =>
       client.createTask(orgId, workspaceId, input),
     onSuccess: refresh,
   });
-  const setDone = useMutation({
-    mutationFn: (input: { id: string; done: boolean }) =>
-      input.done ? client.completeTask(orgId, input.id) : client.uncompleteTask(orgId, input.id),
+  const setPublished = useMutation({
+    mutationFn: (input: { id: string; published: boolean }) =>
+      input.published ? client.publishTask(orgId, input.id) : client.unpublishTask(orgId, input.id),
     onSuccess: refresh,
   });
   const remove = useMutation({
@@ -93,7 +93,7 @@ export function TasksScreen({
   const tasks = tasksQuery.data ?? [];
   const members = membersQuery.data ?? [];
   const limitReached = isEntitlementRequired(create.error);
-  const otherError = !limitReached ? (create.error ?? setDone.error ?? remove.error) : null;
+  const otherError = !limitReached ? (create.error ?? setPublished.error ?? remove.error) : null;
 
   return (
     <section className="page-stack">
@@ -133,7 +133,7 @@ export function TasksScreen({
               key={task.id}
               task={task}
               members={members}
-              onToggle={(done) => setDone.mutate({ id: task.id, done })}
+              onToggle={(published) => setPublished.mutate({ id: task.id, published })}
               onDelete={() => remove.mutate(task.id)}
             />
           ))}
@@ -163,8 +163,8 @@ function StatusFilter({ term, value, onChange }: StatusFilterProps): ReactElemen
         onChange={(event) => onChange(event.target.value as TaskFilter)}
       >
         <option value="all">All</option>
-        <option value="open">Open</option>
-        <option value="done">Done</option>
+        <option value="draft">Draft</option>
+        <option value="published">Published</option>
       </select>
     </label>
   );
@@ -174,11 +174,12 @@ interface AddTaskFormProps {
   term: string;
   members: WorkspaceMember[];
   pending: boolean;
-  onSubmit: (input: { title: string; assigneeMemberId: string | null }) => void;
+  onSubmit: (input: { title: string; assigneeMemberId: string | null; body?: string }) => void;
 }
 
 function AddTaskForm({ term, members, pending, onSubmit }: AddTaskFormProps): ReactElement {
   const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
   const [assigneeMemberId, setAssigneeMemberId] = useState('');
 
   function submit(event: FormEvent<HTMLFormElement>): void {
@@ -186,8 +187,15 @@ function AddTaskForm({ term, members, pending, onSubmit }: AddTaskFormProps): Re
     if (title.trim().length === 0) {
       return;
     }
-    onSubmit({ title: title.trim(), assigneeMemberId: assigneeMemberId || null });
+    const trimmedBody = body.trim();
+    onSubmit({
+      title: title.trim(),
+      assigneeMemberId: assigneeMemberId || null,
+      // Only send a body when one was written, so a title-only draft stays minimal.
+      body: trimmedBody.length > 0 ? trimmedBody : undefined,
+    });
     setTitle('');
+    setBody('');
     setAssigneeMemberId('');
   }
 
@@ -199,6 +207,12 @@ function AddTaskForm({ term, members, pending, onSubmit }: AddTaskFormProps): Re
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         required
+      />
+      <Input
+        aria-label={`New ${term} body`}
+        placeholder={`${term} body (optional)`}
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
       />
       <AssigneeSelect
         members={members}
@@ -240,13 +254,13 @@ function AssigneeSelect({ members, value, onChange }: AssigneeSelectProps): Reac
 interface TaskRowProps {
   task: TaskResponse;
   members: WorkspaceMember[];
-  onToggle: (done: boolean) => void;
+  onToggle: (published: boolean) => void;
   onDelete: () => void;
 }
 
 function TaskRow({ task, members, onToggle, onDelete }: TaskRowProps): ReactElement {
   const assignee = members.find((member) => member.id === task.assigneeMemberId);
-  const done = task.status === 'done';
+  const published = task.status === 'published';
 
   return (
     <TableRow>
@@ -254,8 +268,8 @@ function TaskRow({ task, members, onToggle, onDelete }: TaskRowProps): ReactElem
       <TableCell>{assignee?.name ?? '—'}</TableCell>
       <TableCell>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => onToggle(!done)}>
-            {done ? 'Reopen' : 'Complete'} {task.title}
+          <Button variant="ghost" size="sm" onClick={() => onToggle(!published)}>
+            {published ? 'Unpublish' : 'Publish'} {task.title}
           </Button>
           <Button variant="ghost" size="sm" onClick={onDelete}>
             Delete {task.title}

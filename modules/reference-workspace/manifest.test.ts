@@ -19,22 +19,49 @@ describe('reference-workspace manifest (AC2)', () => {
     expect(MODULE_MANIFESTS).toContain(referenceWorkspaceManifest);
   });
 
-  it('declares exactly the three workspace permission ids', () => {
+  it('declares the six space/note permission ids', () => {
     expect([...referenceWorkspaceManifest.permissions].sort()).toEqual(
-      ['workspace.tasks.read', 'workspace.tasks.write', 'workspace.workspaces.manage'].sort(),
+      [
+        'space.comments.write',
+        'space.likes.write',
+        'space.notes.publish',
+        'space.notes.read',
+        'space.notes.write',
+        'space.spaces.manage',
+      ].sort(),
     );
   });
 
-  it('declares a "Workspace Manager" role granting all three permissions', () => {
-    const role = referenceWorkspaceManifest.roles['Workspace Manager'];
-    expect(role).toBeDefined();
-    expect([...(role ?? [])].sort()).toEqual(
-      ['workspace.tasks.read', 'workspace.tasks.write', 'workspace.workspaces.manage'].sort(),
+  it('declares Author and Editor product roles with the expected permissions', () => {
+    expect([...(referenceWorkspaceManifest.roles.Author ?? [])].sort()).toEqual(
+      ['space.notes.read', 'space.notes.write'].sort(),
+    );
+    expect([...(referenceWorkspaceManifest.roles.Editor ?? [])].sort()).toEqual(
+      ['space.notes.publish', 'space.notes.read', 'space.notes.write', 'space.spaces.manage'].sort(),
     );
   });
 
-  it('declares the workspace.maxTasks entitlement with a default of 100', () => {
-    expect(referenceWorkspaceManifest.entitlements['workspace.maxTasks']).toBe(100);
+  it('declares Reader and Commenter product roles for the reader side', () => {
+    expect([...(referenceWorkspaceManifest.roles.Reader ?? [])].sort()).toEqual(
+      ['space.likes.write', 'space.notes.read'].sort(),
+    );
+    expect([...(referenceWorkspaceManifest.roles.Commenter ?? [])].sort()).toEqual(
+      ['space.comments.write', 'space.likes.write', 'space.notes.read'].sort(),
+    );
+  });
+
+  it('grants comment to Commenter but NOT to Reader (the engagement split)', () => {
+    expect(referenceWorkspaceManifest.roles.Reader).not.toContain('space.comments.write');
+    expect(referenceWorkspaceManifest.roles.Commenter).toContain('space.comments.write');
+  });
+
+  it('grants publish to Editor but NOT to Author (the editorial split)', () => {
+    expect(referenceWorkspaceManifest.roles.Author).not.toContain('space.notes.publish');
+    expect(referenceWorkspaceManifest.roles.Editor).toContain('space.notes.publish');
+  });
+
+  it('declares the space.maxNotes entitlement with a default of 100', () => {
+    expect(referenceWorkspaceManifest.entitlements['space.maxNotes']).toBe(100);
   });
 });
 
@@ -46,9 +73,9 @@ describe('reference-workspace manifest jobs (E8-S4 · AC1/AC3)', () => {
   });
 
   it('keeps permissions/roles/entitlements intact alongside the new jobs field', () => {
-    expect(referenceWorkspaceManifest.permissions).toHaveLength(3);
-    expect(referenceWorkspaceManifest.roles['Workspace Manager']).toBeDefined();
-    expect(referenceWorkspaceManifest.entitlements['workspace.maxTasks']).toBe(100);
+    expect(referenceWorkspaceManifest.permissions).toHaveLength(6);
+    expect(referenceWorkspaceManifest.roles.Editor).toBeDefined();
+    expect(referenceWorkspaceManifest.entitlements['space.maxNotes']).toBe(100);
   });
 
   it('declares a pg-boss retry policy on the export job (AC3)', () => {
@@ -67,10 +94,12 @@ describe('reference-workspace manifest registers cleanly (AC2)', () => {
     }
   });
 
-  it('every Workspace Manager permission resolves to a known permission id', () => {
+  it('every product-role permission resolves to a known permission id', () => {
     const registry = createPermissionRegistry([referenceWorkspaceManifest]);
-    for (const id of referenceWorkspaceManifest.roles['Workspace Manager'] ?? []) {
-      expect(registry.permissions.has(id)).toBe(true);
+    for (const perms of Object.values(referenceWorkspaceManifest.roles)) {
+      for (const id of perms) {
+        expect(registry.permissions.has(id)).toBe(true);
+      }
     }
   });
 
@@ -79,6 +108,6 @@ describe('reference-workspace manifest registers cleanly (AC2)', () => {
       ...BUILT_IN_ENTITLEMENTS,
       ...referenceWorkspaceManifest.entitlements,
     });
-    expect(registry.getDefault('workspace.maxTasks')).toBe(100);
+    expect(registry.getDefault('space.maxNotes')).toBe(100);
   });
 });

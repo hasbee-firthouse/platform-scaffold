@@ -24,7 +24,9 @@ function task(overrides: Partial<TaskResponse> = {}): TaskResponse {
     orgId: 'o1',
     workspaceId: '11111111-1111-1111-1111-111111111111',
     title: 'Write spec',
-    status: 'open',
+    body: '',
+    status: 'draft',
+    publishedAt: null,
     assigneeMemberId: null,
     dueDate: null,
     createdBy: 'u1',
@@ -95,13 +97,13 @@ describe('createWorkspaceClient (E8-S3)', () => {
   });
 
   it('lists tasks filtered by status', async () => {
-    const { fetchImpl, calls } = stubFetch({ items: [task({ status: 'done' })] });
+    const { fetchImpl, calls } = stubFetch({ items: [task({ status: 'published' })] });
     const client = createWorkspaceClient({ fetchImpl });
 
-    const result = await client.listTasks('o1', 'w1', 'done');
+    const result = await client.listTasks('o1', 'w1', 'published');
 
-    expect(result[0]?.status).toBe('done');
-    expect(calls[0]?.[0]).toBe('/api/orgs/o1/workspace/workspaces/w1/tasks?status=done');
+    expect(result[0]?.status).toBe('published');
+    expect(calls[0]?.[0]).toBe('/api/orgs/o1/workspace/workspaces/w1/tasks?status=published');
   });
 
   it('lists tasks without a status query when none is given', async () => {
@@ -125,16 +127,16 @@ describe('createWorkspaceClient (E8-S3)', () => {
     expect(calls[0]?.[1]?.body).toBe(JSON.stringify({ title: 'Write spec', assigneeMemberId: 'm2' }));
   });
 
-  it('completes and uncompletes a task', async () => {
-    const complete = stubFetch({ task: task({ status: 'done' }) });
-    const done = await createWorkspaceClient({ fetchImpl: complete.fetchImpl }).completeTask('o1', 't1');
-    expect(done.status).toBe('done');
-    expect(complete.calls[0]?.[0]).toBe('/api/orgs/o1/workspace/tasks/t1/complete');
+  it('publishes and unpublishes a note', async () => {
+    const publish = stubFetch({ task: task({ status: 'published' }) });
+    const published = await createWorkspaceClient({ fetchImpl: publish.fetchImpl }).publishTask('o1', 't1');
+    expect(published.status).toBe('published');
+    expect(publish.calls[0]?.[0]).toBe('/api/orgs/o1/workspace/tasks/t1/publish');
 
-    const uncomplete = stubFetch({ task: task({ status: 'open' }) });
-    const reopened = await createWorkspaceClient({ fetchImpl: uncomplete.fetchImpl }).uncompleteTask('o1', 't1');
-    expect(reopened.status).toBe('open');
-    expect(uncomplete.calls[0]?.[0]).toBe('/api/orgs/o1/workspace/tasks/t1/uncomplete');
+    const unpublish = stubFetch({ task: task({ status: 'draft' }) });
+    const drafted = await createWorkspaceClient({ fetchImpl: unpublish.fetchImpl }).unpublishTask('o1', 't1');
+    expect(drafted.status).toBe('draft');
+    expect(unpublish.calls[0]?.[0]).toBe('/api/orgs/o1/workspace/tasks/t1/unpublish');
   });
 
   it('deletes a task via DELETE', async () => {

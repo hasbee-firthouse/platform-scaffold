@@ -27,6 +27,12 @@ import { describe, expect, it } from 'vitest';
  *
  * DEFERRED (live Postgres): real `SET LOCAL` visibility and RLS policy
  * enforcement are integration concerns verified against a running database.
+ *
+ * APPROVED EXCEPTION (shared plane): a file may query a DELIBERATELY non-tenant,
+ * cross-org table (e.g. the `published_note` shelf) outside `withOrg` when it
+ * carries the `@shared-plane` marker. Such tables have NO org-isolation RLS
+ * policy by design (SPEC §9.x / decision #2), so the withOrg rule does not apply.
+ * The marker keeps the opt-out explicit, greppable and auditable.
  */
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -34,6 +40,9 @@ const MODULES_DIR = join(REPO_ROOT, 'modules');
 
 /** Drizzle query-builder calls that indicate a database read/write. */
 const QUERY_BUILDER = /\.(select|insertInto|insert|update|delete)\s*\(/;
+
+/** Files carrying this marker query a deliberately non-tenant shared table (SPEC §9.x). */
+const SHARED_PLANE_MARKER = '@shared-plane';
 
 /** Recursively collect non-test TypeScript files under `dir`. */
 function collectSourceFiles(dir: string): string[] {
@@ -74,7 +83,8 @@ describe('no tenant-table access outside withOrg (AC3)', () => {
       const source = readFileSync(file, 'utf8');
       const hasQuery = QUERY_BUILDER.test(source);
       const usesWithOrg = source.includes('withOrg');
-      if (hasQuery && !usesWithOrg) {
+      const isSharedPlane = source.includes(SHARED_PLANE_MARKER);
+      if (hasQuery && !usesWithOrg && !isSharedPlane) {
         offenders.push(file.slice(REPO_ROOT.length + 1).replace(/\\/g, '/'));
       }
     }

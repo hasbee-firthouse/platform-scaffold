@@ -11,17 +11,20 @@ import type { ModuleJob, ModuleManifest } from '../index.js';
  * not here, is what keeps the module deletable (SPEC deletability).
  */
 
-/** The permission ids owned by the reference-workspace module. */
-export const WORKSPACE_PERMISSIONS = {
-  workspacesManage: 'workspace.workspaces.manage',
-  tasksRead: 'workspace.tasks.read',
-  tasksWrite: 'workspace.tasks.write',
+/** The permission ids owned by the reference module (the space/note domain). */
+export const SPACE_PERMISSIONS = {
+  spacesManage: 'space.spaces.manage',
+  notesRead: 'space.notes.read',
+  notesWrite: 'space.notes.write',
+  notesPublish: 'space.notes.publish',
+  likesWrite: 'space.likes.write',
+  commentsWrite: 'space.comments.write',
 } as const satisfies Record<string, PermissionId>;
 
-/** The entitlement key capping the number of tasks per organization. */
-export const MAX_TASKS_ENTITLEMENT = 'workspace.maxTasks';
+/** The entitlement key capping the number of notes per organization. */
+export const MAX_NOTES_ENTITLEMENT = 'space.maxNotes';
 
-/** The queue/job name of the export-workspace job (E8-S4). */
+/** The queue/job name of the export-notes job (E8-S4). */
 export const WORKSPACE_EXPORT_JOB_NAME = 'workspace.export';
 
 /**
@@ -35,26 +38,47 @@ export const workspaceExportJob: ModuleJob = {
 };
 
 /**
- * The reference-workspace manifest: the three workspace permissions, the
- * `Workspace Manager` role (granted all three), and the `workspace.maxTasks`
- * entitlement defaulting to 100 (AC2).
+ * The reference-workspace manifest: the four space/note permissions, the two
+ * product roles that model the writer-side editorial workflow, and the
+ * `space.maxNotes` entitlement (default 100).
+ *
+ * Product roles (assigned per member on the Members screen):
+ * - **Author** (Writer org) — read + write notes: create/edit drafts, NOT publish.
+ * - **Editor** (Writer org) — Author + publish/unpublish + manage spaces (moderator).
+ * - **Reader** (Reader org) — read published notes + like them.
+ * - **Commenter** (Reader org) — Reader + comment on published notes.
+ *
+ * Built-in `owner`/`admin` inherit all permissions; `member` inherits the read
+ * default only. Which roles are offered depends on the org's type — a Writer org
+ * offers Author/Editor, a Reader org offers Reader/Commenter (Step 5 config).
  */
 export const referenceWorkspaceManifest: ModuleManifest = {
   id: 'reference-workspace',
   permissions: [
-    WORKSPACE_PERMISSIONS.workspacesManage,
-    WORKSPACE_PERMISSIONS.tasksRead,
-    WORKSPACE_PERMISSIONS.tasksWrite,
+    SPACE_PERMISSIONS.spacesManage,
+    SPACE_PERMISSIONS.notesRead,
+    SPACE_PERMISSIONS.notesWrite,
+    SPACE_PERMISSIONS.notesPublish,
+    SPACE_PERMISSIONS.likesWrite,
+    SPACE_PERMISSIONS.commentsWrite,
   ],
   roles: {
-    'Workspace Manager': [
-      WORKSPACE_PERMISSIONS.workspacesManage,
-      WORKSPACE_PERMISSIONS.tasksRead,
-      WORKSPACE_PERMISSIONS.tasksWrite,
+    Author: [SPACE_PERMISSIONS.notesRead, SPACE_PERMISSIONS.notesWrite],
+    Editor: [
+      SPACE_PERMISSIONS.notesRead,
+      SPACE_PERMISSIONS.notesWrite,
+      SPACE_PERMISSIONS.notesPublish,
+      SPACE_PERMISSIONS.spacesManage,
+    ],
+    Reader: [SPACE_PERMISSIONS.notesRead, SPACE_PERMISSIONS.likesWrite],
+    Commenter: [
+      SPACE_PERMISSIONS.notesRead,
+      SPACE_PERMISSIONS.likesWrite,
+      SPACE_PERMISSIONS.commentsWrite,
     ],
   },
   entitlements: {
-    [MAX_TASKS_ENTITLEMENT]: 100,
+    [MAX_NOTES_ENTITLEMENT]: 100,
   },
   jobs: [workspaceExportJob],
 };

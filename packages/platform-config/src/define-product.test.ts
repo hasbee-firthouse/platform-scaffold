@@ -81,6 +81,37 @@ describe('defineProduct terminology resolution', () => {
   });
 });
 
+describe('defineProduct org typing', () => {
+  it('omits orgTypes when the product does not declare any', () => {
+    const product = defineProduct(baseInput());
+
+    expect(product.orgTypes).toBeUndefined();
+  });
+
+  it('passes declared org types through to the resolved config', () => {
+    const product = defineProduct(
+      baseInput({
+        orgTypes: {
+          writer: { nav: ['spaces'], roles: ['Author', 'Editor'] },
+          reader: { nav: ['library'], roles: ['Reader', 'Commenter'] },
+        },
+      }),
+    );
+
+    expect(product.orgTypes).toEqual({
+      writer: { nav: ['spaces'], roles: ['Author', 'Editor'] },
+      reader: { nav: ['library'], roles: ['Reader', 'Commenter'] },
+    });
+  });
+
+  it('rejects an org type whose roles is not an array of strings', () => {
+    const invalid = baseInput();
+    (invalid as { orgTypes: unknown }).orgTypes = { writer: { roles: 'Author' } };
+
+    expect(() => defineProduct(invalid)).toThrow(ZodError);
+  });
+});
+
 describe('defineProduct validation', () => {
   it('throws a ZodError naming the offending path when a required color is missing', () => {
     const invalid = baseInput();

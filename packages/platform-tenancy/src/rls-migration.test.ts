@@ -17,11 +17,11 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const migrationPath = resolve(
   here,
-  '../../platform-db/drizzle/0005_rls_backstop_policies.sql',
+  '../../platform-db/drizzle/0001_rls_backstop_policies.sql',
 );
 const migration = readFileSync(migrationPath, 'utf8');
 
-describe('0005_rls_backstop_policies migration', () => {
+describe('rls_backstop_policies migration', () => {
   it('embeds the full generated migration body verbatim', () => {
     expect(migration).toContain(rlsMigrationSql(TENANT_TABLES));
   });
@@ -60,7 +60,7 @@ describe('0005_rls_backstop_policies migration', () => {
         'TO "app_runtime" USING (org_id IS NULL OR',
     );
     expect(migration).not.toContain(
-      'CREATE POLICY "workspace_org_isolation" ON "workspace" AS PERMISSIVE FOR ALL ' +
+      'CREATE POLICY "space_org_isolation" ON "space" AS PERMISSIVE FOR ALL ' +
         'TO "app_runtime" USING (org_id IS NULL',
     );
   });

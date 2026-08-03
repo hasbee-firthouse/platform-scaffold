@@ -60,7 +60,7 @@ describe('buildTasksCsv (AC1)', () => {
       taskFixture({
         id: 'task-a',
         title: 'Ship it',
-        status: 'open',
+        status: 'published',
         assigneeMemberId: 'member-1',
         dueDate: new Date('2026-08-01T00:00:00.000Z'),
         createdBy: 'user-1',
@@ -69,19 +69,19 @@ describe('buildTasksCsv (AC1)', () => {
     const [header, row] = csv.split('\r\n');
     expect(header).toBe('id,title,status,assignee,due_date,created_by,created_at,updated_at');
     expect(row).toBe(
-      'task-a,Ship it,open,member-1,2026-08-01T00:00:00.000Z,user-1,2026-07-16T00:00:00.000Z,2026-07-16T00:00:00.000Z',
+      'task-a,Ship it,published,member-1,2026-08-01T00:00:00.000Z,user-1,2026-07-16T00:00:00.000Z,2026-07-16T00:00:00.000Z',
     );
   });
 
   it('renders a null assignee and null due date as empty fields', () => {
     const csv = buildTasksCsv([taskFixture({ id: 't', assigneeMemberId: null, dueDate: null })]);
     const row = csv.split('\r\n')[1] ?? '';
-    expect(row).toContain('t,Do the thing,open,,,user-1,');
+    expect(row).toContain('t,Do the thing,draft,,,user-1,');
   });
 
   it('escapes a title containing a comma or quote (AC1 escaping)', () => {
     const csv = buildTasksCsv([taskFixture({ id: 't', title: 'a, "b"' })]);
-    expect(csv.split('\r\n')[1]).toContain('t,"a, ""b""",open,');
+    expect(csv.split('\r\n')[1]).toContain('t,"a, ""b""",draft,');
   });
 
   it('emits only the header when the workspace has no tasks', () => {
