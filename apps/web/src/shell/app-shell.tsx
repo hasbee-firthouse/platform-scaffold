@@ -42,7 +42,8 @@ function moduleNavLinks(registry: WebModuleRegistry, orgSlug: string, config: Pr
 
 /** The always-visible top-level links every org exposes above the module nav. */
 function primaryNavLinks(orgSlug: string): ShellNavLink[] {
-  return [{ key: 'home', label: 'Home', to: `/o/${orgSlug}` }];
+  // `exact` so Home deactivates once a module route (e.g. /library) is active.
+  return [{ key: 'home', label: 'Home', to: `/o/${orgSlug}`, exact: true }];
 }
 
 /**
