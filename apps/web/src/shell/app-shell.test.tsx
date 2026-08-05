@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import {
   RouterProvider,
@@ -118,10 +119,13 @@ describe('org shell navigation', () => {
     expect(link).toHaveAttribute('href', '/o/acme/reports');
   });
 
-  it('always shows the non-privileged links and organization creation for b2b', async () => {
+  it('shows the always-available links and organization creation for b2b in the Administration menu', async () => {
     renderShell([]);
+    // Home is top-level product nav; Security + org creation live in the bottom menu.
     expect(await screen.findByRole('link', { name: 'Home' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Security' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /administration/i }));
+    expect(await screen.findByRole('link', { name: 'Security' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'New organization' })).toHaveAttribute(
       'href',
       '/app/create-organization',
@@ -131,6 +135,7 @@ describe('org shell navigation', () => {
   it('shows Invitations when URL-scoped permissions allow inviting members', async () => {
     renderShell(['org.members.invite']);
 
+    await userEvent.click(await screen.findByRole('button', { name: /administration/i }));
     expect(await screen.findByRole('link', { name: 'Invitations' })).toHaveAttribute(
       'href',
       '/o/acme/settings/invitations',
@@ -139,23 +144,32 @@ describe('org shell navigation', () => {
 
   it('hides org-admin nav without the permission and shows it with it (Can gate)', async () => {
     renderShell([]);
-    await screen.findByRole('link', { name: 'Home' });
+    await userEvent.click(await screen.findByRole('button', { name: /administration/i }));
+    // The menu opens (Security is always present) but the gated Members link is absent.
+    await screen.findByRole('link', { name: 'Security' });
     expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
 
     cleanup();
     renderShell(['org.members.read']);
+    await userEvent.click(await screen.findByRole('button', { name: /administration/i }));
     expect(await screen.findByRole('link', { name: 'Members' })).toBeInTheDocument();
   });
 
-  it('groups admin screens under an Administration disclosure, keeping Home and Workspaces top-level', async () => {
+  it('groups admin screens under an Administration menu, keeping Home and module links top-level', async () => {
     renderShell(['org.members.read']);
 
     const toggle = await screen.findByRole('button', { name: /administration/i });
+    // Closed by default: the menu opens on demand, above the trigger.
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
+
+    await userEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
     const panel = document.getElementById('nav-group-administration');
     expect(panel).not.toBeNull();
-    // Admin screens live inside the group; Home and the module link (Reports) stay top-level.
+    // Admin screens live inside the menu; Home and the module link (Reports) stay top-level.
     expect(within(panel as HTMLElement).getByRole('link', { name: 'Members' })).toBeInTheDocument();
     expect(within(panel as HTMLElement).queryByRole('link', { name: 'Home' })).not.toBeInTheDocument();
     expect(
@@ -163,19 +177,21 @@ describe('org shell navigation', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('collapses and re-expands the Administration group on toggle', async () => {
+  it('opens and closes the Administration menu on toggle', async () => {
     renderShell(['org.members.read']);
 
     const toggle = await screen.findByRole('button', { name: /administration/i });
-    expect(screen.getByRole('link', { name: 'Members' })).toBeInTheDocument();
-
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
 
-    fireEvent.click(toggle);
+    await userEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('link', { name: 'Members' })).toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument(),
+    );
   });
 });
 
@@ -223,7 +239,9 @@ describe('org shell navigation for a personal org', () => {
   it('hides org-admin links for a personal org even when the owner holds every permission', async () => {
     renderPersonalOrgShell();
 
-    // The user-scoped Security link still renders, proving the shell mounted.
+    // Opening the Administration menu shows the user-scoped Security link (proving
+    // the shell mounted) but none of the team-only org-admin screens.
+    await userEvent.click(await screen.findByRole('button', { name: /administration/i }));
     expect(await screen.findByRole('link', { name: 'Security' })).toBeInTheDocument();
     for (const label of ['Settings', 'Members', 'Invitations', 'Roles', 'Audit log']) {
       expect(screen.queryByRole('link', { name: label })).not.toBeInTheDocument();

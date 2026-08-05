@@ -48,11 +48,22 @@
 
   .shell-sidebar {
     margin-top: 0.5rem;
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
   }
 
   .shell-sidebar ul {
-    display: grid;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
     gap: 0.125rem;
+  }
+
+  /* The administrative cluster sinks to the bottom of the rail. */
+  .shell-nav-group {
+    margin-top: auto;
   }
 
   .shell-nav-link,
@@ -116,7 +127,8 @@
     border-right: 1.5px solid currentColor;
     border-bottom: 1.5px solid currentColor;
     opacity: 0.75;
-    transform: translateY(-1px) rotate(-45deg);
+    /* Points up: the menu opens above the trigger. Flips down when open. */
+    transform: translateY(1px) rotate(-135deg);
     transition: transform 160ms ease, opacity 160ms ease;
   }
 
@@ -125,19 +137,41 @@
   }
 
   .shell-nav-group-toggle[aria-expanded="true"] .shell-nav-group-chevron {
-    transform: translateY(-2px) rotate(45deg);
+    transform: translateY(-1px) rotate(45deg);
   }
 
-  .shell-nav-group-items {
-    display: grid;
+  /* The floating Administration menu (portaled; opens above the trigger). It is
+     a light surface card, so its links use foreground — not sidebar — colors. */
+  .shell-nav-group-menu {
+    min-width: 13.5rem;
+  }
+
+  .shell-nav-group-menu ul {
+    display: flex;
+    flex-direction: column;
     gap: 0.125rem;
-    margin-left: 0.625rem;
-    padding-left: 0.5rem;
-    border-left: 1px solid color-mix(in srgb, var(--color-sidebar-foreground) 14%, transparent);
   }
 
-  .shell-nav-group-items[hidden] {
-    display: none;
+  .shell-nav-menu-link {
+    display: flex;
+    align-items: center;
+    border-radius: calc(var(--radius) - 2px);
+    padding: 0.5rem 0.625rem;
+    color: var(--color-foreground);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .shell-nav-menu-link:hover {
+    background: var(--color-muted);
+  }
+
+  .shell-nav-menu-link.is-active,
+  .shell-nav-menu-link[aria-current="page"] {
+    background: var(--color-secondary);
+    color: var(--color-secondary-foreground);
+    font-weight: 600;
   }
 
   .shell-content {
@@ -270,8 +304,14 @@
 
   .shell-sidebar ul {
     display: flex;
+    flex-direction: row;
     overflow-x: auto;
     padding-bottom: 0.25rem;
+  }
+
+  /* On the horizontal mobile rail the group sits inline, not pushed down. */
+  .shell-nav-group {
+    margin-top: 0;
   }
 
   .shell-nav-link,
