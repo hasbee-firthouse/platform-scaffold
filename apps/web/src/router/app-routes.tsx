@@ -67,7 +67,15 @@ function resolveOrgRoute(
   return org;
 }
 
-/** The org landing surface — a minimal welcome under the shell (E2E entry point). */
+/**
+ * The org landing surface at `/o/<orgSlug>` — the target of the always-visible
+ * "Home" nav link and a stable post-login entry point (used by E2E).
+ *
+ * PLACEHOLDER: this is intentionally an empty welcome. It reserves the Home
+ * route + nav slot + breadcrumb so a fork can drop in its product's real
+ * landing page (dashboard, overview, recent activity) without wiring anything.
+ * Replace the body when you build your product; the route itself stays.
+ */
 function OrgHome(): ReactElement {
   return (
     <section aria-labelledby="org-home-heading" className="shell-surface">
