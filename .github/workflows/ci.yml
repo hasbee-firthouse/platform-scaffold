@@ -4,8 +4,14 @@ on:
   push:
   pull_request:
 
+# Cancel superseded runs on the same ref (a new push to a PR stops the old run).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  verify:
+  # Fast static gates — no services needed.
+  quality:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,5 +40,109 @@ jobs:
       - name: Typecheck
         run: pnpm -w tsc --noEmit
 
-      - name: Test
-        run: pnpm exec vitest run --passWithNoTests
+  # Unit tests plus the LIVE-DB isolation & migration suite against real Postgres.
+  test:
+    runs-on: ubuntu-latest
+    # A "service container": GitHub starts postgres:16 as a Docker sidecar on this
+    # ephemeral runner VM. Because the job's steps run on the runner host (not
+    # inside a container), the published port is reachable at localhost:5432 — the
+    # runner's own port, NOT any external host. It's a fresh, empty DB created for
+    # this run and destroyed when the job ends (hence the throwaway credentials
+    # below, and why we provision app_runtime + self-migrate every run). If the job
+    # itself ran inside a `container:`, you'd instead connect via the service name
+    # `postgres:5432` on the Docker network rather than localhost.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d platform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Owner connection (runs migrations, seeds); NON-OWNER runtime connection
+      # (NOBYPASSRLS) proves the RLS backstop. Passwords match scripts/init-db.sql
+      # + docker-compose.yml — CI-local only.
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/platform
+      TEST_RUNTIME_DATABASE_URL: postgres://app_runtime:app_runtime_dev_pw@localhost:5432/platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests (with coverage)
+        run: pnpm exec vitest run --coverage --passWithNoTests
+
+      - name: Provision app_runtime role (two-role RLS model)
+        # The isolation suite self-migrates; migration 0005 grants to app_runtime,
+        # so that non-owner role must exist before migrations run.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/init-db.sql
+
+      - name: Isolation & migration suite (live Postgres)
+        run: pnpm test:isolation
+
+  # Build the single production image and publish it to GHCR. Runs only after the
+  # gates pass, on pushes to main (auto on merge). Deploy to staging is a later
+  # step that consumes this image.
+  image:
+    needs: [quality, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

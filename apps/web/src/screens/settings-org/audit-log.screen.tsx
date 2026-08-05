@@ -163,10 +163,14 @@ function AuditLogViewer({ orgId, fetchAuditLogs }: ViewerProps): ReactElement {
         <TableBody>
           {items.map((item) => (
             <TableRow key={item.id}>
-              <TableCell>{item.createdAt}</TableCell>
-              <TableCell>{item.action}</TableCell>
-              <TableCell>{item.actorUserId ?? '—'}</TableCell>
+              <TableCell className="whitespace-nowrap font-mono text-xs text-[var(--color-muted-foreground)]">
+                {item.createdAt}
+              </TableCell>
               <TableCell>
+                <ActionChip action={item.action} />
+              </TableCell>
+              <TableCell className="font-mono text-xs">{item.actorUserId ?? '—'}</TableCell>
+              <TableCell className="font-mono text-xs text-[var(--color-muted-foreground)]">
                 {item.targetId ? `${item.targetType}:${item.targetId}` : item.targetType}
               </TableCell>
             </TableRow>
@@ -197,5 +201,52 @@ function AuditLogViewer({ orgId, fetchAuditLogs }: ViewerProps): ReactElement {
         <span className="text-sm text-[var(--color-muted-foreground)]">{total} total</span>
       </footer>
     </section>
+  );
+}
+
+/** The visual tone for an audit action, derived from its verb. */
+type ActionTone = 'ok' | 'warn' | 'danger' | 'info' | 'neutral';
+
+function actionTone(action: string): ActionTone {
+  const a = action.toLowerCase();
+  if (/(delete|remove|revoke|fail|denied|error|disable|block)/.test(a)) {
+    return 'danger';
+  }
+  if (/(unpublish|expire|suspend)/.test(a)) {
+    return 'warn';
+  }
+  if (/(publish|success|create|accept|grant|enable|complete)/.test(a)) {
+    return 'ok';
+  }
+  if (/(update|invite|change|role|setting|sign_in|sign_out|login|logout)/.test(a)) {
+    return 'info';
+  }
+  return 'neutral';
+}
+
+const TONE_CLASS: Readonly<Record<ActionTone, string>> = {
+  ok: 'bg-[var(--color-ok-weak)] text-[var(--color-ok)]',
+  warn: 'bg-[var(--color-warn-weak)] text-[var(--color-warn)]',
+  danger:
+    'bg-[color-mix(in_srgb,var(--color-destructive)_14%,transparent)] text-[var(--color-destructive)]',
+  info: 'bg-[var(--color-secondary)] text-[var(--color-secondary-foreground)]',
+  neutral: 'bg-[var(--color-muted)] text-[var(--color-muted-foreground)]',
+};
+
+/**
+ * An audit action rendered as a semantic chip: its verb sets the tone (a removal
+ * reads danger, a publish reads ok, a settings change reads info) so what needs
+ * attention stands out when scanning the log. The action text is preserved
+ * verbatim inside the chip.
+ */
+function ActionChip({ action }: { action: string }): ReactElement {
+  const tone = actionTone(action);
+  return (
+    <span
+      data-tone={tone}
+      className={`inline-block rounded-[calc(var(--radius)-3px)] px-2 py-0.5 font-mono text-xs font-medium ${TONE_CLASS[tone]}`}
+    >
+      {action}
+    </span>
   );
 }

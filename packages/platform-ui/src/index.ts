@@ -10,6 +10,7 @@ export * from './components/table.js';
 export * from './components/tabs.js';
 export * from './components/toast.js';
 export * from './components/card.js';
+export * from './components/pill.js';
 export * from './components/form.js';
 export * from './components/empty-state.js';
 export * from './components/confirm-dialog.js';

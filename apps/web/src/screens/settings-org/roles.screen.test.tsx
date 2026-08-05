@@ -65,6 +65,14 @@ describe('RolesScreen (E5-S3 · AC3)', () => {
     expect(within(removeRow).getAllByLabelText('not granted')).toHaveLength(1);
   });
 
+  it('groups permissions by plane under a section header (AC3)', async () => {
+    const client = stubClient();
+    renderScreen(client);
+
+    // All fixture permissions are org.* → one "Organization" plane header row.
+    expect(await screen.findByRole('cell', { name: /organization/i })).toBeInTheDocument();
+  });
+
   it('is read-only: exposes no editing controls (AC3)', async () => {
     const client = stubClient();
     renderScreen(client);

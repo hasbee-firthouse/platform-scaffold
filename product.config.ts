@@ -14,8 +14,17 @@ export default defineProduct({
     // `destructive` themes danger surfaces (e.g. the member-remove button and
     // its confirmation). Optional like the other non-primary tokens; the dark
     // variant is derived automatically. Falls back to the built-in red if unset.
-    colors: { primary: '#4f46e5', destructive: '#dc2626' },
-    typography: { fontFamily: 'Inter, sans-serif' },
+    // "Blueprint" direction: a single structural cobalt accent + a warm red for
+    // danger. Neutrals, surfaces, sidebar, and semantic status colors are driven
+    // by apps/web/src/styles/globals.css (both themes); only the runtime-injected
+    // brand tokens live here (ThemeProvider derives their dark variants).
+    colors: { primary: '#2b44cc', destructive: '#bb3a2c' },
+    // System grotesk for text (crisp, no webfont dependency). A monospace
+    // "instrument" face for labels/data/timestamps is exposed as --font-mono.
+    typography: {
+      fontFamily:
+        'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    },
     radius: '0.5rem',
   },
   terminology: {

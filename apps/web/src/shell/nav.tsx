@@ -1,12 +1,19 @@
 /**
- * Sidebar nav primitives for the org shell: individual links and the collapsible
- * group ("parent tile") that nests administrative screens. Extracted from
- * `app-shell.tsx` so the shell stays small and the permission-aware group logic
- * is independently testable.
+ * Sidebar nav primitives for the org shell: individual links and the grouped
+ * ("parent tile") administrative cluster. Extracted from `app-shell.tsx` so the
+ * shell stays small and the permission-aware group logic is independently
+ * testable. The Administration cluster is pinned to the bottom of the sidebar
+ * and opens as a floating menu ABOVE its trigger — the frequency-of-use
+ * convention (daily product nav up top, occasional config anchored at the
+ * bottom). Dismiss/focus/keyboard handling comes from the shared Radix menu.
  */
 import type { ReactElement } from 'react';
-import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@platform/ui';
 import { hasPermission, type PermissionId } from '@platform/authz';
 import { Can, usePermissions } from '../lib/can.js';
 
@@ -16,13 +23,34 @@ export interface ShellNavLink {
   label: string;
   to: string;
   permission?: PermissionId;
+  /**
+   * Match the path exactly for the active state. Set on the org-root ("Home")
+   * link so it isn't highlighted for descendant routes like `/o/:slug/library`
+   * (TanStack Router treats a link as active for its descendants by default).
+   */
+  exact?: boolean;
 }
 
-/** A single sidebar link, permission-gated via `<Can>` when it carries one. */
-export function NavLink({ link }: { link: ShellNavLink }): ReactElement {
+/** Where a {@link NavLink} is rendered — the dark sidebar rail or a light menu. */
+export type NavLinkVariant = 'sidebar' | 'menu';
+
+/** A single nav link, permission-gated via `<Can>` when it carries one. */
+export function NavLink({
+  link,
+  variant = 'sidebar',
+}: {
+  link: ShellNavLink;
+  variant?: NavLinkVariant;
+}): ReactElement {
+  const base = variant === 'menu' ? 'shell-nav-menu-link' : 'shell-nav-link';
   const anchor = (
     <li>
-      <Link to={link.to} className="shell-nav-link" activeProps={{ className: 'shell-nav-link is-active' }}>
+      <Link
+        to={link.to}
+        className={base}
+        activeOptions={{ exact: link.exact ?? false }}
+        activeProps={{ className: `${base} is-active` }}
+      >
         {link.label}
       </Link>
     </li>
@@ -31,20 +59,20 @@ export function NavLink({ link }: { link: ShellNavLink }): ReactElement {
 }
 
 export interface NavGroupProps {
-  /** Heading shown on the parent tile; also derives the panel's element id. */
+  /** Heading shown on the parent tile; also derives the menu's element id. */
   label: string;
   /** Links nested under the tile; each is still individually permission-gated. */
   links: ShellNavLink[];
 }
 
 /**
- * A collapsible parent tile grouping related nav links (e.g. "Administration").
- * Defaults to expanded and renders nothing when the current user can see none of
- * its children, so a member without any admin permission sees no empty group.
+ * The bottom-pinned parent tile grouping related nav links (e.g.
+ * "Administration"). Its trigger toggles a floating menu that opens above it;
+ * the menu renders nothing when the current user can see none of its children,
+ * so a member without any admin permission sees no empty group.
  */
 export function NavGroup({ label, links }: NavGroupProps): ReactElement | null {
   const permissions = usePermissions();
-  const [expanded, setExpanded] = useState(true);
   const visibleCount = links.filter(
     (link) => !link.permission || hasPermission(permissions, link.permission),
   ).length;
@@ -54,21 +82,27 @@ export function NavGroup({ label, links }: NavGroupProps): ReactElement | null {
   const panelId = `nav-group-${label.toLowerCase().replace(/\s+/g, '-')}`;
   return (
     <li className="shell-nav-group">
-      <button
-        type="button"
-        className="shell-nav-group-toggle"
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        onClick={() => setExpanded((value) => !value)}
-      >
-        <span>{label}</span>
-        <span className="shell-nav-group-chevron" aria-hidden="true" />
-      </button>
-      <ul id={panelId} className="shell-nav-group-items" hidden={!expanded}>
-        {links.map((link) => (
-          <NavLink key={link.key} link={link} />
-        ))}
-      </ul>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button type="button" className="shell-nav-group-toggle">
+            <span>{label}</span>
+            <span className="shell-nav-group-chevron" aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          id={panelId}
+          side="top"
+          align="start"
+          sideOffset={8}
+          className="shell-nav-group-menu"
+        >
+          <ul>
+            {links.map((link) => (
+              <NavLink key={link.key} link={link} variant="menu" />
+            ))}
+          </ul>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </li>
   );
 }

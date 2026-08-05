@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import type { UseFormReturn } from 'react-hook-form';
@@ -205,7 +205,11 @@ function SessionsPanel({
  * evaluate phase). After revoking, the list reloads to reflect the change.
  */
 export function SecurityScreen({ client }: SecurityScreenProps): ReactNode {
-  const auth = resolveAuthClient(client);
+  // Memoize so `auth` is a stable reference: `resolveAuthClient` builds a fresh
+  // client each call, and an unstable client would re-run the session/linked-
+  // account effects on every render — a fetch storm that trips the auth rate
+  // limiter and surfaces spurious "could not load" errors.
+  const auth = useMemo(() => resolveAuthClient(client), [client]);
   const revoke = useAuthMutation();
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
