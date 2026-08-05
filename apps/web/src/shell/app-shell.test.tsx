@@ -85,12 +85,13 @@ function b2bConfig(): ProductConfig {
 function renderShell(
   permissions: PermissionId[],
   registry: WebModuleManifest[] = [navModuleManifest()],
+  initialPath = '/o/acme',
 ): void {
   const router = createAppRouter({
     registry,
     config: b2bConfig(),
     session: AUTHED,
-    history: createMemoryHistory({ initialEntries: ['/o/acme'] }),
+    history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree: ReactElement = (
@@ -117,6 +118,16 @@ describe('org shell navigation', () => {
     renderShell([]);
     const link = await screen.findByRole('link', { name: 'Reports' });
     expect(link).toHaveAttribute('href', '/o/acme/reports');
+  });
+
+  it('activates only the matching top-level link (Home deselects on a module route)', async () => {
+    renderShell([], [navModuleManifest()], '/o/acme/reports');
+
+    const reports = await screen.findByRole('link', { name: 'Reports' });
+    const home = screen.getByRole('link', { name: 'Home' });
+    expect(reports).toHaveClass('is-active');
+    // Home is the org root; it must not stay active for a descendant route.
+    expect(home).not.toHaveClass('is-active');
   });
 
   it('offers organization creation in the Administration menu for b2b, and Home stays top-level', async () => {

@@ -23,6 +23,12 @@ export interface ShellNavLink {
   label: string;
   to: string;
   permission?: PermissionId;
+  /**
+   * Match the path exactly for the active state. Set on the org-root ("Home")
+   * link so it isn't highlighted for descendant routes like `/o/:slug/library`
+   * (TanStack Router treats a link as active for its descendants by default).
+   */
+  exact?: boolean;
 }
 
 /** Where a {@link NavLink} is rendered — the dark sidebar rail or a light menu. */
@@ -39,7 +45,12 @@ export function NavLink({
   const base = variant === 'menu' ? 'shell-nav-menu-link' : 'shell-nav-link';
   const anchor = (
     <li>
-      <Link to={link.to} className={base} activeProps={{ className: `${base} is-active` }}>
+      <Link
+        to={link.to}
+        className={base}
+        activeOptions={{ exact: link.exact ?? false }}
+        activeProps={{ className: `${base} is-active` }}
+      >
         {link.label}
       </Link>
     </li>
