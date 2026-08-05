@@ -51,8 +51,9 @@ function primaryNavLinks(orgSlug: string): ShellNavLink[] {
  * org — a personal org has no such surface, so its screens render `null` (SPEC
  * §12). Those links are therefore omitted for a personal org rather than pointing
  * at blank pages: gating on permission alone is insufficient because a personal
- * org's owner holds every permission. `Security` is user-scoped and always shown;
- * the org-admin entries additionally carry a permission gate.
+ * org's owner holds every permission. The org-admin entries additionally carry a
+ * permission gate. Account **Security** is user-scoped, not org administration —
+ * it lives in the top-bar user menu (see {@link UserMenu}), not here.
  */
 function adminNavLinks(orgSlug: string, config: ProductConfig, orgType: OrgType): ShellNavLink[] {
   const base = `/o/${orgSlug}`;
@@ -71,7 +72,6 @@ function adminNavLinks(orgSlug: string, config: ProductConfig, orgType: OrgType)
       { key: 'audit', label: 'Audit log', to: `${base}/settings/audit-log`, permission: 'org.settings.update' },
     );
   }
-  links.push({ key: 'security', label: 'Security', to: `${base}/settings/security` });
   if (config.capabilities.organizations) {
     links.push({ key: 'new-org', label: 'New organization', to: '/app/create-organization' });
   }

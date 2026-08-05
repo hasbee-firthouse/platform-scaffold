@@ -119,16 +119,31 @@ describe('org shell navigation', () => {
     expect(link).toHaveAttribute('href', '/o/acme/reports');
   });
 
-  it('shows the always-available links and organization creation for b2b in the Administration menu', async () => {
+  it('offers organization creation in the Administration menu for b2b, and Home stays top-level', async () => {
     renderShell([]);
-    // Home is top-level product nav; Security + org creation live in the bottom menu.
+    // Home is top-level product nav; org creation lives in the bottom menu.
     expect(await screen.findByRole('link', { name: 'Home' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /administration/i }));
-    expect(await screen.findByRole('link', { name: 'Security' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'New organization' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'New organization' })).toHaveAttribute(
       'href',
       '/app/create-organization',
+    );
+  });
+
+  it('keeps account Security in the top-bar user menu, not the Administration menu', async () => {
+    renderShell([]);
+
+    // Not in the bottom Administration menu…
+    await userEvent.click(await screen.findByRole('button', { name: /administration/i }));
+    expect(screen.queryByRole('link', { name: 'Security' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+
+    // …but in the top-bar user menu (user-scoped, not org administration).
+    await userEvent.click(screen.getByRole('button', { name: /open user menu/i }));
+    expect(await screen.findByRole('menuitem', { name: /security & sessions/i })).toHaveAttribute(
+      'href',
+      '/o/acme/settings/security',
     );
   });
 
@@ -145,8 +160,8 @@ describe('org shell navigation', () => {
   it('hides org-admin nav without the permission and shows it with it (Can gate)', async () => {
     renderShell([]);
     await userEvent.click(await screen.findByRole('button', { name: /administration/i }));
-    // The menu opens (Security is always present) but the gated Members link is absent.
-    await screen.findByRole('link', { name: 'Security' });
+    // The menu opens (New organization is always present) but the gated Members link is absent.
+    await screen.findByRole('link', { name: 'New organization' });
     expect(screen.queryByRole('link', { name: 'Members' })).not.toBeInTheDocument();
 
     cleanup();
@@ -239,11 +254,11 @@ describe('org shell navigation for a personal org', () => {
   it('hides org-admin links for a personal org even when the owner holds every permission', async () => {
     renderPersonalOrgShell();
 
-    // Opening the Administration menu shows the user-scoped Security link (proving
-    // the shell mounted) but none of the team-only org-admin screens.
+    // The Administration menu still mounts (New organization is always available)
+    // but exposes none of the team-only org-admin screens.
     await userEvent.click(await screen.findByRole('button', { name: /administration/i }));
-    expect(await screen.findByRole('link', { name: 'Security' })).toBeInTheDocument();
-    for (const label of ['Settings', 'Members', 'Invitations', 'Roles', 'Audit log']) {
+    expect(await screen.findByRole('link', { name: 'New organization' })).toBeInTheDocument();
+    for (const label of ['Settings', 'Members', 'Invitations', 'Roles', 'Audit log', 'Security']) {
       expect(screen.queryByRole('link', { name: label })).not.toBeInTheDocument();
     }
   });
