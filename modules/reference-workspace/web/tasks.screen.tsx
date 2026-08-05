@@ -16,6 +16,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Input,
+  Pill,
   Table,
   TableBody,
   TableCell,
@@ -123,6 +124,7 @@ export function TasksScreen({
         <TableHeader>
           <TableRow>
             <TableHead>Title</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Assignee</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -265,6 +267,9 @@ function TaskRow({ task, members, onToggle, onDelete }: TaskRowProps): ReactElem
   return (
     <TableRow>
       <TableCell>{task.title}</TableCell>
+      <TableCell>
+        <Pill variant={published ? 'ok' : 'warn'}>{published ? 'Published' : 'Draft'}</Pill>
+      </TableCell>
       <TableCell>{assignee?.name ?? '—'}</TableCell>
       <TableCell>
         <div className="flex gap-2">

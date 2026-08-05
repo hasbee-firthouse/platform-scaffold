@@ -5,33 +5,59 @@
 @source "../../../../modules";
 
 /*
- * Build-time fallback values only. The real values are set at runtime by
- * `ThemeProvider` (packages/platform-ui/src/theme) as inline custom
- * properties on `<html>`, which win the cascade over these defaults. Tailwind
- * utilities (e.g. `bg-primary`, `rounded-[var(--radius)]`) resolve through
- * these `@theme` tokens, so rebranding never requires touching this file or
- * any component.
+ * "Blueprint" design tokens (SPEC §7 theming). Two kinds of token live here:
+ *
+ *  1. Brand tokens (--color-primary/-destructive, --font-family, --radius) are
+ *     RE-SET AT RUNTIME by ThemeProvider from product.config.ts, which also
+ *     derives their dark variant. The values below are only the build-time /
+ *     no-JS fallback — edit the palette in product.config.ts, not here.
+ *
+ *  2. Everything else — neutrals, surfaces, the sidebar, and the semantic
+ *     status colors (ok / warn) — is driven ENTIRELY from this file, in both
+ *     themes (see the html[data-theme="dark"] block). These never touch
+ *     component code: utilities (bg-card, text-muted-foreground, …) and the
+ *     shell/surface stylesheets resolve through these custom properties, so a
+ *     rebrand or restyle never edits a component (SPEC §7.3).
  */
 @theme {
-  --color-primary: #4f46e5;
+  /* -- Brand (runtime-overridden; fallback only) -- */
+  --color-primary: #2b44cc;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #eef2ff;
-  --color-secondary-foreground: #3730a3;
-  --color-accent: #4f46e5;
-  --color-destructive: #dc2626;
+  --color-secondary: #eaecfb;
+  --color-secondary-foreground: #2b44cc;
+  --color-accent: #2b44cc;
+  --color-destructive: #bb3a2c;
   --color-destructive-foreground: #ffffff;
-  --color-app-background: #f6f7fb;
+
+  /* -- Neutrals: warm "stone / paper" -- */
+  --color-app-background: #f4f2ee;
   --color-background: #ffffff;
   --color-card: #ffffff;
-  --color-foreground: #0f172a;
-  --color-muted: #f1f5f9;
-  --color-muted-foreground: #64748b;
-  --color-border: #e2e8f0;
-  --color-sidebar: #0f1430;
-  --color-sidebar-foreground: #c7cbe6;
-  --color-sidebar-heading: #ffffff;
-  --font-family: Inter, sans-serif;
-  --font-family-heading: Inter, sans-serif;
+  --color-foreground: #1b1915;
+  --color-muted: #efece4;
+  --color-muted-foreground: #6b665d;
+  --color-border: #e5e1d8;
+
+  /* -- Sidebar: warm "timber" -- */
+  --color-sidebar: #191712;
+  --color-sidebar-foreground: #c9c3b5;
+  --color-sidebar-heading: #f6f2e9;
+
+  /* -- Semantic status (kept distinct from the accent) -- */
+  --color-ok: #2f7a4d;
+  --color-ok-foreground: #ffffff;
+  --color-ok-weak: #e4f1e8;
+  --color-warn: #a86f16;
+  --color-warn-foreground: #ffffff;
+  --color-warn-weak: #f6ecd7;
+
+  /* -- Type -- */
+  --font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-family-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas,
+    monospace;
   --radius: 0.5rem;
 }
 
@@ -44,22 +70,30 @@
     font-family: var(--font-family);
   }
 
+  /*
+   * Dark theme. Only the non-brand tokens are set here (the brand tokens are
+   * applied inline by ThemeProvider and win the cascade regardless). These are
+   * hand-tuned warm darks, not naive inversions.
+   */
   html[data-theme="dark"] {
-    --color-primary-foreground: #1e1b4b;
-    --color-secondary: #1e293b;
-    --color-secondary-foreground: #c7d2fe;
-    --color-destructive: #f87171;
-    --color-destructive-foreground: #450a0a;
-    --color-app-background: #0b1120;
-    --color-background: #111a2e;
-    --color-card: #111a2e;
-    --color-foreground: #e2e8f0;
-    --color-muted: #1e293b;
-    --color-muted-foreground: #94a3b8;
-    --color-border: #24304a;
-    --color-sidebar: #070b1c;
-    --color-sidebar-foreground: #aab0d6;
-    --color-sidebar-heading: #e2e8f0;
+    --color-primary-foreground: #12132a;
+    --color-secondary: #22243a;
+    --color-secondary-foreground: #8092ff;
+    --color-destructive-foreground: #2a0f0c;
+    --color-app-background: #161510;
+    --color-background: #1e1c16;
+    --color-card: #1e1c16;
+    --color-foreground: #f1ede3;
+    --color-muted: #232019;
+    --color-muted-foreground: #a49d8e;
+    --color-border: #302d25;
+    --color-sidebar: #100f0a;
+    --color-sidebar-foreground: #b6b0a1;
+    --color-sidebar-heading: #f3efe5;
+    --color-ok: #5cbf87;
+    --color-ok-weak: #183227;
+    --color-warn: #d8a54e;
+    --color-warn-weak: #33291f;
   }
 
   body,
