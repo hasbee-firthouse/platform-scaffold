@@ -74,6 +74,14 @@ describe('AuditLogScreen (E7-S3)', () => {
     });
   });
 
+  it('tags a destructive action with a danger-tone chip', async () => {
+    const fetchAuditLogs = vi.fn(async () => page({ items: [item({ action: 'member.removed' })] }));
+    renderScreen({ orgId: 'org_1', fetchAuditLogs }, ADMIN);
+
+    const cell = await screen.findByRole('cell', { name: 'member.removed' });
+    expect(cell.querySelector('[data-tone="danger"]')).not.toBeNull();
+  });
+
   it('hides all content and issues no request for a non-admin (AC1)', () => {
     const fetchAuditLogs = vi.fn(async () => page());
     renderScreen({ orgId: 'org_1', fetchAuditLogs }, MEMBER);

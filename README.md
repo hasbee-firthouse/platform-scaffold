@@ -10,7 +10,37 @@ A reusable SaaS product scaffold built as a modular monolith:
 - pg-boss for background jobs
 - Drizzle ORM and migrations
 
-The production-shaped deployment is one application container serving both the API and the built SPA on port `3000`, plus PostgreSQL. The repository also includes the removable `reference-workspace` product module.
+The production-shaped deployment is one application container serving both the API and the built SPA on port `3000`, plus PostgreSQL. The repository also ships a removable **reference module** (`reference-workspace`) — a Writer/Reader "Spaces & Notes" product that doubles as a worked example of every customization knob.
+
+> **This README is the user guide.** It covers running, operating, and customizing the scaffold. For the conceptual model start with the next section; for the deeper references see the [documentation map](#documentation-map).
+
+## How this scaffold works
+
+The scaffold is **fork-and-diverge**: you create a new product by forking this repo, **configuring** it, and replacing the reference module with your own — you do **not** rebuild the foundation. Three ideas:
+
+**1. What you inherit for free (never rebuilt).** Authentication & sessions, organizations & membership, roles & permissions (authorization), multi-tenant isolation (app-layer `withOrg` scoping + PostgreSQL row-level security), theming, terminology, entitlements, audit log, transactional email, background jobs, and operations. These live in `packages/platform-*` and `apps/**` and are treated as a platform you inherit. (Rules: [`.claude/architecture.md`](.claude/architecture.md); locked decisions: [`SPEC.md`](SPEC.md).)
+
+**2. What you customize (the control plane).** Two surfaces, nothing else:
+- **`product.config.ts`** — the entire rebrand surface: `profile`/`capabilities` (B2C vs B2B tenancy), `branding` (theme tokens), `terminology` (rename nouns, e.g. Organization → Clinic), `navigation`, `orgTypes` (e.g. buyer/seller, writer/reader), and email identity. Validated at boot.
+- **A product module** under `modules/` — its `manifest.ts` declares the feature's `permissions`, named `roles`, `entitlements`, and background `jobs`; `api/` + `web/` + `shared/` hold the code. **Add a module = one directory + one registry line; remove = the reverse.** The full list of knobs and how the common product archetypes (B2C, B2B, marketplace, finance) map onto them is in [`docs/DECISION-framework-control-plane.md`](docs/DECISION-framework-control-plane.md).
+
+**3. The reference module is a worked example.** `reference-workspace` is a Writer/Reader publishing product ("Spaces & Notes") that deliberately exercises those knobs end-to-end: **org typing** (a Writer org authors, a Reader org reads), **product roles** (Author/Editor on the writer side, Reader/Commenter on the reader side), a **draft → publish** note lifecycle, **ownership** authorization (edit your own notes), a **cross-org shared "Library"** (Readers see notes published by any Writer org), and **likes/comments**. It is designed for deletion once you add your own module. Design log: [`docs/PLAN-spaces-notes-reference.md`](docs/PLAN-spaces-notes-reference.md).
+
+**Shell placeholders to replace.** A couple of shell surfaces are intentionally left empty for forks to fill in — they reserve the route, nav slot, and breadcrumb so you drop in content without rewiring. The main one is **Home** (`/o/<orgSlug>`, the `OrgHome` component in `apps/web/src/router/app-routes.tsx`): a bare "Welcome" page and the always-visible top-level nav link. Replace its body with your product's real landing page (dashboard, overview, recent activity); leave the route itself in place.
+
+To **make it your own**, follow the six-step fork procedure in [`docs/FORKING.md`](docs/FORKING.md).
+
+## Documentation map
+
+| Document | Use it for |
+|---|---|
+| **README.md** (this file) | Running, operating, and customizing the scaffold — the front door |
+| [`SPEC.md`](SPEC.md) | Locked architecture & product decisions — the source of truth |
+| [`docs/FORKING.md`](docs/FORKING.md) | Turning the scaffold into your product: rebrand, add a module, delete the reference module |
+| [`docs/DECISION-framework-control-plane.md`](docs/DECISION-framework-control-plane.md) | The customization knobs and how B2C/B2B/marketplace/finance products map onto them |
+| [`.claude/architecture.md`](.claude/architecture.md) | The layered architecture rules (one-way imports, module boundaries) |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) · [`docs/AWS-DEPLOYMENT.md`](docs/AWS-DEPLOYMENT.md) | Deploying the container + PostgreSQL; the two-role RLS model |
+| [`docs/PLAN-spaces-notes-reference.md`](docs/PLAN-spaces-notes-reference.md) | How the Writer/Reader reference module was built (worked example) |
 
 ## Prerequisites
 
@@ -70,7 +100,7 @@ After running `scripts/seed.ts`, these development-only accounts are available:
 | Organization owner | `owner@example.com` | `devpassword123` |
 | Organization member | `member@example.com` | `devpassword123` |
 
-Both users belong to the seeded **Acme Team** organization. The owner also has sample workspace and task data.
+Both users belong to the seeded **Acme Team** organization. The owner also has sample reference-module data — a **"Launch Plan" Space** with a few draft **Notes**. Publish one, then open **Library** to like and comment on it.
 
 The `postgres` and `app_runtime` credentials in `docker-compose.yml` are **database credentials**, not web application logins.
 

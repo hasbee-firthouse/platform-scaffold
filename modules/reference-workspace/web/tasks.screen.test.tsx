@@ -131,6 +131,22 @@ describe('TasksScreen (E8-S3 · AC1/AC2/AC3)', () => {
     );
   });
 
+  it('encodes each note\'s status as a semantic pill (Draft / Published)', async () => {
+    const client = stubClient();
+    renderScreen(client);
+
+    await screen.findByText('Write spec');
+    // Default draft filter → the draft note carries a warn-variant Draft pill.
+    const draftPill = document.querySelector('[data-variant="warn"]');
+    expect(draftPill).toHaveTextContent(/draft/i);
+
+    await userEvent.selectOptions(screen.getByLabelText(/filter/i), 'published');
+    expect(await screen.findByText('Ship it')).toBeInTheDocument();
+    // Published notes carry an ok-variant Published pill.
+    const publishedPill = document.querySelector('[data-variant="ok"]');
+    expect(publishedPill).toHaveTextContent(/published/i);
+  });
+
   it('publishes a draft note (AC1)', async () => {
     const client = stubClient();
     renderScreen(client);
