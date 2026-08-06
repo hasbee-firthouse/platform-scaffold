@@ -1,0 +1,5 @@
+# Normalize line endings to LF for all text files. Keeps the repo consistent
+# across OSes and prevents Windows CRLF checkouts from breaking LF-sensitive
+# checks (e.g. packages/platform-tenancy/src/rls-migration.test.ts compares a
+# migration file against LF-generated SQL).
+* text=auto eol=lf
