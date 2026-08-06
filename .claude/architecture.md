@@ -1,111 +1,90 @@
-# Architecture
+# Architecture — layering & boundary rules
 
-## Layer Hierarchy
+The layering rules for this repo. For a guided tour of how everything fits
+together (request lifecycle, tenancy, modules, tech stack), see
+[`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md). For the *why* behind locked
+decisions, [`SPEC.md`](../SPEC.md) is canonical.
 
-The project follows a strict layered architecture. Dependencies flow **downward only** — a layer may import from layers below it but never from layers above it.
+## Layer hierarchy
+
+Dependencies flow **downward only** — a layer may import from layers below it,
+never above.
 
 ```
 ┌─────────────┐
-│     UI      │  ← Layer 6 (highest)
+│     UI      │  ← highest
 ├─────────────┤
-│     API     │  ← Layer 5
+│     API     │
 ├─────────────┤
-│   Service   │  ← Layer 4
+│   Service   │
 ├─────────────┤
-│ Repository  │  ← Layer 3
+│ Repository  │
 ├─────────────┤
-│   Config    │  ← Layer 2
+│   Config    │
 ├─────────────┤
-│    Types    │  ← Layer 1 (lowest)
+│    Types    │  ← lowest
 └─────────────┘
 ```
 
-### Layer Definitions
-
-| Layer | Responsibility | May Import From |
+| Layer | Responsibility | May import from |
 |-------|---------------|-----------------|
-| Types | Domain models, interfaces, enums, shared type definitions | (none) |
-| Config | Environment variables, feature flags, constants, app configuration | Types |
-| Repository | Data access, persistence, external data sources | Types, Config |
+| Types | Domain models, Zod contracts, enums, shared types | (none) |
+| Config | `product.config.ts`, env schema, feature flags, constants | Types |
+| Repository | Data access via drizzle; the `withOrg` scoped-db | Types, Config |
 | Service | Business logic, domain rules, orchestration | Types, Config, Repository |
-| API | Route handlers, request/response mapping, middleware, validation | Types, Config, Repository, Service |
-| UI | Components, pages, client-side state, rendering | Types, Config, Service, API |
+| API | Fastify route handlers, request/response mapping, middleware, validation | Types, Config, Repository, Service |
+| UI | Components, screens, client-side state, rendering | Types, Config, Service, API |
 
-## One-Way Dependency Rule
+## How the layers map to this monorepo
 
-**Never import from a higher layer.**
+This is a **pnpm/Turborepo monorepo**, not a single `src/` tree — the layers are
+expressed through packages, module sub-folders, and file naming:
 
-Violations:
-- A `Service` importing from `API` — FORBIDDEN
-- A `Repository` importing from `Service` — FORBIDDEN
-- A `Config` importing from `Repository` — FORBIDDEN
-- A `Types` importing from any other layer — FORBIDDEN
+| Layer | Where it lives |
+|-------|----------------|
+| Types | `packages/platform-contracts`, each module's `shared/`, `*.types.ts` |
+| Config | `product.config.ts`, `packages/platform-config`, `apps/api` env schema |
+| Repository | `*.repository.ts`, `packages/platform-db`, `withOrg` from `packages/platform-tenancy` |
+| Service | `*.service.ts` (pure logic, no Fastify/HTTP imports) |
+| API | `apps/api`, each module's `api/` plugin, `packages/platform-authz` middleware |
+| UI | `apps/web`, each module's `web/`, `packages/platform-ui` |
 
-The `check-architecture` hook enforces this rule on every file save.
+## One-way dependency rule
 
-## Verification Commands
+**Never import from a higher layer.** Forbidden examples:
 
-### Types layer
-```bash
-# No imports from Config, Repository, Service, API, or UI
-grep -rn "from.*config\|from.*repository\|from.*service\|from.*api\|from.*ui" src/types/
-```
+- A `*.service.ts` importing from `apps/api` or a module's `api/` plugin.
+- A `*.repository.ts` importing a service.
+- Anything in `packages/platform-config` importing a repository.
+- A `shared/` contract (Types) importing from any other layer.
 
-### Config layer
-```bash
-# No imports from Repository, Service, API, or UI
-grep -rn "from.*repository\|from.*service\|from.*api\|from.*ui" src/config/
-```
+Two additional, repo-specific boundary rules:
 
-### Repository layer
-```bash
-# No imports from Service, API, or UI
-grep -rn "from.*service\|from.*api\|from.*ui" src/repository/
-```
+- **Ports only.** Nothing outside `packages/platform-identity` imports
+  `better-auth`; nothing outside a repository/`platform-db` uses a raw drizzle
+  client. Modules reach platform services through `PlatformContext`.
+- **Tenant access only inside `withOrg`.** No code path may query a tenant table
+  outside `withOrg(orgId, …)` (the RLS-backed scoped transaction). Shared-plane
+  files are the sole exception and are marked `@shared-plane`.
 
-### Service layer
-```bash
-# No imports from API or UI
-grep -rn "from.*api\|from.*ui" src/service/
-```
+## How these rules are actually enforced
 
-### API layer
-```bash
-# No imports from UI
-grep -rn "from.*ui" src/api/
-```
+There is **no auto-enforcing layer hook active in this TypeScript repo**. (The
+bundled `.claude/hooks/check-architecture.js` is a generic template that only
+inspects Python `from src.<layer>` imports — it is a no-op here and is kept only
+for forks that target that layout.) Boundaries are held by:
 
-### Full architecture audit
-```bash
-# Run the architecture check hook directly
-.claude/hooks/check-architecture.sh
-```
+- **Package graph + `tsconfig`** — a package can only import what it depends on;
+  the layers above map to separate packages/entry points.
+- **ESLint** (`pnpm lint`) and **`tsc --noEmit`** in each app/package.
+- **Guard tests** — e.g. `packages/platform-tenancy/src/no-tenant-access-outside-with-org.test.ts`
+  (the `withOrg` rule) and `packages/platform-ui/src/components/no-hex.test.ts`
+  (token-only styling).
+- **Code review** for the conventions that tooling doesn't catch.
 
-## Cross-Cutting Concerns
+## Customization (forks with a different layout)
 
-The following concerns span all layers and are handled via shared utilities, not inline in each layer:
-
-| Concern | Implementation |
-|---------|---------------|
-| **Logging** | Centralized logger (e.g., `src/lib/logger`) — all layers import from `lib`, not from each other |
-| **Authentication** | Auth context passed via dependency injection or middleware; never hardcoded per-layer |
-| **Telemetry** | Instrumentation via a shared `src/lib/telemetry` module with span/trace helpers |
-| **Error Handling** | Typed error classes in `Types`; caught and mapped at `API` boundary; never swallowed silently |
-
-## Customization
-
-Layer names, paths, and verification commands can be overridden for non-standard stacks (e.g., monorepos, microservices, full-stack frameworks) via `project-manifest.json` in the project root.
-
-Example override:
-```json
-{
-  "layers": [
-    { "name": "domain", "path": "src/domain", "rank": 1 },
-    { "name": "application", "path": "src/application", "rank": 2 },
-    { "name": "infrastructure", "path": "src/infrastructure", "rank": 3 },
-    { "name": "presentation", "path": "src/presentation", "rank": 4 }
-  ]
-}
-```
-
-When `project-manifest.json` is present, the `check-architecture` hook reads layer definitions from it instead of using the defaults above.
+Forks that adopt a classic single-`src/` layout can define layer names and paths
+in `project-manifest.json`; the bundled hook reads them when present. This repo
+uses the package-based mapping above instead, so it does not define a `layers`
+block.

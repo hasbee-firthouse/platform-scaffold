@@ -32,6 +32,7 @@ See `.claude/architecture.md` for full rules.
 | What | Where |
 |------|-------|
 | Locked system spec | `SPEC.md` |
+| Developer onboarding / architecture tour | `docs/ARCHITECTURE.md` |
 | Architecture rules | `.claude/architecture.md` |
 | Quality principles | `.claude/skills/code-gen/SKILL.md` |
 | Testing patterns | `.claude/skills/testing/SKILL.md` |
