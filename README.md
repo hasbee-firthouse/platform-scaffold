@@ -38,6 +38,7 @@ To **make it your own**, follow the six-step fork procedure in [`docs/FORKING.md
 | [`SPEC.md`](SPEC.md) | Locked architecture & product decisions — the source of truth |
 | [`docs/FORKING.md`](docs/FORKING.md) | Turning the scaffold into your product: rebrand, add a module, delete the reference module |
 | [`docs/DECISION-framework-control-plane.md`](docs/DECISION-framework-control-plane.md) | The customization knobs and how B2C/B2B/marketplace/finance products map onto them |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Developer onboarding: the guided tour — mental model, request lifecycle, tenancy, modules, tech stack, first change |
 | [`.claude/architecture.md`](.claude/architecture.md) | The layered architecture rules (one-way imports, module boundaries) |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) · [`docs/AWS-DEPLOYMENT.md`](docs/AWS-DEPLOYMENT.md) | Deploying the container + PostgreSQL; the two-role RLS model |
 | [`docs/PLAN-spaces-notes-reference.md`](docs/PLAN-spaces-notes-reference.md) | How the Writer/Reader reference module was built (worked example) |

@@ -182,7 +182,7 @@ describe('authentication guard', () => {
     expect(screen.getByLabelText(/organization name/i)).toBeInTheDocument();
   });
 
-  it('routes a b2c personal account into the same org-scoped module without org chrome', async () => {
+  it('routes a b2c personal account into its module under the shared personal shell', async () => {
     renderAt('/', {
       session: PERSONAL,
       config: productConfig('b2c-simple'),
@@ -190,18 +190,21 @@ describe('authentication guard', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'Reports Home' })).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+    // b2c uses the same left-sidebar shell as b2b (consistent layout): the
+    // primary nav and user menu are present, not a chrome-free page.
+    expect(screen.getByRole('navigation', { name: /primary/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /open user menu/i })).toBeInTheDocument();
   });
 
-  it('mounts chrome-free Profile and Security settings for b2c accounts', async () => {
+  it('mounts Profile and Security settings for b2c accounts under the personal shell', async () => {
     renderAt('/app/settings/security', {
       session: PERSONAL,
       config: productConfig('b2c-simple'),
     });
 
     expect(await screen.findByRole('heading', { name: 'Security' })).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+    // Settings keep the shell's navigation (no dead-end back to the app).
+    expect(screen.getByRole('navigation', { name: /primary/i })).toBeInTheDocument();
 
     cleanup();
     renderAt('/app/settings/profile', {
@@ -211,7 +214,7 @@ describe('authentication guard', () => {
     expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
   });
 
-  it('redirects a direct personal-org URL back to the chrome-free module route', async () => {
+  it('redirects a direct personal-org URL back to the module route under the personal shell', async () => {
     renderAt('/o/personal-user', {
       session: PERSONAL,
       config: productConfig('b2c-simple'),
@@ -219,7 +222,7 @@ describe('authentication guard', () => {
     });
 
     expect(await screen.findByRole('heading', { name: 'Reports Home' })).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: /primary/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: /primary/i })).toBeInTheDocument();
   });
 
   it('does not expose organization creation when the profile disables organizations', async () => {
